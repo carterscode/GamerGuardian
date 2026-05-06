@@ -254,7 +254,7 @@ Fields:
 | Field | Meaning |
 |---|---|
 | **timestamp** | Local time of the apply |
-| **source** | `manual` (you clicked Apply) or `auto` (silent auto-apply during a poll tick) |
+| **source** | `manual` (you clicked Apply) · `auto` (silent auto-apply during a poll tick) · `ui` (preference toggle in Settings) · `pause` (polling paused/resumed for fullscreen, benchmark, or manual pause) |
 | **STATUS** | `OK` if the after-read matched the target; `FAILED` otherwise (UAC declined, registry locked, etc.) |
 | **Mechanism** | The exact registry path + value type, or the Win32 / DLL function called for non-registry settings |
 | **Before** | The raw bytes / number / string GamerGuardian read before the write, plus a parenthesized friendly description |
@@ -288,6 +288,20 @@ A silent auto-apply that fixed Game Mode after a Windows update reset it:
   Wrote     : AutoGameModeEnabled=1, AllowAutoGameMode=1  (On)
   After     : AutoGameModeEnabled=1, AllowAutoGameMode=1  (On)  <- verified
   Verify    : (Get-ItemProperty 'HKCU:\Software\Microsoft\GameBar' -Name AutoGameModeEnabled).AutoGameModeEnabled
+```
+
+A pause / resume cycle while a fullscreen game runs:
+
+```
+[2026-05-06 19:42:01] [pause ] PAUSED  fullscreen (Cyberpunk2077)
+[2026-05-06 21:18:14] [pause ] RESUMED was: fullscreen (Cyberpunk2077)
+```
+
+A preference toggle in the Settings UI:
+
+```
+[2026-05-06 22:42:15] [ui    ] PREF   Fullscreen optimizations (global)  |  Monitor: False -> True
+[2026-05-06 22:42:16] [ui    ] PREF   Fullscreen optimizations (global)  |  AutoApply: False -> True
 ```
 
 A failed Apply where the user cancelled the UAC prompt:

@@ -14,6 +14,7 @@ public sealed class MonitorService : IDisposable
     private bool _running;
     private int _ticksSinceTrim;
     private bool _userPaused;
+    private string? _activePauseReason;
 
     public bool IsUserPaused => _userPaused;
     public event Action<bool>? PauseChanged;
@@ -63,9 +64,31 @@ public sealed class MonitorService : IDisposable
         }
         try
         {
-            if (_userPaused) return;
-            if (Shell32.IsFullscreenAppActive()) return;
-            if (BenchmarkDetector.GetRunningBenchmark() is not null) return;
+            string? pauseReason = null;
+            if (_userPaused)
+            {
+                pauseReason = "user (manual pause via tray)";
+            }
+            else if (Shell32.IsFullscreenAppActive())
+            {
+                var fg = Shell32.GetForegroundProcessName();
+                pauseReason = string.IsNullOrEmpty(fg) ? "fullscreen" : $"fullscreen ({fg})";
+            }
+            else if (BenchmarkDetector.GetRunningBenchmark() is { } bench)
+            {
+                pauseReason = $"benchmark ({bench})";
+            }
+
+            if (pauseReason != _activePauseReason)
+            {
+                if (pauseReason != null)
+                    ChangeLogger.LogPauseEvent("PAUSED", pauseReason);
+                else if (_activePauseReason != null)
+                    ChangeLogger.LogPauseEvent("RESUMED", $"was: {_activePauseReason}");
+                _activePauseReason = pauseReason;
+            }
+
+            if (pauseReason != null) return;
 
             var config = _store.Load();
             var drifted = new List<DriftItem>();

@@ -54,6 +54,22 @@ public static class ChangeLogger
         catch { }
     }
 
+    /// <summary>
+    /// Records the start or end of a polling pause (fullscreen / benchmark / user).
+    /// </summary>
+    public static void LogPauseEvent(string action, string reason)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(LogPath);
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+            RotateIfNeeded();
+            var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [pause ] {action,-7} {reason}";
+            File.AppendAllText(LogPath, line + Environment.NewLine, Encoding.UTF8);
+        }
+        catch { }
+    }
+
     private static string Format(ApplyResult r, string source)
     {
         var status = r.Verified ? "OK" : "FAILED";

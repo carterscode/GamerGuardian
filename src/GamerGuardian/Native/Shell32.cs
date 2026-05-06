@@ -66,6 +66,20 @@ internal static class Shell32
         return IsForegroundBorderlessFullscreen();
     }
 
+    public static string? GetForegroundProcessName()
+    {
+        try
+        {
+            var hwnd = GetForegroundWindow();
+            if (hwnd == IntPtr.Zero) return null;
+            GetWindowThreadProcessId(hwnd, out var pid);
+            if (pid == 0) return null;
+            using var p = System.Diagnostics.Process.GetProcessById((int)pid);
+            return p.ProcessName;
+        }
+        catch { return null; }
+    }
+
     private static bool IsForegroundBorderlessFullscreen()
     {
         try
