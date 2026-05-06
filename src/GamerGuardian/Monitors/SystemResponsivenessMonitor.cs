@@ -32,7 +32,8 @@ public sealed class SystemResponsivenessMonitor : IMonitoredSetting
             DesiredValue: desired ? "Gaming" : "Default",
             AutoApply: pref.AutoApply,
             Apply: () => Task.Run(() => ElevatedRegistry.SetHklmDword(
-                SubKey, ValueName, desired ? GamingValue : DefaultValue)));
+                SubKey, ValueName, desired ? GamingValue : DefaultValue)),
+            RequiresReboot: true);
     }
 
     public static bool? ReadCurrent()

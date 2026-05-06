@@ -8,7 +8,8 @@ public sealed record DriftItem(
     string CurrentValue,
     string DesiredValue,
     bool AutoApply,
-    Func<Task> Apply);
+    Func<Task> Apply,
+    bool RequiresReboot = false);
 
 public sealed record DriftReport(IReadOnlyList<DriftItem> Items)
 {

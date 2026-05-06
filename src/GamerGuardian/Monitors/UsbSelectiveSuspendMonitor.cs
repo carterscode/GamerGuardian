@@ -29,7 +29,8 @@ public sealed class UsbSelectiveSuspendMonitor : IMonitoredSetting
             DesiredValue: desired ? "Disabled (gaming)" : "Default",
             AutoApply: pref.AutoApply,
             Apply: () => Task.Run(() => ElevatedRegistry.SetHklmDword(
-                SubKey, ValueName, desired ? 1u : 0u)));
+                SubKey, ValueName, desired ? 1u : 0u)),
+            RequiresReboot: true);
     }
 
     public static bool? ReadCurrent()

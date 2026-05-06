@@ -38,7 +38,8 @@
                                     ToolTip="Open releases page"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
                     <ui:Button Content="Cancel" MinWidth="96" Margin="0,0,8,0" Click="CancelButton_Click"/>
-                    <ui:Button Content="Save" Appearance="Primary" MinWidth="96" Click="SaveButton_Click"/>
+                    <ui:Button Content="Apply" MinWidth="96" Margin="0,0,8,0" Click="ApplyButton_Click"/>
+                    <ui:Button Content="Save &amp; close" Appearance="Primary" MinWidth="120" Click="SaveButton_Click"/>
                 </StackPanel>
             </Grid>
 
@@ -99,7 +100,16 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
-                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                <Border Visibility="{Binding RebootBadgeVisibility}"
+                                                        Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                                                        CornerRadius="3" Padding="6,1" Margin="8,0,0,0">
+                                                    <TextBlock Text="reboot required"
+                                                               Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                                               FontSize="10" FontWeight="SemiBold"/>
+                                                </Border>
+                                            </StackPanel>
                                             <TextBlock Text="{Binding Description}"
                                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                        FontSize="12" Margin="0,3,0,0"
@@ -117,8 +127,8 @@
                                             <CheckBox Content="Monitor" IsChecked="{Binding Monitor}"/>
                                             <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
                                                 <TextBlock Text="Want:" Margin="0,4,8,0"/>
-                                                <RadioButton GroupName="{Binding GroupName}" Content="On" IsChecked="{Binding DesiredOn}" Margin="0,0,8,0"/>
-                                                <RadioButton GroupName="{Binding GroupName}" Content="Off" IsChecked="{Binding DesiredOff}"/>
+                                                <RadioButton GroupName="{Binding GroupName}" Content="{Binding OnLabel}" IsChecked="{Binding DesiredOn}" Margin="0,0,8,0"/>
+                                                <RadioButton GroupName="{Binding GroupName}" Content="{Binding OffLabel}" IsChecked="{Binding DesiredOff}"/>
                                             </StackPanel>
                                             <CheckBox Content="Auto-apply silently" IsChecked="{Binding AutoApply}"/>
                                         </StackPanel>

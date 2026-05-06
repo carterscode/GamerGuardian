@@ -28,7 +28,8 @@ public sealed class HagsMonitor : IMonitoredSetting
             CurrentValue: current.Value ? "On" : "Off",
             DesiredValue: desired ? "On" : "Off",
             AutoApply: pref.AutoApply,
-            Apply: () => Task.Run(() => ElevatedRegistry.SetHklmDword(SubKey, ValueName, desired ? 2u : 1u)));
+            Apply: () => Task.Run(() => ElevatedRegistry.SetHklmDword(SubKey, ValueName, desired ? 2u : 1u)),
+            RequiresReboot: true);
     }
 
     public static bool? ReadCurrent()

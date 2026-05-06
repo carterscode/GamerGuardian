@@ -17,15 +17,17 @@ public partial class SettingsWindow : FluentWindow
 {
     private readonly ConfigStore _store;
     private readonly AppConfig _config;
+    private readonly IReadOnlyList<IMonitoredSetting> _monitors;
     public ObservableCollection<DisplayRow> DisplayRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> GlobalToggleRows { get; } = new();
 
     public event Action? Saved;
 
-    public SettingsWindow(ConfigStore store)
+    public SettingsWindow(ConfigStore store, IReadOnlyList<IMonitoredSetting> monitors)
     {
         InitializeComponent();
         _store = store;
+        _monitors = monitors;
         _config = store.Load();
 
         LaunchAtStartupCheck.IsChecked = _config.LaunchAtStartup;
@@ -61,6 +63,7 @@ public partial class SettingsWindow : FluentWindow
             description: "Tells Windows to prioritize the running game and suppress background work.",
             currentText: $"Current: {OnOffText(SafeRead(GameModeMonitor.ReadCurrent))}",
             defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
             pref: g.GameMode, groupName: "gm"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
@@ -68,20 +71,25 @@ public partial class SettingsWindow : FluentWindow
             description: "Always-on game capture. Costs CPU/GPU during gameplay; off is gaming-recommended.",
             currentText: $"Current: {OnOffText(SafeRead(GameDvrMonitor.ReadCurrent))}",
             defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
             pref: g.GameDvr, groupName: "dvr"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Hardware-accelerated GPU Scheduling (HAGS)",
-            description: "Lets the GPU manage its own command queue. Lower latency on supported GPUs. Requires reboot.",
+            description: "Lets the GPU manage its own command queue. Lower latency on supported GPUs.",
             currentText: $"Current: {OnOffText(SafeRead(HagsMonitor.ReadCurrent))}",
             defaultText: "Default: On (Win11)",
+            onLabel: "On", offLabel: "Off",
+            requiresReboot: true,
             pref: g.Hags, groupName: "hags"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Memory Integrity / VBS (Core Isolation)",
-            description: "Hypervisor-Enforced Code Integrity. Disabling recovers ~5–15% gaming perf but reduces malware protection. Requires reboot.",
+            description: "Hypervisor-Enforced Code Integrity. Disabling recovers ~5–15% gaming perf but reduces malware protection.",
             currentText: $"Current: {OnOffText(SafeRead(MemoryIntegrityMonitor.ReadCurrent))}",
             defaultText: "Default: On (Win11)",
+            onLabel: "On", offLabel: "Off",
+            requiresReboot: true,
             pref: g.MemoryIntegrity, groupName: "memint"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
@@ -89,6 +97,8 @@ public partial class SettingsWindow : FluentWindow
             description: "CPU percentage Windows reserves for non-multimedia tasks. Lower frees CPU for games.",
             currentText: $"Current: {GamingDefaultText(SafeRead(SystemResponsivenessMonitor.ReadCurrent))}",
             defaultText: "Default: 20    Gaming: 10",
+            onLabel: "Gaming", offLabel: "Default",
+            requiresReboot: true,
             pref: g.SystemResponsiveness, groupName: "sysresp"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
@@ -96,6 +106,7 @@ public partial class SettingsWindow : FluentWindow
             description: "Multimedia packet pacing. Disabling reduces network jitter for online games.",
             currentText: $"Current: {GamingDefaultText(SafeRead(NetworkThrottlingMonitor.ReadCurrent))}",
             defaultText: "Default: 10    Gaming: disabled",
+            onLabel: "Gaming", offLabel: "Default",
             pref: g.NetworkThrottling, groupName: "netthr"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
@@ -103,6 +114,8 @@ public partial class SettingsWindow : FluentWindow
             description: "Lets Windows suspend idle USB devices. Disabling keeps mice/keyboards/headsets always responsive.",
             currentText: $"Current: {GamingDefaultText(SafeRead(UsbSelectiveSuspendMonitor.ReadCurrent))}",
             defaultText: "Default: enabled    Gaming: disabled",
+            onLabel: "Gaming", offLabel: "Default",
+            requiresReboot: true,
             pref: g.UsbSelectiveSuspend, groupName: "usbsus"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
@@ -110,6 +123,7 @@ public partial class SettingsWindow : FluentWindow
             description: "Priority + scheduling values for processes registered with the Games multimedia class.",
             currentText: $"Current: {GamingDefaultText(SafeRead(GamesTaskProfileMonitor.ReadCurrent))}",
             defaultText: "Default: standard    Gaming: boosted",
+            onLabel: "Gaming", offLabel: "Default",
             pref: g.GamesTaskProfile, groupName: "gtask"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
@@ -117,6 +131,7 @@ public partial class SettingsWindow : FluentWindow
             description: "Acceleration curve applied to mouse movement. Most gamers want this off for consistent aim.",
             currentText: $"Current: {OnOffText(SafeRead(MousePrecisionMonitor.ReadCurrent))}",
             defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
             pref: g.MousePrecision, groupName: "mp"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
@@ -124,6 +139,7 @@ public partial class SettingsWindow : FluentWindow
             description: "Borderless-windowed compositing layer. Generally fine; some titles prefer it off.",
             currentText: $"Current: {OnOffText(SafeRead(FullscreenOptimizationsMonitor.ReadCurrent))}",
             defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
             pref: g.FullscreenOptimizations, groupName: "fso"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
@@ -131,6 +147,7 @@ public partial class SettingsWindow : FluentWindow
             description: "DirectX user-pref VRR toggle. Smoother frame pacing on G-Sync / FreeSync displays.",
             currentText: $"Current: {OnOffText(SafeRead(VrrMonitor.ReadCurrent))}",
             defaultText: "Default: not set",
+            onLabel: "On", offLabel: "Off",
             pref: g.Vrr, groupName: "vrr"));
 
         var planNames = PowerPlanMonitor.ListAvailablePlans();
@@ -230,7 +247,50 @@ public partial class SettingsWindow : FluentWindow
             ThemeService.Apply(c);
     }
 
-    private void SaveButton_Click(object sender, RoutedEventArgs e)
+    private async void ApplyButton_Click(object sender, RoutedEventArgs e)
+    {
+        await ApplyChangesAsync(closeAfter: false);
+    }
+
+    private async void SaveButton_Click(object sender, RoutedEventArgs e)
+    {
+        await ApplyChangesAsync(closeAfter: true);
+    }
+
+    private async Task ApplyChangesAsync(bool closeAfter)
+    {
+        PersistFormToConfig();
+        _store.Save(_config);
+        StartupRegistration.Sync(_config.LaunchAtStartup);
+
+        var drifted = new List<DriftItem>();
+        foreach (var m in _monitors)
+        {
+            try { drifted.AddRange(m.CheckDrift(_config)); }
+            catch { /* per-monitor failures shouldn't break Apply */ }
+        }
+        bool anyRebootRequired = false;
+        foreach (var d in drifted)
+        {
+            try { await d.Apply(); }
+            catch { continue; }
+            if (d.RequiresReboot) anyRebootRequired = true;
+        }
+
+        Saved?.Invoke();
+
+        LoadGlobals();
+        LoadDisplays();
+
+        if (anyRebootRequired)
+        {
+            PromptReboot();
+        }
+
+        if (closeAfter) Close();
+    }
+
+    private void PersistFormToConfig()
     {
         _config.LaunchAtStartup = LaunchAtStartupCheck.IsChecked == true;
         _config.ConsolidateNotifications = ConsolidateCheck.IsChecked == true;
@@ -246,11 +306,22 @@ public partial class SettingsWindow : FluentWindow
 
         foreach (var row in GlobalToggleRows) row.WriteBack();
         foreach (var row in DisplayRows) row.WriteTo(_config);
+    }
 
-        _store.Save(_config);
-        StartupRegistration.Sync(_config.LaunchAtStartup);
-        Saved?.Invoke();
-        Close();
+    private static void PromptReboot()
+    {
+        var result = System.Windows.MessageBox.Show(
+            "Some settings you applied require a Windows reboot to take effect.\n\nReboot now? (You'll have 30 seconds to cancel via 'shutdown /a' if needed.)",
+            "Reboot recommended",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Question);
+        if (result != System.Windows.MessageBoxResult.Yes) return;
+        try
+        {
+            System.Diagnostics.Process.Start("shutdown.exe",
+                "/r /t 30 /c \"Rebooting for GamerGuardian settings. Cancel: shutdown /a\"");
+        }
+        catch { /* user can reboot manually */ }
     }
 
     private void CancelButton_Click(object sender, RoutedEventArgs e) => Close();
@@ -263,7 +334,11 @@ public sealed class GlobalToggleRow : INotifyPropertyChanged
     public string Description { get; }
     public string CurrentText { get; }
     public string DefaultText { get; }
+    public string OnLabel { get; }
+    public string OffLabel { get; }
     public string GroupName { get; }
+    public bool RequiresReboot { get; }
+    public Visibility RebootBadgeVisibility => RequiresReboot ? Visibility.Visible : Visibility.Collapsed;
 
     public bool Monitor { get => _pref.Monitor; set { _pref.Monitor = value; OnPropertyChanged(); } }
     public bool DesiredOn
@@ -279,14 +354,19 @@ public sealed class GlobalToggleRow : INotifyPropertyChanged
     public bool AutoApply { get => _pref.AutoApply; set { _pref.AutoApply = value; OnPropertyChanged(); } }
 
     public GlobalToggleRow(string name, string description, string currentText, string defaultText,
-                           ToggleSettingPref pref, string groupName)
+                           string onLabel, string offLabel,
+                           ToggleSettingPref pref, string groupName,
+                           bool requiresReboot = false)
     {
         Name = name;
         Description = description;
         CurrentText = currentText;
         DefaultText = defaultText;
+        OnLabel = onLabel;
+        OffLabel = offLabel;
         _pref = pref;
         GroupName = groupName;
+        RequiresReboot = requiresReboot;
     }
 
     public void WriteBack() { /* mutations are direct; nothing to do */ }

@@ -29,7 +29,8 @@ public sealed class MemoryIntegrityMonitor : IMonitoredSetting
             CurrentValue: current.Value ? "On" : "Off",
             DesiredValue: desired ? "On" : "Off",
             AutoApply: pref.AutoApply,
-            Apply: () => Task.Run(() => ElevatedRegistry.SetHklmDword(SubKey, ValueName, desired ? 1u : 0u)));
+            Apply: () => Task.Run(() => ElevatedRegistry.SetHklmDword(SubKey, ValueName, desired ? 1u : 0u)),
+            RequiresReboot: true);
     }
 
     public static bool? ReadCurrent()

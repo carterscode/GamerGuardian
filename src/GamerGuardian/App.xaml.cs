@@ -17,6 +17,7 @@ public partial class App : WpfApplication
     private Notifier? _notifier;
     private ConfigStore? _store;
     private SettingsWindow? _settingsWindow;
+    private IReadOnlyList<IMonitoredSetting>? _allMonitors;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -50,27 +51,25 @@ public partial class App : WpfApplication
         ThemeService.Apply(cfg.Theme);
 
         _notifier = new Notifier();
-        _monitor = new MonitorService(
-            _store,
-            new IMonitoredSetting[]
-            {
-                new HdrMonitor(),
-                new RefreshRateMonitor(),
-                new ResolutionMonitor(),
-                new VrrMonitor(),
-                new HagsMonitor(),
-                new MemoryIntegrityMonitor(),
-                new SystemResponsivenessMonitor(),
-                new NetworkThrottlingMonitor(),
-                new UsbSelectiveSuspendMonitor(),
-                new GamesTaskProfileMonitor(),
-                new GameModeMonitor(),
-                new GameDvrMonitor(),
-                new MousePrecisionMonitor(),
-                new FullscreenOptimizationsMonitor(),
-                new PowerPlanMonitor(),
-            },
-            report => _notifier.ShowAsync(report));
+        _allMonitors = new IMonitoredSetting[]
+        {
+            new HdrMonitor(),
+            new RefreshRateMonitor(),
+            new ResolutionMonitor(),
+            new VrrMonitor(),
+            new HagsMonitor(),
+            new MemoryIntegrityMonitor(),
+            new SystemResponsivenessMonitor(),
+            new NetworkThrottlingMonitor(),
+            new UsbSelectiveSuspendMonitor(),
+            new GamesTaskProfileMonitor(),
+            new GameModeMonitor(),
+            new GameDvrMonitor(),
+            new MousePrecisionMonitor(),
+            new FullscreenOptimizationsMonitor(),
+            new PowerPlanMonitor(),
+        };
+        _monitor = new MonitorService(_store, _allMonitors, report => _notifier.ShowAsync(report));
 
         _tray = new TrayIconHost();
         _tray.OpenSettingsRequested += ShowSettings;
@@ -100,7 +99,7 @@ public partial class App : WpfApplication
                 _settingsWindow.Activate();
                 return;
             }
-            _settingsWindow = new SettingsWindow(_store!);
+            _settingsWindow = new SettingsWindow(_store!, _allMonitors!);
             _settingsWindow.Saved += () => _monitor?.TriggerNow();
             _settingsWindow.Closed += (_, _) =>
             {
