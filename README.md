@@ -4,18 +4,35 @@ A lightweight Windows tray app that watches gaming-related display settings and 
 
 Tired of HDR silently turning itself off, or the refresh rate dropping to 60Hz after a driver update, and only noticing hours later? GamerGuardian sits in the tray, periodically checks your display state against your preferences, and pops up a one-click "Apply" prompt when something's wrong. Or — if you opt in per-setting — silently fixes it for you.
 
-## Features (v1)
+## What it watches
 
-- **Per-monitor HDR enforcement** — detect on/off state, prompt or auto-apply.
-- **Per-monitor refresh rate enforcement** — target the maximum supported, or pin a specific Hz.
+**Per-monitor:**
+- **HDR** — on/off state via the Windows Display Configuration (CCD) API
+- **Refresh rate** — target the maximum supported, or pin a specific Hz
+- **Resolution** — pin to a specific resolution (opt-in)
+
+**Global gaming settings:**
+- **Hardware-accelerated GPU Scheduling (HAGS)** — `HKLM` registry; apply uses elevated `reg.exe` (UAC prompt)
+- **Windows Game Mode**
+- **Game DVR background recording** — typically a perf killer when left on
+- **Mouse "Enhance pointer precision"** — most gamers want this off
+- **Fullscreen optimizations** (global setting)
+- **Variable Refresh Rate (Windows-level)** — the DirectX user-pref toggle
+- **Power plan** — Balanced / High Performance / Power Saver / Ultimate Performance (whichever are installed)
+
+For each setting you choose: monitor or not, desired value, and whether to auto-apply silently when it drifts. Otherwise you get a one-click "Apply" popup.
+
+## Common features
+
 - **Drift notifications** — discreet bottom-right popup with all drifted settings; one-click "Apply All".
 - **Auto-apply per setting** — opt in to silent correction.
 - **Launches at Windows startup** — registers itself in `HKCU\...\Run`.
 - **Single-instance** tray app, dark UI, no nags.
+- **`--test` CLI flag** — runs every monitor's read path and writes results to `%TEMP%\gamerguardian_selftest.txt` (no UI). Useful for QA / debugging on weird hardware.
 
-## Roadmap (v2)
+## Roadmap
 
-VRR, Hardware-accelerated GPU Scheduling (HAGS), Game Mode, Game DVR, power plan, mouse "Enhance pointer precision", fullscreen optimizations, resolution, color bit depth, Focus Assist. Each is a pluggable `IMonitoredSetting` module — easy to add more.
+Color bit depth (currently no public Windows API for setting it without driver SDKs — read-only support is possible later) and Focus Assist / DND. Windows 10 support. Optional code signing via SignPath OSS.
 
 ## Install
 
