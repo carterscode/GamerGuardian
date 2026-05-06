@@ -18,16 +18,18 @@ public partial class SettingsWindow : FluentWindow
     private readonly ConfigStore _store;
     private readonly AppConfig _config;
     private readonly IReadOnlyList<IMonitoredSetting> _monitors;
+    private readonly Action _exitApp;
     public ObservableCollection<DisplayRow> DisplayRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> GlobalToggleRows { get; } = new();
 
     public event Action? Saved;
 
-    public SettingsWindow(ConfigStore store, IReadOnlyList<IMonitoredSetting> monitors)
+    public SettingsWindow(ConfigStore store, IReadOnlyList<IMonitoredSetting> monitors, Action exitApp)
     {
         InitializeComponent();
         _store = store;
         _monitors = monitors;
+        _exitApp = exitApp;
         _config = store.Load();
 
         LaunchAtStartupCheck.IsChecked = _config.LaunchAtStartup;
@@ -246,6 +248,44 @@ public partial class SettingsWindow : FluentWindow
     {
         if (ThemeCombo.SelectedItem is AppThemeChoice c)
             ThemeService.Apply(c);
+    }
+
+    private async void CheckUpdatesNowButton_Click(object sender, RoutedEventArgs e)
+    {
+        var btn = CheckUpdatesNowButton;
+        var prev = btn.Content;
+        btn.IsEnabled = false;
+        btn.Content = "Checking…";
+        try
+        {
+            var info = await UpdateService.CheckLatestAsync();
+            if (info is null)
+            {
+                System.Windows.MessageBox.Show(
+                    $"You're on the latest version (v{UpdateService.CurrentSemver()}).",
+                    "GamerGuardian",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Information);
+            }
+            else
+            {
+                var win = new UpdateAvailableWindow(info, _store, _exitApp);
+                win.Show();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(
+                $"Couldn't reach the update server.\n\n{ex.Message}",
+                "GamerGuardian",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Warning);
+        }
+        finally
+        {
+            btn.Content = prev;
+            btn.IsEnabled = true;
+        }
     }
 
     private async void ApplyButton_Click(object sender, RoutedEventArgs e)

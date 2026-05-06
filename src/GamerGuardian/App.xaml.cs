@@ -147,7 +147,7 @@ public partial class App : WpfApplication
                 _settingsWindow.Activate();
                 return;
             }
-            _settingsWindow = new SettingsWindow(_store!, _allMonitors!);
+            _settingsWindow = new SettingsWindow(_store!, _allMonitors!, exitApp: ExitApp);
             _settingsWindow.Saved += () => _monitor?.TriggerNow();
             _settingsWindow.Closed += (_, _) =>
             {
