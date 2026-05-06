@@ -17,6 +17,7 @@ public sealed class MonitorService : IDisposable
 
     public bool IsUserPaused => _userPaused;
     public event Action<bool>? PauseChanged;
+    public event Action<IReadOnlyList<DriftItem>>? AutoAppliedRebootRequired;
 
     public void SetPaused(bool paused)
     {
@@ -76,10 +77,19 @@ public sealed class MonitorService : IDisposable
             _store.Save(config);
 
             var auto = drifted.Where(d => d.AutoApply).ToList();
+            var autoRebootRequired = new List<DriftItem>();
             foreach (var item in auto)
             {
-                try { await item.Apply(); } catch { }
+                try
+                {
+                    await item.Apply();
+                    if (item.RequiresReboot) autoRebootRequired.Add(item);
+                }
+                catch { }
             }
+            if (autoRebootRequired.Count > 0)
+                AutoAppliedRebootRequired?.Invoke(autoRebootRequired);
+
             var prompt = drifted.Where(d => !d.AutoApply).ToList();
             if (prompt.Count > 0)
                 await _onDriftAsync(new DriftReport(prompt));

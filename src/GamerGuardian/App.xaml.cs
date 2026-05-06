@@ -70,6 +70,19 @@ public partial class App : WpfApplication
             new PowerPlanMonitor(),
         };
         _monitor = new MonitorService(_store, _allMonitors, report => _notifier.ShowAsync(report));
+        _monitor.AutoAppliedRebootRequired += items =>
+        {
+            var descriptions = items.Select(i => i.Description).ToList();
+            Dispatcher.BeginInvoke(() =>
+            {
+                try
+                {
+                    var win = new GamerGuardian.UI.RebootPendingWindow(descriptions);
+                    win.Show();
+                }
+                catch { }
+            });
+        };
 
         _tray = new TrayIconHost();
         _tray.OpenSettingsRequested += ShowSettings;

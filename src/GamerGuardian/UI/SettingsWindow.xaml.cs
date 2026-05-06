@@ -48,7 +48,7 @@ public partial class SettingsWindow : FluentWindow
     }
 
     private static string OnOffText(bool? state) =>
-        state is null ? "not detected" : (state.Value ? "On" : "Off");
+        state is null ? "not detected" : (state.Value ? "Enabled" : "Disabled");
 
     private static string GamingDefaultText(bool? state) =>
         state is null ? "not detected" : (state.Value ? "Gaming-optimized" : "Default");
@@ -62,24 +62,24 @@ public partial class SettingsWindow : FluentWindow
             name: "Game Mode",
             description: "Tells Windows to prioritize the running game and suppress background work.",
             currentText: $"Current: {OnOffText(SafeRead(GameModeMonitor.ReadCurrent))}",
-            defaultText: "Default: On",
-            onLabel: "On", offLabel: "Off",
+            defaultText: "Default: Enabled",
+            onLabel: "Enabled", offLabel: "Disabled",
             pref: g.GameMode, groupName: "gm"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Game DVR background recording",
             description: "Always-on game capture. Costs CPU/GPU during gameplay; off is gaming-recommended.",
             currentText: $"Current: {OnOffText(SafeRead(GameDvrMonitor.ReadCurrent))}",
-            defaultText: "Default: On",
-            onLabel: "On", offLabel: "Off",
+            defaultText: "Default: Enabled",
+            onLabel: "Enabled", offLabel: "Disabled",
             pref: g.GameDvr, groupName: "dvr"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Hardware-accelerated GPU Scheduling (HAGS)",
             description: "Lets the GPU manage its own command queue. Lower latency on supported GPUs.",
             currentText: $"Current: {OnOffText(SafeRead(HagsMonitor.ReadCurrent))}",
-            defaultText: "Default: On (Win11)",
-            onLabel: "On", offLabel: "Off",
+            defaultText: "Default: Enabled (Win11)",
+            onLabel: "Enabled", offLabel: "Disabled",
             requiresReboot: true,
             pref: g.Hags, groupName: "hags"));
 
@@ -87,8 +87,8 @@ public partial class SettingsWindow : FluentWindow
             name: "Memory Integrity / VBS (Core Isolation)",
             description: "Hypervisor-Enforced Code Integrity. Disabling recovers ~5–15% gaming perf but reduces malware protection.",
             currentText: $"Current: {OnOffText(SafeRead(MemoryIntegrityMonitor.ReadCurrent))}",
-            defaultText: "Default: On (Win11)",
-            onLabel: "On", offLabel: "Off",
+            defaultText: "Default: Enabled (Win11)",
+            onLabel: "Enabled", offLabel: "Disabled",
             requiresReboot: true,
             pref: g.MemoryIntegrity, groupName: "memint"));
 
@@ -105,7 +105,7 @@ public partial class SettingsWindow : FluentWindow
             name: "Network Throttling",
             description: "Multimedia packet pacing. Disabling reduces network jitter for online games.",
             currentText: $"Current: {GamingDefaultText(SafeRead(NetworkThrottlingMonitor.ReadCurrent))}",
-            defaultText: "Default: 10    Gaming: disabled",
+            defaultText: "Default: 10    Gaming: Disabled",
             onLabel: "Gaming", offLabel: "Default",
             pref: g.NetworkThrottling, groupName: "netthr"));
 
@@ -113,7 +113,7 @@ public partial class SettingsWindow : FluentWindow
             name: "USB Selective Suspend (global)",
             description: "Lets Windows suspend idle USB devices. Disabling keeps mice/keyboards/headsets always responsive.",
             currentText: $"Current: {GamingDefaultText(SafeRead(UsbSelectiveSuspendMonitor.ReadCurrent))}",
-            defaultText: "Default: enabled    Gaming: disabled",
+            defaultText: "Default: Enabled    Gaming: Disabled",
             onLabel: "Gaming", offLabel: "Default",
             requiresReboot: true,
             pref: g.UsbSelectiveSuspend, groupName: "usbsus"));
@@ -130,16 +130,16 @@ public partial class SettingsWindow : FluentWindow
             name: "Mouse \"Enhance pointer precision\"",
             description: "Acceleration curve applied to mouse movement. Most gamers want this off for consistent aim.",
             currentText: $"Current: {OnOffText(SafeRead(MousePrecisionMonitor.ReadCurrent))}",
-            defaultText: "Default: On",
-            onLabel: "On", offLabel: "Off",
+            defaultText: "Default: Enabled",
+            onLabel: "Enabled", offLabel: "Disabled",
             pref: g.MousePrecision, groupName: "mp"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Fullscreen optimizations (global)",
             description: "Borderless-windowed compositing layer. Generally fine; some titles prefer it off.",
             currentText: $"Current: {OnOffText(SafeRead(FullscreenOptimizationsMonitor.ReadCurrent))}",
-            defaultText: "Default: On",
-            onLabel: "On", offLabel: "Off",
+            defaultText: "Default: Enabled",
+            onLabel: "Enabled", offLabel: "Disabled",
             pref: g.FullscreenOptimizations, groupName: "fso"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
@@ -147,7 +147,7 @@ public partial class SettingsWindow : FluentWindow
             description: "DirectX user-pref VRR toggle. Smoother frame pacing on G-Sync / FreeSync displays.",
             currentText: $"Current: {OnOffText(SafeRead(VrrMonitor.ReadCurrent))}",
             defaultText: "Default: not set",
-            onLabel: "On", offLabel: "Off",
+            onLabel: "Enabled", offLabel: "Disabled",
             pref: g.Vrr, groupName: "vrr"));
 
         var planNames = PowerPlanMonitor.ListAvailablePlans();
