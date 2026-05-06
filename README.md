@@ -254,7 +254,7 @@ Fields:
 | Field | Meaning |
 |---|---|
 | **timestamp** | Local time of the apply |
-| **source** | `manual` (you clicked Apply) · `auto` (silent auto-apply during a poll tick) · `ui` (preference toggle in Settings) · `pause` (polling paused/resumed for fullscreen, benchmark, or manual pause) |
+| **source** | `manual` (you clicked Apply) · `auto` (silent auto-apply during a poll tick) · `ui` (preference toggle in Settings) · `pause` (polling paused/resumed for fullscreen, benchmark, or manual pause) · `trim` (periodic memory snapshot — useful for verifying the app doesn't leak over hours of runtime) |
 | **STATUS** | `OK` if the after-read matched the target; `FAILED` otherwise (UAC declined, registry locked, etc.) |
 | **Mechanism** | The exact registry path + value type, or the Win32 / DLL function called for non-registry settings |
 | **Before** | The raw bytes / number / string GamerGuardian read before the write, plus a parenthesized friendly description |

@@ -70,6 +70,29 @@ public static class ChangeLogger
         catch { }
     }
 
+    /// <summary>
+    /// Records a working-set / private-memory snapshot. Called on each periodic trim
+    /// so users can `grep "[trim ]" changes.log` and see whether memory holds steady
+    /// over hours, instead of guessing.
+    /// </summary>
+    public static void LogMemorySnapshot(string trigger)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(LogPath);
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+            RotateIfNeeded();
+            using var p = System.Diagnostics.Process.GetCurrentProcess();
+            long ws = p.WorkingSet64 / 1024 / 1024;
+            long priv = p.PrivateMemorySize64 / 1024 / 1024;
+            int handles = p.HandleCount;
+            int threads = p.Threads.Count;
+            var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [trim  ] MEM    WS={ws}MB  Priv={priv}MB  Handles={handles}  Threads={threads}  ({trigger})";
+            File.AppendAllText(LogPath, line + Environment.NewLine, Encoding.UTF8);
+        }
+        catch { }
+    }
+
     private static string Format(ApplyResult r, string source)
     {
         var status = r.Verified ? "OK" : "FAILED";

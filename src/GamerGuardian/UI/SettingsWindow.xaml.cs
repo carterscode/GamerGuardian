@@ -417,6 +417,19 @@ public partial class SettingsWindow : FluentWindow
         catch { }
     }
 
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+        try
+        {
+            DisplaysList.ItemsSource = null;
+            GlobalTogglesList.ItemsSource = null;
+            DisplayRows.Clear();
+            GlobalToggleRows.Clear();
+        }
+        catch { }
+    }
+
     private void OnRowPrefChanged(string settingName, string field, string before, string after)
     {
         try { _store.Save(_config); } catch { }

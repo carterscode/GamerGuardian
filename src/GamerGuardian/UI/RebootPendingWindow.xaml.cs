@@ -30,4 +30,16 @@ public partial class RebootPendingWindow : FluentWindow
     }
 
     private void LaterButton_Click(object sender, RoutedEventArgs e) => Close();
+
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+        try
+        {
+            ItemsList.ItemsSource = null;
+            Content = null;
+            DataContext = null;
+        }
+        catch { }
+    }
 }

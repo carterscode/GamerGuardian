@@ -46,6 +46,17 @@ public partial class UpdateAvailableWindow : FluentWindow
 
     private void LaterButton_Click(object sender, RoutedEventArgs e) => Close();
 
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+        try
+        {
+            Content = null;
+            DataContext = null;
+        }
+        catch { }
+    }
+
     private async void InstallButton_Click(object sender, RoutedEventArgs e)
     {
         SkipButton.IsEnabled = false;

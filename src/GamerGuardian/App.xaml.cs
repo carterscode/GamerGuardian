@@ -79,6 +79,7 @@ public partial class App : WpfApplication
                 try
                 {
                     var win = new GamerGuardian.UI.RebootPendingWindow(descriptions);
+                    win.Closed += (_, _) => ReleaseWindow(win);
                     win.Show();
                 }
                 catch { }
@@ -152,13 +153,16 @@ public partial class App : WpfApplication
             _settingsWindow.Saved += () => _monitor?.TriggerNow();
             _settingsWindow.Closed += (_, _) =>
             {
+                ReleaseWindow(_settingsWindow);
                 _settingsWindow = null;
                 _ = Dispatcher.BeginInvoke(() =>
                 {
+                    System.Runtime.GCSettings.LargeObjectHeapCompactionMode = System.Runtime.GCLargeObjectHeapCompactionMode.CompactOnce;
                     GC.Collect(2, GCCollectionMode.Aggressive, blocking: true, compacting: true);
                     GC.WaitForPendingFinalizers();
                     GC.Collect();
                     GamerGuardian.Native.Psapi.TrimSelf();
+                    GamerGuardian.Services.ChangeLogger.LogMemorySnapshot("settings-closed");
                 }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
             };
             _settingsWindow.Show();
@@ -174,6 +178,21 @@ public partial class App : WpfApplication
         _tray?.Dispose();
         _monitor?.Dispose();
         Shutdown();
+    }
+
+    /// <summary>
+    /// Frees the visual tree associated with a Window so the heap can reclaim it.
+    /// WPF won't release Content/DataContext refs on its own after Close.
+    /// </summary>
+    private static void ReleaseWindow(System.Windows.Window? window)
+    {
+        if (window is null) return;
+        try
+        {
+            window.Content = null;
+            window.DataContext = null;
+        }
+        catch { }
     }
 
     private static void LogException(string source, Exception? ex)

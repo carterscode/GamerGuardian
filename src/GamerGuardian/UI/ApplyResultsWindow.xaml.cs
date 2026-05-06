@@ -25,6 +25,18 @@ public partial class ApplyResultsWindow : FluentWindow
 
     private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();
 
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+        try
+        {
+            Content = null;
+            DataContext = null;
+            ItemsList.ItemsSource = null;
+        }
+        catch { }
+    }
+
     private void RebootButton_Click(object sender, RoutedEventArgs e)
     {
         try

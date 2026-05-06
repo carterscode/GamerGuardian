@@ -1,3 +1,4 @@
+using System.Runtime;
 using GamerGuardian.Models;
 using GamerGuardian.Monitors;
 using GamerGuardian.Native;
@@ -119,10 +120,13 @@ public sealed class MonitorService : IDisposable
             if (prompt.Count > 0)
                 await _onDriftAsync(new DriftReport(prompt));
 
-            if (++_ticksSinceTrim >= 10)
+            if (++_ticksSinceTrim >= 5)
             {
                 _ticksSinceTrim = 0;
+                GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+                GC.Collect(2, GCCollectionMode.Optimized, blocking: false, compacting: true);
                 Psapi.TrimSelf();
+                ChangeLogger.LogMemorySnapshot("trim");
             }
         }
         finally

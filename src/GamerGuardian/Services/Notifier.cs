@@ -22,6 +22,7 @@ public sealed class Notifier
                 _current = win;
                 win.Closed += (_, _) =>
                 {
+                    try { win.Content = null; win.DataContext = null; } catch { }
                     if (ReferenceEquals(_current, win)) _current = null;
                     tcs.TrySetResult();
                 };
