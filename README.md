@@ -65,9 +65,9 @@ For each setting you choose: **monitor or not**, **desired value**, and whether 
 
 | Setting | Notes |
 |---|---|
-| [**HDR**](https://support.microsoft.com/en-us/windows/turn-on-or-off-hdr-and-wcg-on-your-windows-pc-fcb31115-c0cd-4c2c-8029-dd8b8a4fcf5e) | On/off via Windows Display Configuration (CCD) API. |
-| [**Refresh rate**](https://support.microsoft.com/en-us/windows/change-your-display-refresh-rate-in-windows-c8ea729e-0678-015c-c415-f806f04aae5a) | Maximum supported, or pin a specific Hz. |
-| **Resolution** | Pin to a specific resolution (opt-in). |
+| [**HDR**](https://support.microsoft.com/en-us/windows/hdr-settings-in-windows-2d767185-38ec-7fdc-6f97-bbc6c5ef24e6) | On/off via Windows Display Configuration (CCD) API. |
+| [**Refresh rate**](https://support.microsoft.com/en-us/windows/change-the-refresh-rate-on-your-monitor-in-windows-c8ea729e-0678-015c-c415-f806f04aae5a) | Maximum supported, or pin a specific Hz. |
+| [**Resolution**](https://support.microsoft.com/en-us/windows/change-your-screen-resolution-and-layout-in-windows-5effefe3-2eac-e306-0b5d-2073b765876b) | Pin to a specific resolution (opt-in). |
 
 ### Global gaming settings
 
@@ -75,11 +75,11 @@ For each setting you choose: **monitor or not**, **desired value**, and whether 
 |---|---|:---:|
 | [**HAGS** (Hardware-accelerated GPU Scheduling)](https://devblogs.microsoft.com/directx/hardware-accelerated-gpu-scheduling/) | Lets the GPU manage its own command queue. Lower latency on supported GPUs. | ✓ |
 | [**Memory Integrity / VBS**](https://support.microsoft.com/en-us/windows/core-isolation-e30ed737-17d8-42f3-a2a9-87521df09b78) | Hypervisor-Enforced Code Integrity. Disabling recovers ~5–15% gaming perf at the cost of reduced malware protection. | ✓ |
-| [**Game Mode**](https://support.microsoft.com/en-us/windows/use-game-mode-while-gaming-on-your-windows-pc-388de80f-aef3-bdda-2b66-3c11001e4b50) | Tells Windows to prioritize the running game and suppress background work. | |
+| [**Game Mode**](https://support.xbox.com/en-US/help/games-apps/game-setup-and-play/use-game-mode-gaming-on-pc) | Tells Windows to prioritize the running game and suppress background work. | |
 | [**Game DVR background recording**](https://support.xbox.com/help/games-apps/game-dvr/game-dvr-windows-10) | Always-on game capture. Costs CPU/GPU during gameplay; off is gaming-recommended. | |
-| **Mouse "Enhance pointer precision"** | Acceleration curve applied to mouse movement. Most gamers want this off for consistent aim. | |
-| [**Fullscreen optimizations**](https://devblogs.microsoft.com/directx/demystifying-full-screen-optimizations-api/) | Borderless-windowed compositing layer for fullscreen apps. | |
-| [**Variable Refresh Rate (Windows)**](https://learn.microsoft.com/en-us/windows-hardware/drivers/display/variable-refresh-rate) | DirectX user-pref VRR toggle. Smoother frame pacing on G-Sync / FreeSync displays. | |
+| [**Mouse "Enhance pointer precision"**](https://support.microsoft.com/en-us/windows/change-mouse-settings-e81356a4-0e74-fe38-7d01-9d79fbf8712b) | Acceleration curve applied to mouse movement. Most gamers want this off for consistent aim. | |
+| [**Fullscreen optimizations**](https://devblogs.microsoft.com/directx/demystifying-full-screen-optimizations/) | Borderless-windowed compositing layer for fullscreen apps. | |
+| [**Variable Refresh Rate (Windows)**](https://devblogs.microsoft.com/directx/os-variable-refresh-rate/) | DirectX user-pref VRR toggle. Smoother frame pacing on G-Sync / FreeSync displays. | |
 | [**Power plan**](https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/configure-power-settings) | Active Windows power scheme. High Performance keeps CPU clocks elevated. | |
 | [**System Responsiveness**](https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service) | CPU percentage Windows reserves for non-multimedia tasks. Default 20 → 10 frees that headroom for games. | ✓ |
 | [**Network Throttling**](https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service) | Multimedia packet pacing. Disabling reduces network jitter for online games. | |
