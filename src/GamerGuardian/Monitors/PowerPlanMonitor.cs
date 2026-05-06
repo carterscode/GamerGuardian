@@ -1,6 +1,5 @@
-using System.Diagnostics;
-using System.Text.RegularExpressions;
 using GamerGuardian.Models;
+using GamerGuardian.Native;
 
 namespace GamerGuardian.Monitors;
 
@@ -47,51 +46,22 @@ public sealed class PowerPlanMonitor : IMonitoredSetting
         _ => Balanced,
     };
 
-    public static Guid GetActivePlan()
-    {
-        var output = Run("powercfg.exe", "/getactivescheme");
-        if (output is null) return Guid.Empty;
-        var m = Regex.Match(output, @"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})", RegexOptions.IgnoreCase);
-        return m.Success ? Guid.Parse(m.Value) : Guid.Empty;
-    }
+    public static Guid GetActivePlan() => Powrprof.GetActiveScheme();
 
     public static Dictionary<Guid, string> ListAvailablePlans()
     {
-        var dict = new Dictionary<Guid, string>();
-        var output = Run("powercfg.exe", "/list");
-        if (output is null) return dict;
-        foreach (Match m in Regex.Matches(output, @"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s+\(([^)]+)\)", RegexOptions.IgnoreCase))
-        {
-            if (Guid.TryParse(m.Groups[1].Value, out var g))
-                dict[g] = m.Groups[2].Value.Trim();
-        }
-        return dict;
-    }
-
-    public static bool SetActivePlan(Guid g) => Run("powercfg.exe", $"/setactive {g}") != null;
-
-    private static string? Run(string file, string args)
-    {
+        var result = new Dictionary<Guid, string>();
         try
         {
-            var psi = new ProcessStartInfo
+            foreach (var g in Powrprof.EnumerateSchemes())
             {
-                FileName = file,
-                Arguments = args,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-            };
-            using var p = Process.Start(psi);
-            if (p is null) return null;
-            var output = p.StandardOutput.ReadToEnd();
-            p.WaitForExit(5_000);
-            return p.HasExited && p.ExitCode == 0 ? output : null;
+                var name = Powrprof.ReadFriendlyName(g) ?? g.ToString();
+                result[g] = name;
+            }
         }
-        catch
-        {
-            return null;
-        }
+        catch { }
+        return result;
     }
+
+    public static bool SetActivePlan(Guid g) => Powrprof.SetActiveScheme(g);
 }

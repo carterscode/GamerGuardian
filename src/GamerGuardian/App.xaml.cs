@@ -75,6 +75,12 @@ public partial class App : WpfApplication
 
         bool isFirstRun = !System.IO.File.Exists(_store.ConfigPath);
         if (isFirstRun || e.Args.Any(a => a == "--show-settings")) ShowSettings();
+
+        _ = Dispatcher.BeginInvoke(() =>
+        {
+            GC.Collect();
+            GamerGuardian.Native.Psapi.TrimSelf();
+        }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
     }
 
     private void ShowSettings()
@@ -88,7 +94,17 @@ public partial class App : WpfApplication
             }
             _settingsWindow = new SettingsWindow(_store!);
             _settingsWindow.Saved += () => _monitor?.TriggerNow();
-            _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+            _settingsWindow.Closed += (_, _) =>
+            {
+                _settingsWindow = null;
+                _ = Dispatcher.BeginInvoke(() =>
+                {
+                    GC.Collect(2, GCCollectionMode.Aggressive, blocking: true, compacting: true);
+                    GC.WaitForPendingFinalizers();
+                    GC.Collect();
+                    GamerGuardian.Native.Psapi.TrimSelf();
+                }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            };
             _settingsWindow.Show();
         }
         catch (Exception ex)

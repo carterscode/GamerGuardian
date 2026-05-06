@@ -1,5 +1,6 @@
 using GamerGuardian.Models;
 using GamerGuardian.Monitors;
+using GamerGuardian.Native;
 
 namespace GamerGuardian.Services;
 
@@ -11,6 +12,7 @@ public sealed class MonitorService : IDisposable
     private readonly System.Threading.Timer _timer;
     private readonly object _lock = new();
     private bool _running;
+    private int _ticksSinceTrim;
 
     public MonitorService(
         ConfigStore store,
@@ -47,6 +49,11 @@ public sealed class MonitorService : IDisposable
         }
         try
         {
+            if (Shell32.IsFullscreenAppActive())
+            {
+                return;
+            }
+
             var config = _store.Load();
             var drifted = new List<DriftItem>();
             foreach (var m in _monitors)
@@ -64,6 +71,12 @@ public sealed class MonitorService : IDisposable
             var prompt = drifted.Where(d => !d.AutoApply).ToList();
             if (prompt.Count > 0)
                 await _onDriftAsync(new DriftReport(prompt));
+
+            if (++_ticksSinceTrim >= 10)
+            {
+                _ticksSinceTrim = 0;
+                Psapi.TrimSelf();
+            }
         }
         finally
         {
