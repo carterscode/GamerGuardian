@@ -7,9 +7,9 @@
 A lightweight Windows 11 tray app that watches gaming-related display and system settings, alerts you (or auto-fixes) when they drift from your preferences, and stays out of the way during gameplay and benchmarks.
 
 [![Latest release](https://img.shields.io/github/v/release/carterscode/GamerGuardian?label=latest&color=brightgreen)](https://github.com/carterscode/GamerGuardian/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/carterscode/GamerGuardian/total?color=blue)](https://github.com/carterscode/GamerGuardian/releases)
+[![Releases](https://img.shields.io/badge/releases-download-blue)](https://github.com/carterscode/GamerGuardian/releases)
 [![Build](https://img.shields.io/github/actions/workflow/status/carterscode/GamerGuardian/release.yml?branch=main&label=build)](https://github.com/carterscode/GamerGuardian/actions/workflows/release.yml)
-[![License](https://img.shields.io/github/license/carterscode/GamerGuardian?color=lightgrey)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2011-0078d4)](#compatibility)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512bd4)](https://dotnet.microsoft.com/)
 
