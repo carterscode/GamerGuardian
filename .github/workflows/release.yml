@@ -2,37 +2,61 @@ name: release
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'installer/**'
+      - '.github/workflows/release.yml'
+    tags: ['v*.*.*']
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version (e.g. 1.0.0)'
-        required: true
-        default: '0.0.1'
+        description: 'Version (e.g. 1.0.0). Leave blank to auto-bump from latest tag.'
+        required: false
+        default: ''
 
 permissions:
   contents: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   release:
+    if: >
+      github.event_name == 'workflow_dispatch'
+      || startsWith(github.ref, 'refs/tags/v')
+      || (github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip release]'))
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Resolve version
         id: ver
         shell: pwsh
         run: |
+          $manual = '${{ github.event.inputs.version }}'
           if ($env:GITHUB_REF -like 'refs/tags/v*') {
             $v = $env:GITHUB_REF -replace 'refs/tags/v',''
-          } elseif ('${{ github.event.inputs.version }}' -ne '') {
-            $v = '${{ github.event.inputs.version }}'
+            $createTag = $false
+          } elseif (-not [string]::IsNullOrWhiteSpace($manual)) {
+            $v = $manual
+            $createTag = $true
           } else {
-            $v = '0.0.0'
+            $latest = (git tag --list 'v*.*.*' --sort=-v:refname | Select-Object -First 1)
+            if ([string]::IsNullOrWhiteSpace($latest)) { $latest = 'v0.0.0' }
+            $parts = ($latest -replace '^v','').Split('.')
+            $patch = [int]$parts[2] + 1
+            $v = "$($parts[0]).$($parts[1]).$patch"
+            $createTag = $true
           }
           "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          Write-Host "Building version $v"
+          "create_tag=$($createTag.ToString().ToLower())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Building version $v (create_tag=$createTag)"
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
@@ -83,11 +107,12 @@ jobs:
           path: publish/GamerGuardian.exe
 
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ steps.ver.outputs.version }}
           name: GamerGuardian ${{ steps.ver.outputs.version }}
           generate_release_notes: true
+          target_commitish: ${{ github.sha }}
           files: |
             installer/Output/GamerGuardian-Setup-${{ steps.ver.outputs.version }}.exe
             publish/GamerGuardian.exe
