@@ -13,6 +13,19 @@ public sealed class MonitorService : IDisposable
     private readonly object _lock = new();
     private bool _running;
     private int _ticksSinceTrim;
+    private bool _userPaused;
+
+    public bool IsUserPaused => _userPaused;
+    public event Action<bool>? PauseChanged;
+
+    public void SetPaused(bool paused)
+    {
+        if (_userPaused == paused) return;
+        _userPaused = paused;
+        PauseChanged?.Invoke(paused);
+    }
+
+    public void TogglePaused() => SetPaused(!_userPaused);
 
     public MonitorService(
         ConfigStore store,
@@ -49,10 +62,9 @@ public sealed class MonitorService : IDisposable
         }
         try
         {
-            if (Shell32.IsFullscreenAppActive())
-            {
-                return;
-            }
+            if (_userPaused) return;
+            if (Shell32.IsFullscreenAppActive()) return;
+            if (BenchmarkDetector.GetRunningBenchmark() is not null) return;
 
             var config = _store.Load();
             var drifted = new List<DriftItem>();

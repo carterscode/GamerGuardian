@@ -31,6 +31,7 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=Output
 OutputBaseFilename=GamerGuardian-Setup-{#AppVersion}
+SetupIconFile=..\src\GamerGuardian\Assets\AppIcon.ico
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern

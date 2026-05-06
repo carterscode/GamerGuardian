@@ -70,7 +70,9 @@ public partial class App : WpfApplication
         _tray = new TrayIconHost();
         _tray.OpenSettingsRequested += ShowSettings;
         _tray.CheckNowRequested += () => _monitor.TriggerNow();
+        _tray.PauseToggleRequested += () => _monitor.TogglePaused();
         _tray.ExitRequested += ExitApp;
+        _monitor.PauseChanged += paused => _tray?.SetPaused(paused);
 
         _monitor.Start();
 
@@ -164,6 +166,10 @@ public partial class App : WpfApplication
 
         Run("displays", () => string.Join(", ",
             GamerGuardian.Native.DisplayHelper.EnumerateActiveDisplays().Select(d => d.DisplayLabel)));
+        Run("Shell32.IsFullscreenAppActive",
+            () => GamerGuardian.Native.Shell32.IsFullscreenAppActive().ToString());
+        Run("BenchmarkDetector.GetRunningBenchmark",
+            () => GamerGuardian.Services.BenchmarkDetector.GetRunningBenchmark() ?? "(none)");
 
         Run("HagsMonitor.ReadCurrent",
             () => GamerGuardian.Monitors.HagsMonitor.ReadCurrent()?.ToString() ?? "(null)");

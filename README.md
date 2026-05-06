@@ -27,12 +27,14 @@ For each setting you choose: monitor or not, desired value, and whether to auto-
 - **Drift notifications** — discreet bottom-right popup with all drifted settings; one-click "Apply All".
 - **Auto-apply per setting** — opt in to silent correction.
 - **Launches at Windows startup** — registers itself in `HKCU\...\Run`.
-- **Single-instance** tray app, dark UI, no nags.
+- **Manual pause** from the tray — right-click → *Pause monitoring*. Useful for benchmarks the auto-detector doesn't know about.
+- **Light / Dark / System** theme toggle. Native Win11 Fluent design via WPF-UI.
+- **Single-instance** tray app, no nags.
 - **`--test` CLI flag** — runs every monitor's read path and writes results to `%TEMP%\gamerguardian_selftest.txt` (no UI). Useful for QA / debugging on weird hardware.
 
 ## Roadmap
 
-Color bit depth (currently no public Windows API for setting it without driver SDKs — read-only support is possible later) and Focus Assist / DND. Windows 10 support. Optional code signing via SignPath OSS.
+Color bit depth (no public Windows API for setting it without driver SDKs — read-only support is possible later). Focus Assist / DND. Windows 10 support. Optional code signing via SignPath OSS.
 
 ## Install
 
@@ -43,7 +45,7 @@ Color bit depth (currently no public Windows API for setting it without driver S
 
 ## Usage
 
-- **Tray icon** → right-click for *Settings*, *Check now*, *Exit*. Double-click → settings.
+- **Tray icon** → right-click for *Settings*, *Check now*, *Pause monitoring*, *Exit*. Double-click → settings.
 - **Settings window** lets you toggle "monitor this setting", set your desired value, and opt into "auto-apply silently when it drifts".
 - **Drift popup** appears when something differs from your preference and you haven't enabled auto-apply.
 
@@ -91,23 +93,18 @@ The ~136 MB private (committed) memory at runtime is the irreducible cost of bun
 **CPU during polling:**
 
 - Default 30s interval. Each poll runs ~10ms of in-memory API calls — below the noise floor on any modern CPU.
-- No process spawning. The original v0.1.x build invoked `powercfg.exe` per poll; this was replaced with direct `powrprof.dll` P/Invoke (microseconds vs ~50ms, no disk I/O, no process creation).
-- All registry/API reads are blocking but synchronous and microsecond-scale.
+- No process spawning. Power plan reads/writes go through `powrprof.dll` P/Invoke directly (microseconds, no disk I/O).
+- All registry / Win32 reads are synchronous and microsecond-scale.
 
-**Pauses entirely during fullscreen gameplay:**
+**Pauses automatically during gameplay or benchmarks:**
 
-Two-stage detection covers all common gaming display modes:
+Three independent detectors. If any fires, the poll tick is skipped — no drift checks, no notifications, no registry / API calls.
 
-1. `SHQueryUserNotificationState` from `shell32.dll` (the same API Windows uses for its own Do-Not-Disturb logic) detects exclusive-fullscreen D3D, presentation mode, and fullscreen UWP apps. Catches games like StarCraft 2, older esports titles in true fullscreen.
-2. **Foreground window vs monitor bounds check.** The above API misses *borderless windowed* (the default for most modern games — Apex, Valorant, CS2, Fortnite, etc.). For that, we get the foreground window's rect and the monitor's full bounds (including taskbar area) via `GetForegroundWindow` + `MonitorFromWindow` + `GetMonitorInfo`. If the window covers the entire monitor edge-to-edge, it's borderless fullscreen — pause polling. A regular maximized window (Chrome, VSCode, etc.) matches `rcWork` (excludes taskbar), not `rcMonitor`, so this won't false-positive on those.
+1. **Exclusive fullscreen / presentation mode.** `SHQueryUserNotificationState` from `shell32.dll` (the same API Windows uses for its own Do-Not-Disturb logic) detects exclusive-fullscreen D3D, presentation mode, and fullscreen UWP apps.
+2. **Borderless fullscreen.** The above API misses borderless windowed games — the default for most modern titles (Apex, Valorant, CS2, Fortnite, etc.). For that, GamerGuardian compares the foreground window's rect to the monitor's full bounds via `GetForegroundWindow` + `MonitorFromWindow` + `GetMonitorInfo`. A window covering the entire monitor edge-to-edge (matching `rcMonitor`, not `rcWork`) is treated as fullscreen-like. A maximized regular window (Chrome, VSCode, etc.) matches `rcWork` and is correctly ignored.
+3. **Known benchmarks.** A list of common benchmark executables (3DMark, Cinebench, Geekbench, AIDA64, FurMark, Unigine Heaven/Valley/Superposition, OCCT, Prime95, y-cruncher, CrystalDiskMark, PCMark, PassMark, Time Spy, etc.) is checked against `Process.GetProcesses()`. If any of them is running, polling is paused until they exit.
 
-When either check fires, GamerGuardian:
-
-- Skips drift checks
-- Skips notifications
-- Doesn't touch the registry, doesn't call `powrprof.dll`, doesn't enumerate displays
-
-Polling resumes the next tick after you alt-tab back to the desktop. So during actual gameplay, the app is genuinely doing nothing — no CPU, no syscalls, no allocations.
+You can also **manually pause** monitoring from the tray menu (right-click → *Pause monitoring*). Useful for any tool the auto-detector doesn't know about. Pause is in-memory only — restarting the app resumes monitoring.
 
 **Working-set trimming:**
 
@@ -117,15 +114,15 @@ Polling resumes the next tick after you alt-tab back to the desktop. So during a
 
 **Wake-up rate / interrupts:**
 
-- One timer wake every 30 seconds (configurable), skipped when fullscreen.
+- One timer wake every 30 seconds (configurable), skipped when paused / fullscreen / benchmark detected.
 - No high-frequency event subscriptions, no DPC callbacks, no kernel hooks.
 - The tray icon's message loop is the only persistent thread besides the polling timer.
 
-**Net effect:** during a gaming session, GamerGuardian is paused. While you're on the desktop, it's a ~25 MB tray app that wakes for 10ms every 30s. You shouldn't notice it.
+**Net effect:** during a gaming or benchmark session, GamerGuardian is paused. While you're on the desktop, it's a ~25 MB tray app that wakes for 10ms every 30s.
 
 ## Compatibility
 
-- Windows 11 (any version). Windows 10 support is planned for v2.
+- Windows 11 (any version).
 - x64 only.
 
 ## License
