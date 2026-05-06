@@ -332,12 +332,36 @@ public partial class SettingsWindow : FluentWindow
             try { drifted.AddRange(m.CheckDrift(_config)); }
             catch { /* per-monitor failures shouldn't break Apply */ }
         }
-        bool anyRebootRequired = false;
+
         foreach (var d in drifted)
         {
             try { await d.Apply(); }
-            catch { continue; }
-            if (d.RequiresReboot) anyRebootRequired = true;
+            catch { /* keep going; verification will catch failure */ }
+        }
+
+        var afterDrift = new List<DriftItem>();
+        foreach (var m in _monitors)
+        {
+            try { afterDrift.AddRange(m.CheckDrift(_config)); }
+            catch { }
+        }
+
+        var results = new List<ApplyResult>();
+        foreach (var d in drifted)
+        {
+            var stillDrifted = afterDrift.FirstOrDefault(a => a.SettingId == d.SettingId);
+            var verified = stillDrifted is null;
+            var afterValue = verified ? d.DesiredValue : (stillDrifted?.CurrentValue ?? d.CurrentValue);
+            results.Add(new ApplyResult(
+                SettingId: d.SettingId,
+                Description: d.Description,
+                Before: d.CurrentValue,
+                Desired: d.DesiredValue,
+                After: afterValue,
+                Verified: verified,
+                RequiresReboot: d.RequiresReboot,
+                Mechanism: SettingDocs.MechanismFor(d.SettingId),
+                VerifyCommand: SettingDocs.VerifyCommandFor(d.SettingId)));
         }
 
         Saved?.Invoke();
@@ -345,9 +369,10 @@ public partial class SettingsWindow : FluentWindow
         LoadGlobals();
         LoadDisplays();
 
-        if (anyRebootRequired)
+        if (results.Count > 0)
         {
-            PromptReboot();
+            var win = new ApplyResultsWindow(results) { Owner = this };
+            win.Show();
         }
 
         if (closeAfter) Close();
@@ -370,22 +395,6 @@ public partial class SettingsWindow : FluentWindow
 
         foreach (var row in GlobalToggleRows) row.WriteBack();
         foreach (var row in DisplayRows) row.WriteTo(_config);
-    }
-
-    private static void PromptReboot()
-    {
-        var result = System.Windows.MessageBox.Show(
-            "Some settings you applied require a Windows reboot to take effect.\n\nReboot now? (You'll have 30 seconds to cancel via 'shutdown /a' if needed.)",
-            "Reboot recommended",
-            System.Windows.MessageBoxButton.YesNo,
-            System.Windows.MessageBoxImage.Question);
-        if (result != System.Windows.MessageBoxResult.Yes) return;
-        try
-        {
-            System.Diagnostics.Process.Start("shutdown.exe",
-                "/r /t 30 /c \"Rebooting for GamerGuardian settings. Cancel: shutdown /a\"");
-        }
-        catch { /* user can reboot manually */ }
     }
 
     private void CancelButton_Click(object sender, RoutedEventArgs e) => Close();

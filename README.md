@@ -195,6 +195,40 @@ dotnet publish src/GamerGuardian/GamerGuardian.csproj `
 
 CI runs the same flags on every push to `main` (touching `src/`, `installer/`, or the release workflow) — see [`.github/workflows/release.yml`](.github/workflows/release.yml).
 
+## Verification — how do you know it's actually doing what it says?
+
+GamerGuardian doesn't ask you to take its word for it.
+
+**1. The Settings UI re-reads from the OS after Apply.** The "Current" line under each setting comes directly from the same Win32 / registry call any other tool would use. If that line changes after you click Apply, the change happened.
+
+**2. The Apply Results window** (v0.1.18+) shows per-setting:
+- Before value, target value, and the **after** value (re-read from the OS post-apply)
+- ✓ Verified or ✗ Failed
+- The exact registry path or Win32 API used
+- A copy-pasteable PowerShell command you can run yourself
+
+**3. Verify externally.** Every setting reads/writes a documented Windows location. Sample PowerShell:
+
+| Setting | PowerShell |
+|---|---|
+| HAGS | `(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers' -Name HwSchMode).HwSchMode` |
+| Memory Integrity | `(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity' -Name Enabled).Enabled` |
+| Game Mode | `(Get-ItemProperty 'HKCU:\Software\Microsoft\GameBar' -Name AutoGameModeEnabled).AutoGameModeEnabled` |
+| Game DVR | `(Get-ItemProperty 'HKCU:\System\GameConfigStore' -Name GameDVR_Enabled).GameDVR_Enabled` |
+| Mouse precision | `(Get-ItemProperty 'HKCU:\Control Panel\Mouse' -Name MouseSpeed).MouseSpeed` |
+| Fullscreen optimizations | `(Get-ItemProperty 'HKCU:\System\GameConfigStore' -Name GameDVR_FSEBehaviorMode).GameDVR_FSEBehaviorMode` |
+| VRR | `(Get-ItemProperty 'HKCU:\Software\Microsoft\DirectX\UserGpuPreferences' -Name DirectXUserGlobalSettings).DirectXUserGlobalSettings` |
+| System Responsiveness | `(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile' -Name SystemResponsiveness).SystemResponsiveness` |
+| Network Throttling | `(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile' -Name NetworkThrottlingIndex).NetworkThrottlingIndex` |
+| USB Selective Suspend | `(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\USB' -Name DisableSelectiveSuspend).DisableSelectiveSuspend` |
+| Games task profile | `Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games'` |
+| Power plan | `powercfg /getactivescheme` |
+| HDR / Refresh / Resolution | Settings → System → Display, or `dxdiag` |
+
+**4. The `--test` CLI flag** (`GamerGuardian.exe --test`) writes every monitor's current readout to `%TEMP%\gamerguardian_selftest.txt` — same call paths the live UI uses, so the file is always in sync with what Settings shows.
+
+**5. The source.** Every monitor is a single file under [`src/GamerGuardian/Monitors/`](src/GamerGuardian/Monitors/) that does exactly one thing each. Read [`HagsMonitor.cs`](src/GamerGuardian/Monitors/HagsMonitor.cs), say, to see the full code that reads and writes HAGS — about 30 lines.
+
 ## Compatibility
 
 - **Windows 11** (any version). Windows 10 support is on the roadmap.

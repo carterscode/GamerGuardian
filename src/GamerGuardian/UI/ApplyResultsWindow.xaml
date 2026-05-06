@@ -1,0 +1,97 @@
+<ui:FluentWindow x:Class="GamerGuardian.UI.ApplyResultsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="Apply results"
+        Width="640" Height="600"
+        MinWidth="520" MinHeight="380"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        ShowInTaskbar="True"
+        WindowBackdropType="Mica"
+        ExtendsContentIntoTitleBar="True"
+        WindowCornerPreference="Round">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="Apply results">
+            <ui:TitleBar.Icon>
+                <ui:SymbolIcon Symbol="CheckmarkCircle24"/>
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+
+        <DockPanel Grid.Row="1" Margin="20,8,20,16" LastChildFill="True">
+            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                <ui:Button x:Name="RebootButton" Content="Reboot now" MinWidth="110" Margin="0,0,8,0" Visibility="Collapsed" Click="RebootButton_Click"/>
+                <ui:Button x:Name="CloseButton" Content="Close" Appearance="Primary" MinWidth="90" Click="CloseButton_Click"/>
+            </StackPanel>
+
+            <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+                <TextBlock x:Name="HeaderText" FontSize="16" FontWeight="SemiBold"/>
+                <TextBlock x:Name="SubText"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           FontSize="12" Margin="0,3,0,0"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl x:Name="ItemsList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <ui:Card Padding="14" Margin="0,0,0,8">
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ui:SymbolIcon Grid.Column="0" Symbol="{Binding Icon}" Foreground="{Binding IconColor}" FontSize="20" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Description}" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                        <Border Grid.Column="2" Visibility="{Binding RebootBadgeVisibility}"
+                                                Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                                                CornerRadius="3" Padding="6,1" Margin="8,0,0,0"
+                                                VerticalAlignment="Center">
+                                            <TextBlock Text="reboot to take effect"
+                                                       Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                                       FontSize="10" FontWeight="SemiBold"/>
+                                        </Border>
+                                    </Grid>
+                                    <TextBlock Margin="30,4,0,0" FontSize="12">
+                                        <Run Text="Before: "/><Run Text="{Binding Before}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                        <Run Text="    →    "/>
+                                        <Run Text="Want: "/><Run Text="{Binding Desired}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                        <Run Text="    →    "/>
+                                        <Run Text="Now: "/><Run Text="{Binding After}" Foreground="{Binding IconColor}" FontWeight="SemiBold"/>
+                                    </TextBlock>
+                                    <TextBlock Margin="30,6,0,0" FontSize="11"
+                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                               TextWrapping="Wrap">
+                                        <Run Text="Mechanism: "/><Run Text="{Binding Mechanism}"/>
+                                    </TextBlock>
+                                    <Grid Margin="30,4,0,0" Visibility="{Binding HasVerifyCommandVisibility}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Grid.Column="0" Text="{Binding VerifyCommand, Mode=OneWay}" IsReadOnly="True"
+                                                 FontFamily="Consolas" FontSize="11"
+                                                 Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                                 BorderThickness="0" Padding="6,4"
+                                                 ToolTip="Verify yourself in PowerShell"/>
+                                        <ui:Button Grid.Column="1" Content="Copy" Margin="6,0,0,0" MinWidth="60"
+                                                   Tag="{Binding VerifyCommand}"
+                                                   Click="CopyButton_Click"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ui:Card>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </DockPanel>
+    </Grid>
+</ui:FluentWindow>
