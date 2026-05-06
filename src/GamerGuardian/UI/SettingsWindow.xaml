@@ -98,13 +98,22 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                            <TextBlock Text="{Binding CurrentText}"
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding Description}"
                                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                       FontSize="12" Margin="0,2,0,0"/>
+                                                       FontSize="12" Margin="0,3,0,0"
+                                                       TextWrapping="Wrap"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                <TextBlock Text="{Binding CurrentText}"
+                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                           FontSize="11" Margin="0,0,12,0"/>
+                                                <TextBlock Text="{Binding DefaultText}"
+                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                           FontSize="11"/>
+                                            </StackPanel>
                                         </StackPanel>
-                                        <StackPanel Grid.Column="1" Orientation="Vertical" Margin="16,0,0,0">
+                                        <StackPanel Grid.Column="1" Orientation="Vertical">
                                             <CheckBox Content="Monitor" IsChecked="{Binding Monitor}"/>
                                             <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
                                                 <TextBlock Text="Want:" Margin="0,4,8,0"/>
@@ -125,13 +134,22 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
                                 <TextBlock Text="Power plan" FontWeight="SemiBold"/>
-                                <TextBlock x:Name="PowerPlanCurrentText"
+                                <TextBlock Text="Active Windows power scheme — High Performance keeps CPU clocks elevated."
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           FontSize="12" Margin="0,2,0,0"/>
+                                           FontSize="12" Margin="0,3,0,0"
+                                           TextWrapping="Wrap"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                    <TextBlock x:Name="PowerPlanCurrentText"
+                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                               FontSize="11" Margin="0,0,12,0"/>
+                                    <TextBlock Text="Default: Balanced"
+                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                               FontSize="11"/>
+                                </StackPanel>
                             </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Vertical" Margin="16,0,0,0">
+                            <StackPanel Grid.Column="1" Orientation="Vertical">
                                 <CheckBox x:Name="PowerPlanMonitorCheck" Content="Monitor"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
                                     <TextBlock Text="Want:" Margin="0,6,8,0"/>

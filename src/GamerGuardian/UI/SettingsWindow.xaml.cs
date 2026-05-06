@@ -45,13 +45,11 @@ public partial class SettingsWindow : FluentWindow
         LoadDisplays();
     }
 
-    private static string CurrentText(bool? state, string verb = "Now", bool gamingMeansOn = false)
-    {
-        if (state is null) return $"{verb}: not detected";
-        if (gamingMeansOn)
-            return $"{verb}: {(state.Value ? "Gaming-optimized" : "Default")}";
-        return $"{verb}: {(state.Value ? "On" : "Off")}";
-    }
+    private static string OnOffText(bool? state) =>
+        state is null ? "not detected" : (state.Value ? "On" : "Off");
+
+    private static string GamingDefaultText(bool? state) =>
+        state is null ? "not detected" : (state.Value ? "Gaming-optimized" : "Default");
 
     private void LoadGlobals()
     {
@@ -59,41 +57,86 @@ public partial class SettingsWindow : FluentWindow
         var g = _config.Global;
 
         GlobalToggleRows.Add(new GlobalToggleRow(
-            "Game Mode", CurrentText(SafeRead(GameModeMonitor.ReadCurrent)), g.GameMode, "gm"));
+            name: "Game Mode",
+            description: "Tells Windows to prioritize the running game and suppress background work.",
+            currentText: $"Current: {OnOffText(SafeRead(GameModeMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            pref: g.GameMode, groupName: "gm"));
+
         GlobalToggleRows.Add(new GlobalToggleRow(
-            "Game DVR background recording", CurrentText(SafeRead(GameDvrMonitor.ReadCurrent)), g.GameDvr, "dvr"));
+            name: "Game DVR background recording",
+            description: "Always-on game capture. Costs CPU/GPU during gameplay; off is gaming-recommended.",
+            currentText: $"Current: {OnOffText(SafeRead(GameDvrMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            pref: g.GameDvr, groupName: "dvr"));
+
         GlobalToggleRows.Add(new GlobalToggleRow(
-            "Hardware-accelerated GPU Scheduling (HAGS) — reboot required",
-            CurrentText(SafeRead(HagsMonitor.ReadCurrent)), g.Hags, "hags"));
+            name: "Hardware-accelerated GPU Scheduling (HAGS)",
+            description: "Lets the GPU manage its own command queue. Lower latency on supported GPUs. Requires reboot.",
+            currentText: $"Current: {OnOffText(SafeRead(HagsMonitor.ReadCurrent))}",
+            defaultText: "Default: On (Win11)",
+            pref: g.Hags, groupName: "hags"));
+
         GlobalToggleRows.Add(new GlobalToggleRow(
-            "Memory Integrity / VBS (Core Isolation) — disable for gaming perf, reboot required",
-            CurrentText(SafeRead(MemoryIntegrityMonitor.ReadCurrent)), g.MemoryIntegrity, "memint"));
+            name: "Memory Integrity / VBS (Core Isolation)",
+            description: "Hypervisor-Enforced Code Integrity. Disabling recovers ~5–15% gaming perf but reduces malware protection. Requires reboot.",
+            currentText: $"Current: {OnOffText(SafeRead(MemoryIntegrityMonitor.ReadCurrent))}",
+            defaultText: "Default: On (Win11)",
+            pref: g.MemoryIntegrity, groupName: "memint"));
+
         GlobalToggleRows.Add(new GlobalToggleRow(
-            "System Responsiveness — frees ~10% CPU reserved for non-multimedia",
-            CurrentText(SafeRead(SystemResponsivenessMonitor.ReadCurrent), gamingMeansOn: true), g.SystemResponsiveness, "sysresp"));
+            name: "System Responsiveness",
+            description: "CPU percentage Windows reserves for non-multimedia tasks. Lower frees CPU for games.",
+            currentText: $"Current: {GamingDefaultText(SafeRead(SystemResponsivenessMonitor.ReadCurrent))}",
+            defaultText: "Default: 20    Gaming: 10",
+            pref: g.SystemResponsiveness, groupName: "sysresp"));
+
         GlobalToggleRows.Add(new GlobalToggleRow(
-            "Network Throttling — disable to reduce online-game packet jitter",
-            CurrentText(SafeRead(NetworkThrottlingMonitor.ReadCurrent), gamingMeansOn: true), g.NetworkThrottling, "netthr"));
+            name: "Network Throttling",
+            description: "Multimedia packet pacing. Disabling reduces network jitter for online games.",
+            currentText: $"Current: {GamingDefaultText(SafeRead(NetworkThrottlingMonitor.ReadCurrent))}",
+            defaultText: "Default: 10    Gaming: disabled",
+            pref: g.NetworkThrottling, groupName: "netthr"));
+
         GlobalToggleRows.Add(new GlobalToggleRow(
-            "USB Selective Suspend (global) — disable so peripherals never sleep mid-input",
-            CurrentText(SafeRead(UsbSelectiveSuspendMonitor.ReadCurrent), gamingMeansOn: true), g.UsbSelectiveSuspend, "usbsus"));
+            name: "USB Selective Suspend (global)",
+            description: "Lets Windows suspend idle USB devices. Disabling keeps mice/keyboards/headsets always responsive.",
+            currentText: $"Current: {GamingDefaultText(SafeRead(UsbSelectiveSuspendMonitor.ReadCurrent))}",
+            defaultText: "Default: enabled    Gaming: disabled",
+            pref: g.UsbSelectiveSuspend, groupName: "usbsus"));
+
         GlobalToggleRows.Add(new GlobalToggleRow(
-            "Games multimedia task profile — boosts priority/scheduling for game processes",
-            CurrentText(SafeRead(GamesTaskProfileMonitor.ReadCurrent), gamingMeansOn: true), g.GamesTaskProfile, "gtask"));
+            name: "Games multimedia task profile",
+            description: "Priority + scheduling values for processes registered with the Games multimedia class.",
+            currentText: $"Current: {GamingDefaultText(SafeRead(GamesTaskProfileMonitor.ReadCurrent))}",
+            defaultText: "Default: standard    Gaming: boosted",
+            pref: g.GamesTaskProfile, groupName: "gtask"));
+
         GlobalToggleRows.Add(new GlobalToggleRow(
-            "Mouse \"Enhance pointer precision\"",
-            CurrentText(SafeRead(MousePrecisionMonitor.ReadCurrent)), g.MousePrecision, "mp"));
+            name: "Mouse \"Enhance pointer precision\"",
+            description: "Acceleration curve applied to mouse movement. Most gamers want this off for consistent aim.",
+            currentText: $"Current: {OnOffText(SafeRead(MousePrecisionMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            pref: g.MousePrecision, groupName: "mp"));
+
         GlobalToggleRows.Add(new GlobalToggleRow(
-            "Fullscreen optimizations (global)",
-            CurrentText(SafeRead(FullscreenOptimizationsMonitor.ReadCurrent)), g.FullscreenOptimizations, "fso"));
+            name: "Fullscreen optimizations (global)",
+            description: "Borderless-windowed compositing layer. Generally fine; some titles prefer it off.",
+            currentText: $"Current: {OnOffText(SafeRead(FullscreenOptimizationsMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            pref: g.FullscreenOptimizations, groupName: "fso"));
+
         GlobalToggleRows.Add(new GlobalToggleRow(
-            "Variable Refresh Rate (Windows)",
-            CurrentText(SafeRead(VrrMonitor.ReadCurrent)), g.Vrr, "vrr"));
+            name: "Variable Refresh Rate (Windows)",
+            description: "DirectX user-pref VRR toggle. Smoother frame pacing on G-Sync / FreeSync displays.",
+            currentText: $"Current: {OnOffText(SafeRead(VrrMonitor.ReadCurrent))}",
+            defaultText: "Default: not set",
+            pref: g.Vrr, groupName: "vrr"));
 
         var planNames = PowerPlanMonitor.ListAvailablePlans();
         var active = SafeRunGuid(PowerPlanMonitor.GetActivePlan);
         var activeName = active is not null && planNames.TryGetValue(active.Value, out var name) ? name : "unknown";
-        PowerPlanCurrentText.Text = $"Now: {activeName}";
+        PowerPlanCurrentText.Text = $"Current: {activeName}";
         PowerPlanMonitorCheck.IsChecked = g.PowerPlan.Monitor;
         PowerPlanAutoApplyCheck.IsChecked = g.PowerPlan.AutoApply;
         var availableChoices = Enum.GetValues<PowerPlanChoice>()
@@ -217,7 +260,9 @@ public sealed class GlobalToggleRow : INotifyPropertyChanged
 {
     private readonly ToggleSettingPref _pref;
     public string Name { get; }
+    public string Description { get; }
     public string CurrentText { get; }
+    public string DefaultText { get; }
     public string GroupName { get; }
 
     public bool Monitor { get => _pref.Monitor; set { _pref.Monitor = value; OnPropertyChanged(); } }
@@ -233,10 +278,13 @@ public sealed class GlobalToggleRow : INotifyPropertyChanged
     }
     public bool AutoApply { get => _pref.AutoApply; set { _pref.AutoApply = value; OnPropertyChanged(); } }
 
-    public GlobalToggleRow(string name, string currentText, ToggleSettingPref pref, string groupName)
+    public GlobalToggleRow(string name, string description, string currentText, string defaultText,
+                           ToggleSettingPref pref, string groupName)
     {
         Name = name;
+        Description = description;
         CurrentText = currentText;
+        DefaultText = defaultText;
         _pref = pref;
         GroupName = groupName;
     }
