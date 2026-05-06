@@ -168,8 +168,8 @@ public partial class SettingsWindow : FluentWindow
             pref: g.FullscreenOptimizations, groupName: "fso"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
-            name: "Variable Refresh Rate (Windows)",
-            description: "DirectX user-pref VRR toggle. Smoother frame pacing on G-Sync / FreeSync displays.",
+            name: "Variable Refresh Rate (DirectX)",
+            description: "G-Sync / FreeSync compatibility flag (Settings → Display → Graphics). Not the same as Dynamic Refresh Rate (DRR) in Advanced Display.",
             currentText: $"Current: {OnOffText(SafeRead(VrrMonitor.ReadCurrent))}",
             defaultText: "Default: not set",
             onLabel: "Enabled", offLabel: "Disabled",
