@@ -89,7 +89,8 @@ public partial class SettingsWindow : FluentWindow
             currentText: $"Current: {OnOffText(SafeRead(GameModeMonitor.ReadCurrent))}",
             defaultText: "Default: Enabled",
             onLabel: "Enabled", offLabel: "Disabled",
-            pref: g.GameMode, groupName: "gm"));
+            pref: g.GameMode, groupName: "gm",
+            onPrefChanged: OnRowPrefChanged));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Game DVR background recording",
@@ -97,7 +98,8 @@ public partial class SettingsWindow : FluentWindow
             currentText: $"Current: {OnOffText(SafeRead(GameDvrMonitor.ReadCurrent))}",
             defaultText: "Default: Enabled",
             onLabel: "Enabled", offLabel: "Disabled",
-            pref: g.GameDvr, groupName: "dvr"));
+            pref: g.GameDvr, groupName: "dvr",
+            onPrefChanged: OnRowPrefChanged));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Hardware-accelerated GPU Scheduling (HAGS)",
@@ -106,7 +108,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: Enabled (Win11)",
             onLabel: "Enabled", offLabel: "Disabled",
             requiresReboot: true,
-            pref: g.Hags, groupName: "hags"));
+            pref: g.Hags, groupName: "hags",
+            onPrefChanged: OnRowPrefChanged));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Memory Integrity / VBS (Core Isolation)",
@@ -115,7 +118,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: Enabled (Win11)",
             onLabel: "Enabled", offLabel: "Disabled",
             requiresReboot: true,
-            pref: g.MemoryIntegrity, groupName: "memint"));
+            pref: g.MemoryIntegrity, groupName: "memint",
+            onPrefChanged: OnRowPrefChanged));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "System Responsiveness",
@@ -124,7 +128,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: 20    Gaming: 10",
             onLabel: "Gaming", offLabel: "Default",
             requiresReboot: true,
-            pref: g.SystemResponsiveness, groupName: "sysresp"));
+            pref: g.SystemResponsiveness, groupName: "sysresp",
+            onPrefChanged: OnRowPrefChanged));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Network Throttling",
@@ -132,7 +137,8 @@ public partial class SettingsWindow : FluentWindow
             currentText: $"Current: {GamingDefaultText(SafeRead(NetworkThrottlingMonitor.ReadCurrent))}",
             defaultText: "Default: 10    Gaming: Disabled",
             onLabel: "Gaming", offLabel: "Default",
-            pref: g.NetworkThrottling, groupName: "netthr"));
+            pref: g.NetworkThrottling, groupName: "netthr",
+            onPrefChanged: OnRowPrefChanged));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "USB Selective Suspend (global)",
@@ -141,7 +147,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: Enabled    Gaming: Disabled",
             onLabel: "Gaming", offLabel: "Default",
             requiresReboot: true,
-            pref: g.UsbSelectiveSuspend, groupName: "usbsus"));
+            pref: g.UsbSelectiveSuspend, groupName: "usbsus",
+            onPrefChanged: OnRowPrefChanged));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Games multimedia task profile",
@@ -149,7 +156,8 @@ public partial class SettingsWindow : FluentWindow
             currentText: $"Current: {GamingDefaultText(SafeRead(GamesTaskProfileMonitor.ReadCurrent))}",
             defaultText: "Default: standard    Gaming: boosted",
             onLabel: "Gaming", offLabel: "Default",
-            pref: g.GamesTaskProfile, groupName: "gtask"));
+            pref: g.GamesTaskProfile, groupName: "gtask",
+            onPrefChanged: OnRowPrefChanged));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Mouse \"Enhance pointer precision\"",
@@ -157,7 +165,8 @@ public partial class SettingsWindow : FluentWindow
             currentText: $"Current: {OnOffText(SafeRead(MousePrecisionMonitor.ReadCurrent))}",
             defaultText: "Default: Enabled",
             onLabel: "Enabled", offLabel: "Disabled",
-            pref: g.MousePrecision, groupName: "mp"));
+            pref: g.MousePrecision, groupName: "mp",
+            onPrefChanged: OnRowPrefChanged));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Fullscreen optimizations (global)",
@@ -165,7 +174,8 @@ public partial class SettingsWindow : FluentWindow
             currentText: $"Current: {OnOffText(SafeRead(FullscreenOptimizationsMonitor.ReadCurrent))}",
             defaultText: "Default: Enabled",
             onLabel: "Enabled", offLabel: "Disabled",
-            pref: g.FullscreenOptimizations, groupName: "fso"));
+            pref: g.FullscreenOptimizations, groupName: "fso",
+            onPrefChanged: OnRowPrefChanged));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Variable Refresh Rate (DirectX)",
@@ -173,7 +183,8 @@ public partial class SettingsWindow : FluentWindow
             currentText: $"Current: {OnOffText(SafeRead(VrrMonitor.ReadCurrent))}",
             defaultText: "Default: not set",
             onLabel: "Enabled", offLabel: "Disabled",
-            pref: g.Vrr, groupName: "vrr"));
+            pref: g.Vrr, groupName: "vrr",
+            onPrefChanged: OnRowPrefChanged));
 
         var planNames = PowerPlanMonitor.ListAvailablePlans();
         var active = SafeRunGuid(PowerPlanMonitor.GetActivePlan);
@@ -393,12 +404,36 @@ public partial class SettingsWindow : FluentWindow
         foreach (var row in DisplayRows) row.WriteTo(_config);
     }
 
-    private void CancelButton_Click(object sender, RoutedEventArgs e) => Close();
+    private bool _suppressSaveOnClose = false;
+
+    private void OnWindowClosing(object? sender, CancelEventArgs e)
+    {
+        if (_suppressSaveOnClose) return;
+        try
+        {
+            PersistFormToConfig();
+            _store.Save(_config);
+        }
+        catch { }
+    }
+
+    private void OnRowPrefChanged(string settingName, string field, string before, string after)
+    {
+        try { _store.Save(_config); } catch { }
+        ChangeLogger.LogPreferenceChange(settingName, field, before, after);
+    }
+
+    private void CancelButton_Click(object sender, RoutedEventArgs e)
+    {
+        _suppressSaveOnClose = true;
+        Close();
+    }
 }
 
 public sealed class GlobalToggleRow : INotifyPropertyChanged
 {
     private readonly ToggleSettingPref _pref;
+    private readonly Action<string, string, string, string>? _onPrefChanged;
     public string Name { get; }
     public string Description { get; }
     public string CurrentText { get; }
@@ -409,23 +444,54 @@ public sealed class GlobalToggleRow : INotifyPropertyChanged
     public bool RequiresReboot { get; }
     public Visibility RebootBadgeVisibility => RequiresReboot ? Visibility.Visible : Visibility.Collapsed;
 
-    public bool Monitor { get => _pref.Monitor; set { _pref.Monitor = value; OnPropertyChanged(); } }
+    public bool Monitor
+    {
+        get => _pref.Monitor;
+        set
+        {
+            if (_pref.Monitor == value) return;
+            var before = _pref.Monitor;
+            _pref.Monitor = value;
+            OnPropertyChanged();
+            _onPrefChanged?.Invoke(Name, "Monitor", before.ToString(), value.ToString());
+        }
+    }
     public bool DesiredOn
     {
         get => _pref.DesiredOn;
-        set { if (_pref.DesiredOn != value) { _pref.DesiredOn = value; OnPropertyChanged(); OnPropertyChanged(nameof(DesiredOff)); } }
+        set
+        {
+            if (_pref.DesiredOn == value) return;
+            var before = _pref.DesiredOn;
+            _pref.DesiredOn = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(DesiredOff));
+            _onPrefChanged?.Invoke(Name, "Want", before ? OnLabel : OffLabel, value ? OnLabel : OffLabel);
+        }
     }
     public bool DesiredOff
     {
         get => !_pref.DesiredOn;
-        set { if (value && _pref.DesiredOn) { _pref.DesiredOn = false; OnPropertyChanged(); OnPropertyChanged(nameof(DesiredOn)); } }
+        set { if (value && _pref.DesiredOn) DesiredOn = false; }
     }
-    public bool AutoApply { get => _pref.AutoApply; set { _pref.AutoApply = value; OnPropertyChanged(); } }
+    public bool AutoApply
+    {
+        get => _pref.AutoApply;
+        set
+        {
+            if (_pref.AutoApply == value) return;
+            var before = _pref.AutoApply;
+            _pref.AutoApply = value;
+            OnPropertyChanged();
+            _onPrefChanged?.Invoke(Name, "AutoApply", before.ToString(), value.ToString());
+        }
+    }
 
     public GlobalToggleRow(string name, string description, string currentText, string defaultText,
                            string onLabel, string offLabel,
                            ToggleSettingPref pref, string groupName,
-                           bool requiresReboot = false)
+                           bool requiresReboot = false,
+                           Action<string, string, string, string>? onPrefChanged = null)
     {
         Name = name;
         Description = description;
@@ -436,6 +502,7 @@ public sealed class GlobalToggleRow : INotifyPropertyChanged
         _pref = pref;
         GroupName = groupName;
         RequiresReboot = requiresReboot;
+        _onPrefChanged = onPrefChanged;
     }
 
     public void WriteBack() { /* mutations are direct; nothing to do */ }

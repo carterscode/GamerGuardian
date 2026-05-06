@@ -37,6 +37,23 @@ public static class ChangeLogger
         catch { /* logging is best-effort */ }
     }
 
+    /// <summary>
+    /// Records a preference toggle (Monitor / AutoApply / Want) made in the Settings UI.
+    /// Single line per change so the log stays scannable.
+    /// </summary>
+    public static void LogPreferenceChange(string settingName, string field, string before, string after)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(LogPath);
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+            RotateIfNeeded();
+            var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [ui    ] PREF   {settingName}  |  {field}: {before} -> {after}";
+            File.AppendAllText(LogPath, line + Environment.NewLine, Encoding.UTF8);
+        }
+        catch { }
+    }
+
     private static string Format(ApplyResult r, string source)
     {
         var status = r.Verified ? "OK" : "FAILED";

@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         Title="GamerGuardian - Settings"
+        Closing="OnWindowClosing"
         Width="780" Height="760"
         MinWidth="640" MinHeight="500"
         WindowStartupLocation="CenterScreen"
