@@ -13,6 +13,7 @@ Tired of HDR silently turning itself off, or the refresh rate dropping to 60Hz a
 
 **Global gaming settings:**
 - **Hardware-accelerated GPU Scheduling (HAGS)** — `HKLM` registry; apply uses elevated `reg.exe` (UAC prompt)
+- **Memory Integrity / VBS** (Core Isolation) — Windows 11's Hypervisor-Enforced Code Integrity. Disabling can recover ~5–15% gaming performance at the cost of reduced protection against advanced malware. Apply uses elevated `reg.exe`; takes effect on reboot.
 - **Windows Game Mode**
 - **Game DVR background recording** — typically a perf killer when left on
 - **Mouse "Enhance pointer precision"** — most gamers want this off

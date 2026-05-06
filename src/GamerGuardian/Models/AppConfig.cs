@@ -68,6 +68,7 @@ public sealed class GlobalPreferences
     public ToggleSettingPref MousePrecision { get; set; } = new() { DesiredOn = false };
     public ToggleSettingPref FullscreenOptimizations { get; set; } = new() { DesiredOn = true };
     public ToggleSettingPref Vrr { get; set; } = new() { DesiredOn = true };
+    public ToggleSettingPref MemoryIntegrity { get; set; } = new() { DesiredOn = false };
     public PowerPlanPref PowerPlan { get; set; } = new();
 }
 

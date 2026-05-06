@@ -59,6 +59,7 @@ public partial class App : WpfApplication
                 new ResolutionMonitor(),
                 new VrrMonitor(),
                 new HagsMonitor(),
+                new MemoryIntegrityMonitor(),
                 new GameModeMonitor(),
                 new GameDvrMonitor(),
                 new MousePrecisionMonitor(),
@@ -173,6 +174,8 @@ public partial class App : WpfApplication
 
         Run("HagsMonitor.ReadCurrent",
             () => GamerGuardian.Monitors.HagsMonitor.ReadCurrent()?.ToString() ?? "(null)");
+        Run("MemoryIntegrityMonitor.ReadCurrent",
+            () => GamerGuardian.Monitors.MemoryIntegrityMonitor.ReadCurrent()?.ToString() ?? "(null)");
         Run("GameModeMonitor.ReadCurrent",
             () => GamerGuardian.Monitors.GameModeMonitor.ReadCurrent()?.ToString() ?? "(null)");
         Run("GameDvrMonitor.ReadCurrent",

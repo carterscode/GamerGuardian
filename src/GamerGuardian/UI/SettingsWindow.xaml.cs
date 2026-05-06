@@ -61,6 +61,9 @@ public partial class SettingsWindow : FluentWindow
             "Hardware-accelerated GPU Scheduling (HAGS) — reboot required",
             CurrentText(SafeRead(HagsMonitor.ReadCurrent)), g.Hags, "hags"));
         GlobalToggleRows.Add(new GlobalToggleRow(
+            "Memory Integrity / VBS (Core Isolation) — disable for gaming perf, reboot required",
+            CurrentText(SafeRead(MemoryIntegrityMonitor.ReadCurrent)), g.MemoryIntegrity, "memint"));
+        GlobalToggleRows.Add(new GlobalToggleRow(
             "Mouse \"Enhance pointer precision\"",
             CurrentText(SafeRead(MousePrecisionMonitor.ReadCurrent)), g.MousePrecision, "mp"));
         GlobalToggleRows.Add(new GlobalToggleRow(
