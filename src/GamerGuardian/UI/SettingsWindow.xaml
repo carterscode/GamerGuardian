@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="GamerGuardian - Settings"
-        Width="640" Height="560"
+        Width="720" Height="700"
         WindowStartupLocation="CenterScreen"
         Background="#1f1f1f"
         Foreground="#f0f0f0"
@@ -39,6 +39,60 @@
                         </StackPanel>
                     </StackPanel>
                 </GroupBox>
+
+                <GroupBox Header="Global gaming settings">
+                    <StackPanel>
+                        <ItemsControl x:Name="GlobalTogglesList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#2a2a2a" Padding="10" Margin="0,0,0,6" CornerRadius="4">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding CurrentText}" Foreground="#9e9e9e" FontSize="11"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Orientation="Vertical" HorizontalAlignment="Right">
+                                                <CheckBox Content="Monitor" IsChecked="{Binding Monitor}" Margin="0,0,0,2"/>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="Want:" Margin="0,4,6,0" Foreground="#cccccc"/>
+                                                    <RadioButton GroupName="{Binding GroupName}" Content="On" IsChecked="{Binding DesiredOn}" Margin="0,4,8,0"/>
+                                                    <RadioButton GroupName="{Binding GroupName}" Content="Off" IsChecked="{Binding DesiredOff}" Margin="0,4,0,0"/>
+                                                </StackPanel>
+                                                <CheckBox Content="Auto-apply silently" IsChecked="{Binding AutoApply}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Border Background="#2a2a2a" Padding="10" Margin="0,0,0,6" CornerRadius="4">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Power plan" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="PowerPlanCurrentText" Foreground="#9e9e9e" FontSize="11"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                                    <CheckBox x:Name="PowerPlanMonitorCheck" Content="Monitor" Margin="0,0,0,2"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Want:" Margin="0,4,6,0" Foreground="#cccccc"/>
+                                        <ComboBox x:Name="PowerPlanCombo" Width="160" Background="#2a2a2a" Foreground="#f0f0f0" BorderBrush="#3a3a3a"/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="PowerPlanAutoApplyCheck" Content="Auto-apply silently"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </GroupBox>
+
                 <ItemsControl x:Name="DisplaysList">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
@@ -54,12 +108,20 @@
                                     <TextBlock Text="Refresh Rate" FontWeight="SemiBold" Margin="0,4,0,2"/>
                                     <CheckBox Content="Monitor this setting" IsChecked="{Binding RefreshMonitor}"/>
                                     <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
-                                        <RadioButton GroupName="{Binding GroupName}" Content="Maximum supported" IsChecked="{Binding RefreshUseMax}" Margin="0,0,12,0"/>
-                                        <RadioButton GroupName="{Binding GroupName}" Content="Fixed:" IsChecked="{Binding RefreshUseFixed}" Margin="0,0,6,0"/>
+                                        <RadioButton GroupName="{Binding RateGroupName}" Content="Maximum supported" IsChecked="{Binding RefreshUseMax}" Margin="0,0,12,0"/>
+                                        <RadioButton GroupName="{Binding RateGroupName}" Content="Fixed:" IsChecked="{Binding RefreshUseFixed}" Margin="0,0,6,0"/>
                                         <ComboBox ItemsSource="{Binding AvailableHz}" SelectedItem="{Binding FixedHz}" Width="80" IsEnabled="{Binding RefreshUseFixed}" Background="#2a2a2a" Foreground="#f0f0f0" BorderBrush="#3a3a3a"/>
                                         <TextBlock Text="Hz" Margin="4,0,0,0" VerticalAlignment="Center"/>
                                     </StackPanel>
                                     <CheckBox Content="Auto-apply silently when it drifts" IsChecked="{Binding RefreshAutoApply}"/>
+                                    <Separator Margin="0,6"/>
+                                    <TextBlock Text="Resolution" FontWeight="SemiBold" Margin="0,4,0,2"/>
+                                    <CheckBox Content="Monitor this setting" IsChecked="{Binding ResolutionMonitor}"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                                        <TextBlock Text="Pin to:" Margin="0,4,6,0"/>
+                                        <ComboBox ItemsSource="{Binding AvailableResolutions}" SelectedItem="{Binding DesiredResolution}" Width="140" IsEnabled="{Binding ResolutionMonitor}" Background="#2a2a2a" Foreground="#f0f0f0" BorderBrush="#3a3a3a"/>
+                                    </StackPanel>
+                                    <CheckBox Content="Auto-apply silently when it drifts" IsChecked="{Binding ResolutionAutoApply}"/>
                                 </StackPanel>
                             </GroupBox>
                         </DataTemplate>

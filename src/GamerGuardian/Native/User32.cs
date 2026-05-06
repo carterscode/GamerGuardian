@@ -84,4 +84,17 @@ public static class User32
         IntPtr hwnd,
         uint flags,
         IntPtr lParam);
+
+    public const uint SPI_GETMOUSE = 0x0003;
+    public const uint SPI_SETMOUSE = 0x0004;
+    public const uint SPIF_UPDATEINIFILE = 0x01;
+    public const uint SPIF_SENDCHANGE = 0x02;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool SystemParametersInfo(
+        uint uiAction,
+        uint uiParam,
+        [MarshalAs(UnmanagedType.LPArray)] int[] pvParam,
+        uint fWinIni);
 }

@@ -14,7 +14,8 @@ public partial class SettingsWindow : Window
 {
     private readonly ConfigStore _store;
     private readonly AppConfig _config;
-    public ObservableCollection<DisplayRow> Rows { get; } = new();
+    public ObservableCollection<DisplayRow> DisplayRows { get; } = new();
+    public ObservableCollection<GlobalToggleRow> GlobalToggleRows { get; } = new();
 
     public event Action? Saved;
 
@@ -28,13 +29,67 @@ public partial class SettingsWindow : Window
         ConsolidateCheck.IsChecked = _config.ConsolidateNotifications;
         PollSecondsBox.Text = _config.PollIntervalSeconds.ToString(CultureInfo.InvariantCulture);
 
-        DisplaysList.ItemsSource = Rows;
-        LoadRows();
+        DisplaysList.ItemsSource = DisplayRows;
+        GlobalTogglesList.ItemsSource = GlobalToggleRows;
+
+        LoadGlobals();
+        LoadDisplays();
     }
 
-    private void LoadRows()
+    private static string CurrentText(bool? state, string verb = "Now") =>
+        state is null ? $"{verb}: not detected" : $"{verb}: {(state.Value ? "On" : "Off")}";
+
+    private void LoadGlobals()
     {
-        Rows.Clear();
+        GlobalToggleRows.Clear();
+        var g = _config.Global;
+
+        GlobalToggleRows.Add(new GlobalToggleRow(
+            "Game Mode", CurrentText(SafeRead(GameModeMonitor.ReadCurrent)), g.GameMode, "gm"));
+        GlobalToggleRows.Add(new GlobalToggleRow(
+            "Game DVR background recording", CurrentText(SafeRead(GameDvrMonitor.ReadCurrent)), g.GameDvr, "dvr"));
+        GlobalToggleRows.Add(new GlobalToggleRow(
+            "Hardware-accelerated GPU Scheduling (HAGS) — reboot required",
+            CurrentText(SafeRead(HagsMonitor.ReadCurrent)), g.Hags, "hags"));
+        GlobalToggleRows.Add(new GlobalToggleRow(
+            "Mouse \"Enhance pointer precision\"",
+            CurrentText(SafeRead(MousePrecisionMonitor.ReadCurrent)), g.MousePrecision, "mp"));
+        GlobalToggleRows.Add(new GlobalToggleRow(
+            "Fullscreen optimizations (global)",
+            CurrentText(SafeRead(FullscreenOptimizationsMonitor.ReadCurrent)), g.FullscreenOptimizations, "fso"));
+        GlobalToggleRows.Add(new GlobalToggleRow(
+            "Variable Refresh Rate (Windows)",
+            CurrentText(SafeRead(VrrMonitor.ReadCurrent)), g.Vrr, "vrr"));
+
+        var planNames = PowerPlanMonitor.ListAvailablePlans();
+        var active = SafeRunGuid(PowerPlanMonitor.GetActivePlan);
+        var activeName = active is not null && planNames.TryGetValue(active.Value, out var name) ? name : "unknown";
+        PowerPlanCurrentText.Text = $"Now: {activeName}";
+        PowerPlanMonitorCheck.IsChecked = g.PowerPlan.Monitor;
+        PowerPlanAutoApplyCheck.IsChecked = g.PowerPlan.AutoApply;
+        var availableChoices = Enum.GetValues<PowerPlanChoice>()
+            .Where(c => planNames.ContainsKey(PowerPlanMonitor.ToGuid(c)))
+            .ToList();
+        if (availableChoices.Count == 0) availableChoices = Enum.GetValues<PowerPlanChoice>().ToList();
+        PowerPlanCombo.ItemsSource = availableChoices;
+        PowerPlanCombo.SelectedItem = availableChoices.Contains(g.PowerPlan.Desired)
+            ? g.PowerPlan.Desired
+            : availableChoices[0];
+    }
+
+    private static bool? SafeRead(Func<bool?> f)
+    {
+        try { return f(); } catch { return null; }
+    }
+
+    private static Guid? SafeRunGuid(Func<Guid> f)
+    {
+        try { var g = f(); return g == Guid.Empty ? null : g; } catch { return null; }
+    }
+
+    private void LoadDisplays()
+    {
+        DisplayRows.Clear();
         foreach (var d in DisplayHelper.EnumerateActiveDisplays())
         {
             if (!_config.Displays.TryGetValue(d.StableKey, out var pref))
@@ -42,19 +97,21 @@ public partial class SettingsWindow : Window
                 pref = new DisplayPreference { DisplayLabel = d.DisplayLabel };
                 _config.Displays[d.StableKey] = pref;
             }
-            var hdr = HdrMonitor.ReadHdrState(d);
-            var refresh = RefreshRateMonitor.GetCurrentRefresh(d.GdiDeviceName);
+            var hdr = SafeRead(() => HdrMonitor.ReadHdrState(d) is { } s ? (bool?)(s.Supported && s.Enabled) : null);
+            var refresh = string.IsNullOrEmpty(d.GdiDeviceName) ? null : RefreshRateMonitor.GetCurrentRefresh(d.GdiDeviceName);
             uint maxHz = refresh is null ? 0 : RefreshRateMonitor.GetMaxSupportedRefresh(d.GdiDeviceName, refresh.Value.Width, refresh.Value.Height);
             var rates = refresh is null ? Array.Empty<uint>() : RefreshRateMonitor.GetSupportedRefreshRates(d.GdiDeviceName, refresh.Value.Width, refresh.Value.Height);
+            var resolutions = string.IsNullOrEmpty(d.GdiDeviceName) ? Array.Empty<(uint, uint)>() : ResolutionMonitor.ListSupported(d.GdiDeviceName);
+            var resStrings = resolutions.Select(r => $"{r.Item1}x{r.Item2}").ToList();
+            var current = ResolutionMonitor.GetCurrent(d.GdiDeviceName);
 
             var status = string.Format(CultureInfo.InvariantCulture,
-                "Now — HDR: {0}{1}    Refresh: {2}{3}",
-                hdr is null ? "unknown" : (hdr.Value.Supported ? (hdr.Value.Enabled ? "On" : "Off") : "not supported"),
-                hdr?.Supported == false ? "" : "",
-                refresh is null ? "unknown" : refresh.Value.Hz + " Hz",
-                maxHz > 0 ? $" (max {maxHz} Hz)" : "");
+                "Now — HDR: {0}    Refresh: {1}    Resolution: {2}",
+                hdr is null ? "unknown" : (hdr.Value ? "On" : "Off"),
+                refresh is null ? "unknown" : refresh.Value.Hz + " Hz" + (maxHz > 0 ? $" (max {maxHz})" : ""),
+                current is null ? "unknown" : $"{current.Value.Width}x{current.Value.Height}");
 
-            Rows.Add(new DisplayRow(d.StableKey, d.DisplayLabel, status, pref, rates, maxHz));
+            DisplayRows.Add(new DisplayRow(d.StableKey, d.DisplayLabel, status, pref, rates, resStrings));
         }
     }
 
@@ -65,7 +122,14 @@ public partial class SettingsWindow : Window
         if (int.TryParse(PollSecondsBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var s) && s >= 5)
             _config.PollIntervalSeconds = s;
 
-        foreach (var row in Rows) row.WriteTo(_config);
+        _config.Global.PowerPlan.Monitor = PowerPlanMonitorCheck.IsChecked == true;
+        _config.Global.PowerPlan.AutoApply = PowerPlanAutoApplyCheck.IsChecked == true;
+        if (PowerPlanCombo.SelectedItem is PowerPlanChoice c)
+            _config.Global.PowerPlan.Desired = c;
+
+        foreach (var row in GlobalToggleRows) row.WriteBack();
+        foreach (var row in DisplayRows) row.WriteTo(_config);
+
         _store.Save(_config);
         StartupRegistration.Sync(_config.LaunchAtStartup);
         Saved?.Invoke();
@@ -75,6 +139,41 @@ public partial class SettingsWindow : Window
     private void CancelButton_Click(object sender, RoutedEventArgs e) => Close();
 }
 
+public sealed class GlobalToggleRow : INotifyPropertyChanged
+{
+    private readonly ToggleSettingPref _pref;
+    public string Name { get; }
+    public string CurrentText { get; }
+    public string GroupName { get; }
+
+    public bool Monitor { get => _pref.Monitor; set { _pref.Monitor = value; OnPropertyChanged(); } }
+    public bool DesiredOn
+    {
+        get => _pref.DesiredOn;
+        set { if (_pref.DesiredOn != value) { _pref.DesiredOn = value; OnPropertyChanged(); OnPropertyChanged(nameof(DesiredOff)); } }
+    }
+    public bool DesiredOff
+    {
+        get => !_pref.DesiredOn;
+        set { if (value && _pref.DesiredOn) { _pref.DesiredOn = false; OnPropertyChanged(); OnPropertyChanged(nameof(DesiredOn)); } }
+    }
+    public bool AutoApply { get => _pref.AutoApply; set { _pref.AutoApply = value; OnPropertyChanged(); } }
+
+    public GlobalToggleRow(string name, string currentText, ToggleSettingPref pref, string groupName)
+    {
+        Name = name;
+        CurrentText = currentText;
+        _pref = pref;
+        GroupName = groupName;
+    }
+
+    public void WriteBack() { /* mutations are direct; nothing to do */ }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+    private void OnPropertyChanged([CallerMemberName] string? name = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+}
+
 public sealed class DisplayRow : INotifyPropertyChanged
 {
     private readonly string _key;
@@ -82,15 +181,15 @@ public sealed class DisplayRow : INotifyPropertyChanged
 
     public string HeaderText { get; }
     public string StatusText { get; }
-    public string GroupName { get; }
+    public string RateGroupName { get; }
     public IReadOnlyList<uint> AvailableHz { get; }
+    public IReadOnlyList<string> AvailableResolutions { get; }
 
     public bool HdrMonitor { get => _pref.Hdr.Monitor; set { _pref.Hdr.Monitor = value; OnPropertyChanged(); } }
     public bool HdrDesiredOn { get => _pref.Hdr.DesiredOn; set { _pref.Hdr.DesiredOn = value; OnPropertyChanged(); } }
     public bool HdrAutoApply { get => _pref.Hdr.AutoApply; set { _pref.Hdr.AutoApply = value; OnPropertyChanged(); } }
 
     public bool RefreshMonitor { get => _pref.RefreshRate.Monitor; set { _pref.RefreshRate.Monitor = value; OnPropertyChanged(); } }
-
     public bool RefreshUseMax
     {
         get => _pref.RefreshRate.Target == RefreshRateTarget.Maximum;
@@ -127,14 +226,40 @@ public sealed class DisplayRow : INotifyPropertyChanged
     }
     public bool RefreshAutoApply { get => _pref.RefreshRate.AutoApply; set { _pref.RefreshRate.AutoApply = value; OnPropertyChanged(); } }
 
-    public DisplayRow(string key, string label, string status, DisplayPreference pref, IReadOnlyList<uint> rates, uint maxHz)
+    public bool ResolutionMonitor { get => _pref.Resolution.Monitor; set { _pref.Resolution.Monitor = value; OnPropertyChanged(); } }
+    public string? DesiredResolution
+    {
+        get => _pref.Resolution.DesiredWidth is { } w && _pref.Resolution.DesiredHeight is { } h ? $"{w}x{h}" : null;
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                _pref.Resolution.DesiredWidth = null;
+                _pref.Resolution.DesiredHeight = null;
+            }
+            else
+            {
+                var parts = value.Split('x');
+                if (parts.Length == 2 && uint.TryParse(parts[0], out var w) && uint.TryParse(parts[1], out var h))
+                {
+                    _pref.Resolution.DesiredWidth = w;
+                    _pref.Resolution.DesiredHeight = h;
+                }
+            }
+            OnPropertyChanged();
+        }
+    }
+    public bool ResolutionAutoApply { get => _pref.Resolution.AutoApply; set { _pref.Resolution.AutoApply = value; OnPropertyChanged(); } }
+
+    public DisplayRow(string key, string label, string status, DisplayPreference pref, IReadOnlyList<uint> rates, IReadOnlyList<string> resolutions)
     {
         _key = key;
         _pref = pref;
         HeaderText = label;
         StatusText = status;
-        GroupName = "rate_" + key.GetHashCode().ToString("X");
+        RateGroupName = "rate_" + key.GetHashCode().ToString("X");
         AvailableHz = rates;
+        AvailableResolutions = resolutions;
     }
 
     public void WriteTo(AppConfig cfg) => cfg.Displays[_key] = _pref;
