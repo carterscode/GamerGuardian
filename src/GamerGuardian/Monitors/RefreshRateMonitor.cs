@@ -39,7 +39,9 @@ public sealed class RefreshRateMonitor : IMonitoredSetting
                 DesiredValue: $"{desired} Hz",
                 AutoApply: pref.RefreshRate.AutoApply,
                 Apply: () => Task.Run(() => SetRefresh(captured.GdiDeviceName, capturedDesired)),
-                IsMonitored: pref.RefreshRate.Monitor);
+                IsMonitored: pref.RefreshRate.Monitor,
+                RawBefore: $"dmDisplayFrequency={current.Value.Hz}",
+                RawDesired: $"dmDisplayFrequency={desired}");
         }
     }
 

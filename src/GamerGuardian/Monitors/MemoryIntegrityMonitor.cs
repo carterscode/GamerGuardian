@@ -15,22 +15,26 @@ public sealed class MemoryIntegrityMonitor : IMonitoredSetting
     {
         var pref = config.Global.MemoryIntegrity;
 
-        var current = ReadCurrent();
-        if (current is null) yield break;
-        if (current.Value == pref.DesiredOn) yield break;
+        using var k = Registry.LocalMachine.OpenSubKey(SubKey, writable: false);
+        if (k?.GetValue(ValueName) is not int rawValue) yield break;
+        var current = rawValue != 0;
+        if (current == pref.DesiredOn) yield break;
 
         bool desired = pref.DesiredOn;
+        uint desiredRaw = desired ? 1u : 0u;
         yield return new DriftItem(
             SettingId: Id,
             DisplayKey: "global",
             DisplayLabel: "Global",
             Description: "Memory Integrity (Core Isolation) — requires reboot",
-            CurrentValue: current.Value ? "On" : "Off",
+            CurrentValue: current ? "On" : "Off",
             DesiredValue: desired ? "On" : "Off",
             AutoApply: pref.AutoApply,
-            Apply: () => Task.Run(() => ElevatedRegistry.SetHklmDword(SubKey, ValueName, desired ? 1u : 0u)),
+            Apply: () => Task.Run(() => ElevatedRegistry.SetHklmDword(SubKey, ValueName, desiredRaw)),
             RequiresReboot: true,
-            IsMonitored: pref.Monitor);
+            IsMonitored: pref.Monitor,
+            RawBefore: rawValue.ToString(),
+            RawDesired: desiredRaw.ToString());
     }
 
     public static bool? ReadCurrent()

@@ -17,22 +17,26 @@ public sealed class NetworkThrottlingMonitor : IMonitoredSetting
     {
         var pref = config.Global.NetworkThrottling;
 
-        var current = ReadCurrent();
-        if (current is null) yield break;
-        if (current.Value == pref.DesiredOn) yield break;
+        using var k = Registry.LocalMachine.OpenSubKey(SubKey, writable: false);
+        if (k?.GetValue(ValueName) is not int rawValueInt) yield break;
+        var rawValue = unchecked((uint)rawValueInt);
+        var current = rawValue == DisabledValue;
+        if (current == pref.DesiredOn) yield break;
 
         bool desired = pref.DesiredOn;
+        uint desiredRaw = desired ? DisabledValue : DefaultValue;
         yield return new DriftItem(
             SettingId: Id,
             DisplayKey: "global",
             DisplayLabel: "Global",
             Description: "Network Throttling (multimedia packet pacing)",
-            CurrentValue: current.Value ? "Disabled (gaming)" : "Default",
+            CurrentValue: current ? "Disabled (gaming)" : "Default",
             DesiredValue: desired ? "Disabled (gaming)" : "Default",
             AutoApply: pref.AutoApply,
-            Apply: () => Task.Run(() => ElevatedRegistry.SetHklmDword(
-                SubKey, ValueName, desired ? DisabledValue : DefaultValue)),
-            IsMonitored: pref.Monitor);
+            Apply: () => Task.Run(() => ElevatedRegistry.SetHklmDword(SubKey, ValueName, desiredRaw)),
+            IsMonitored: pref.Monitor,
+            RawBefore: rawValue == DisabledValue ? "0xFFFFFFFF" : rawValue.ToString(),
+            RawDesired: desiredRaw == DisabledValue ? "0xFFFFFFFF" : desiredRaw.ToString());
     }
 
     public static bool? ReadCurrent()

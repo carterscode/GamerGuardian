@@ -17,23 +17,26 @@ public sealed class SystemResponsivenessMonitor : IMonitoredSetting
     {
         var pref = config.Global.SystemResponsiveness;
 
-        var current = ReadCurrent();
-        if (current is null) yield break;
-        if (current.Value == pref.DesiredOn) yield break;
+        using var k = Registry.LocalMachine.OpenSubKey(SubKey, writable: false);
+        if (k?.GetValue(ValueName) is not int rawValue) yield break;
+        var current = rawValue <= (int)GamingValue;
+        if (current == pref.DesiredOn) yield break;
 
         bool desired = pref.DesiredOn;
+        uint desiredRaw = desired ? GamingValue : DefaultValue;
         yield return new DriftItem(
             SettingId: Id,
             DisplayKey: "global",
             DisplayLabel: "Global",
             Description: "System Responsiveness (multimedia CPU reservation)",
-            CurrentValue: current.Value ? "Gaming" : "Default",
+            CurrentValue: current ? "Gaming" : "Default",
             DesiredValue: desired ? "Gaming" : "Default",
             AutoApply: pref.AutoApply,
-            Apply: () => Task.Run(() => ElevatedRegistry.SetHklmDword(
-                SubKey, ValueName, desired ? GamingValue : DefaultValue)),
+            Apply: () => Task.Run(() => ElevatedRegistry.SetHklmDword(SubKey, ValueName, desiredRaw)),
             RequiresReboot: true,
-            IsMonitored: pref.Monitor);
+            IsMonitored: pref.Monitor,
+            RawBefore: rawValue.ToString(),
+            RawDesired: desiredRaw.ToString());
     }
 
     public static bool? ReadCurrent()

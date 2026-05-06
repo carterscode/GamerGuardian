@@ -26,6 +26,8 @@ public sealed class GamesTaskProfileMonitor : IMonitoredSetting
         if (current.Value == pref.DesiredOn) yield break;
 
         bool desired = pref.DesiredOn;
+        string rawDesired = string.Join(", ", Values.Select(v => $"{v.Name}={(desired ? v.Gaming : v.Default)}"));
+        string rawBefore = string.Join(", ", Values.Select(v => $"{v.Name}={(current.Value ? v.Gaming : v.Default)}"));
         yield return new DriftItem(
             SettingId: Id,
             DisplayKey: "global",
@@ -35,7 +37,9 @@ public sealed class GamesTaskProfileMonitor : IMonitoredSetting
             DesiredValue: desired ? "Gaming" : "Default",
             AutoApply: pref.AutoApply,
             Apply: () => Task.Run(() => ApplyValues(desired)),
-            IsMonitored: pref.Monitor);
+            IsMonitored: pref.Monitor,
+            RawBefore: rawBefore,
+            RawDesired: rawDesired);
     }
 
     public static bool? ReadCurrent()

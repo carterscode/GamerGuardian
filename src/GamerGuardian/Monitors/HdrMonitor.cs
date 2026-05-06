@@ -31,7 +31,9 @@ public sealed class HdrMonitor : IMonitoredSetting
                 DesiredValue: desired ? "On" : "Off",
                 AutoApply: pref.Hdr.AutoApply,
                 Apply: () => Task.Run(() => SetHdrState(display, desired)),
-                IsMonitored: pref.Hdr.Monitor);
+                IsMonitored: pref.Hdr.Monitor,
+                RawBefore: $"advancedColorEnabled={(current ? 1 : 0)}",
+                RawDesired: $"advancedColorEnabled={(desired ? 1 : 0)}");
         }
     }
 

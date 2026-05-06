@@ -9,4 +9,7 @@ public sealed record ApplyResult(
     bool Verified,
     bool RequiresReboot,
     string Mechanism,
-    string VerifyCommand);
+    string VerifyCommand,
+    string RawBefore = "",
+    string RawDesired = "",
+    string RawAfter = "");

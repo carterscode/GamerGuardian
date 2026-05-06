@@ -15,22 +15,27 @@ public sealed class UsbSelectiveSuspendMonitor : IMonitoredSetting
     {
         var pref = config.Global.UsbSelectiveSuspend;
 
-        var current = ReadCurrent();
-        if (current.HasValue && current.Value == pref.DesiredOn) yield break;
+        using var k = Registry.LocalMachine.OpenSubKey(SubKey, writable: false);
+        var rawObj = k?.GetValue(ValueName);
+        var rawValue = rawObj is int v ? v : 0;
+        var current = rawValue != 0;
+        if (current == pref.DesiredOn) yield break;
 
         bool desired = pref.DesiredOn;
+        uint desiredRaw = desired ? 1u : 0u;
         yield return new DriftItem(
             SettingId: Id,
             DisplayKey: "global",
             DisplayLabel: "Global",
             Description: "USB Selective Suspend (global override)",
-            CurrentValue: (current ?? false) ? "Disabled (gaming)" : "Default",
+            CurrentValue: current ? "Disabled (gaming)" : "Default",
             DesiredValue: desired ? "Disabled (gaming)" : "Default",
             AutoApply: pref.AutoApply,
-            Apply: () => Task.Run(() => ElevatedRegistry.SetHklmDword(
-                SubKey, ValueName, desired ? 1u : 0u)),
+            Apply: () => Task.Run(() => ElevatedRegistry.SetHklmDword(SubKey, ValueName, desiredRaw)),
             RequiresReboot: true,
-            IsMonitored: pref.Monitor);
+            IsMonitored: pref.Monitor,
+            RawBefore: rawObj is null ? "(unset)" : rawValue.ToString(),
+            RawDesired: desiredRaw.ToString());
     }
 
     public static bool? ReadCurrent()

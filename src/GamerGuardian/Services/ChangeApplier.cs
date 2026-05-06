@@ -35,6 +35,7 @@ public static class ChangeApplier
             var stillDrifted = afterDrift.FirstOrDefault(a => a.SettingId == d.SettingId);
             var verified = stillDrifted is null;
             var afterValue = verified ? d.DesiredValue : (stillDrifted?.CurrentValue ?? d.CurrentValue);
+            var rawAfter = verified ? d.RawDesired : (stillDrifted?.RawBefore ?? d.RawBefore);
             results.Add(new ApplyResult(
                 SettingId: d.SettingId,
                 Description: d.Description,
@@ -44,7 +45,10 @@ public static class ChangeApplier
                 Verified: verified,
                 RequiresReboot: d.RequiresReboot,
                 Mechanism: SettingDocs.MechanismFor(d.SettingId),
-                VerifyCommand: SettingDocs.VerifyCommandFor(d.SettingId)));
+                VerifyCommand: SettingDocs.VerifyCommandFor(d.SettingId),
+                RawBefore: d.RawBefore,
+                RawDesired: d.RawDesired,
+                RawAfter: rawAfter));
         }
         return results;
     }

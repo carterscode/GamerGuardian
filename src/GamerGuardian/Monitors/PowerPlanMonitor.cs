@@ -34,7 +34,9 @@ public sealed class PowerPlanMonitor : IMonitoredSetting
             DesiredValue: pref.Desired.ToString(),
             AutoApply: pref.AutoApply,
             Apply: () => Task.Run(() => SetActivePlan(desiredGuid)),
-            IsMonitored: pref.Monitor);
+            IsMonitored: pref.Monitor,
+            RawBefore: active.ToString(),
+            RawDesired: desiredGuid.ToString());
     }
 
     public static Guid ToGuid(PowerPlanChoice c) => c switch

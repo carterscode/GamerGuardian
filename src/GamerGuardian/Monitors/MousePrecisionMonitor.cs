@@ -26,7 +26,9 @@ public sealed class MousePrecisionMonitor : IMonitoredSetting
             DesiredValue: desired ? "On" : "Off",
             AutoApply: pref.AutoApply,
             Apply: () => Task.Run(() => Apply(desired)),
-            IsMonitored: pref.Monitor);
+            IsMonitored: pref.Monitor,
+            RawBefore: current.Value ? "[6, 10, 1]" : "[0, 0, 0]",
+            RawDesired: desired ? "[6, 10, 1]" : "[0, 0, 0]");
     }
 
     public static bool? ReadCurrent()

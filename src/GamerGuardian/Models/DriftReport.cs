@@ -10,7 +10,9 @@ public sealed record DriftItem(
     bool AutoApply,
     Func<Task> Apply,
     bool RequiresReboot = false,
-    bool IsMonitored = true);
+    bool IsMonitored = true,
+    string RawBefore = "",
+    string RawDesired = "");
 
 public sealed record DriftReport(IReadOnlyList<DriftItem> Items)
 {

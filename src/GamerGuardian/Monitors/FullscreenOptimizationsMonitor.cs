@@ -17,6 +17,12 @@ public sealed class FullscreenOptimizationsMonitor : IMonitoredSetting
         if (current.Value == pref.DesiredOn) yield break;
 
         bool desired = pref.DesiredOn;
+        string rawBefore = current.Value
+            ? "FSEBehaviorMode=0, DXGIHonorFSEWindowsCompatible=1, HonorUserFSEBehaviorMode=0, EFSEFeatureFlags=0"
+            : "FSEBehaviorMode=2, DXGIHonorFSEWindowsCompatible=0, HonorUserFSEBehaviorMode=1, EFSEFeatureFlags=0";
+        string rawDesired = desired
+            ? "FSEBehaviorMode=0, DXGIHonorFSEWindowsCompatible=1, HonorUserFSEBehaviorMode=0, EFSEFeatureFlags=0"
+            : "FSEBehaviorMode=2, DXGIHonorFSEWindowsCompatible=0, HonorUserFSEBehaviorMode=1, EFSEFeatureFlags=0";
         yield return new DriftItem(
             SettingId: Id,
             DisplayKey: "global",
@@ -26,7 +32,9 @@ public sealed class FullscreenOptimizationsMonitor : IMonitoredSetting
             DesiredValue: desired ? "On" : "Off",
             AutoApply: pref.AutoApply,
             Apply: () => Task.Run(() => Apply(desired)),
-            IsMonitored: pref.Monitor);
+            IsMonitored: pref.Monitor,
+            RawBefore: rawBefore,
+            RawDesired: rawDesired);
     }
 
     public static bool? ReadCurrent()

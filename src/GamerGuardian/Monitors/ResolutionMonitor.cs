@@ -37,7 +37,9 @@ public sealed class ResolutionMonitor : IMonitoredSetting
                 DesiredValue: $"{dw}x{dh}",
                 AutoApply: pref.Resolution.AutoApply,
                 Apply: () => Task.Run(() => Apply(captured.GdiDeviceName, dw, dh)),
-                IsMonitored: pref.Resolution.Monitor);
+                IsMonitored: pref.Resolution.Monitor,
+                RawBefore: $"dmPelsWidth={current.Value.Width}, dmPelsHeight={current.Value.Height}",
+                RawDesired: $"dmPelsWidth={dw}, dmPelsHeight={dh}");
         }
     }
 

@@ -17,6 +17,8 @@ public sealed class GameModeMonitor : IMonitoredSetting
         if (current.Value == pref.DesiredOn) yield break;
 
         bool desired = pref.DesiredOn;
+        int rawBefore = current.Value ? 1 : 0;
+        int rawDesired = desired ? 1 : 0;
         yield return new DriftItem(
             SettingId: Id,
             DisplayKey: "global",
@@ -26,7 +28,9 @@ public sealed class GameModeMonitor : IMonitoredSetting
             DesiredValue: desired ? "On" : "Off",
             AutoApply: pref.AutoApply,
             Apply: () => Task.Run(() => Apply(desired)),
-            IsMonitored: pref.Monitor);
+            IsMonitored: pref.Monitor,
+            RawBefore: $"AutoGameModeEnabled={rawBefore}, AllowAutoGameMode={rawBefore}",
+            RawDesired: $"AutoGameModeEnabled={rawDesired}, AllowAutoGameMode={rawDesired}");
     }
 
     public static bool? ReadCurrent()

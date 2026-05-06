@@ -28,7 +28,9 @@ public sealed class VrrMonitor : IMonitoredSetting
             DesiredValue: desired ? "On" : "Off",
             AutoApply: pref.AutoApply,
             Apply: () => Task.Run(() => Apply(desired)),
-            IsMonitored: pref.Monitor);
+            IsMonitored: pref.Monitor,
+            RawBefore: $"VRROptimizeEnable={(current.Value ? "1" : "0")}",
+            RawDesired: $"VRROptimizeEnable={(desired ? "1" : "0")}");
     }
 
     public static bool? ReadCurrent()
