@@ -96,7 +96,12 @@ The ~136 MB private (committed) memory at runtime is the irreducible cost of bun
 
 **Pauses entirely during fullscreen gameplay:**
 
-`SHQueryUserNotificationState` from `shell32.dll` (the same API Windows uses for its own Do-Not-Disturb logic) detects when a fullscreen D3D / exclusive-fullscreen / presentation app is in the foreground. When it is, GamerGuardian:
+Two-stage detection covers all common gaming display modes:
+
+1. `SHQueryUserNotificationState` from `shell32.dll` (the same API Windows uses for its own Do-Not-Disturb logic) detects exclusive-fullscreen D3D, presentation mode, and fullscreen UWP apps. Catches games like StarCraft 2, older esports titles in true fullscreen.
+2. **Foreground window vs monitor bounds check.** The above API misses *borderless windowed* (the default for most modern games — Apex, Valorant, CS2, Fortnite, etc.). For that, we get the foreground window's rect and the monitor's full bounds (including taskbar area) via `GetForegroundWindow` + `MonitorFromWindow` + `GetMonitorInfo`. If the window covers the entire monitor edge-to-edge, it's borderless fullscreen — pause polling. A regular maximized window (Chrome, VSCode, etc.) matches `rcWork` (excludes taskbar), not `rcMonitor`, so this won't false-positive on those.
+
+When either check fires, GamerGuardian:
 
 - Skips drift checks
 - Skips notifications
