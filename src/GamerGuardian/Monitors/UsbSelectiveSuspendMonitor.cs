@@ -14,7 +14,6 @@ public sealed class UsbSelectiveSuspendMonitor : IMonitoredSetting
     public IEnumerable<DriftItem> CheckDrift(AppConfig config)
     {
         var pref = config.Global.UsbSelectiveSuspend;
-        if (!pref.Monitor) yield break;
 
         var current = ReadCurrent();
         if (current.HasValue && current.Value == pref.DesiredOn) yield break;
@@ -30,7 +29,8 @@ public sealed class UsbSelectiveSuspendMonitor : IMonitoredSetting
             AutoApply: pref.AutoApply,
             Apply: () => Task.Run(() => ElevatedRegistry.SetHklmDword(
                 SubKey, ValueName, desired ? 1u : 0u)),
-            RequiresReboot: true);
+            RequiresReboot: true,
+            IsMonitored: pref.Monitor);
     }
 
     public static bool? ReadCurrent()

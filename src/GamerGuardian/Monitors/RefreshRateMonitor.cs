@@ -16,7 +16,6 @@ public sealed class RefreshRateMonitor : IMonitoredSetting
                 pref = new DisplayPreference { DisplayLabel = display.DisplayLabel };
                 config.Displays[display.StableKey] = pref;
             }
-            if (!pref.RefreshRate.Monitor) continue;
             if (string.IsNullOrEmpty(display.GdiDeviceName)) continue;
 
             var current = GetCurrentRefresh(display.GdiDeviceName);
@@ -39,7 +38,8 @@ public sealed class RefreshRateMonitor : IMonitoredSetting
                 CurrentValue: $"{current.Value.Hz} Hz",
                 DesiredValue: $"{desired} Hz",
                 AutoApply: pref.RefreshRate.AutoApply,
-                Apply: () => Task.Run(() => SetRefresh(captured.GdiDeviceName, capturedDesired)));
+                Apply: () => Task.Run(() => SetRefresh(captured.GdiDeviceName, capturedDesired)),
+                IsMonitored: pref.RefreshRate.Monitor);
         }
     }
 

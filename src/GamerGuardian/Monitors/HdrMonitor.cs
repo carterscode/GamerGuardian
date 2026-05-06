@@ -13,7 +13,6 @@ public sealed class HdrMonitor : IMonitoredSetting
         foreach (var display in DisplayHelper.EnumerateActiveDisplays())
         {
             var pref = GetOrCreatePref(config, display);
-            if (!pref.Hdr.Monitor) continue;
 
             var state = ReadHdrState(display);
             if (state is null) continue;
@@ -31,7 +30,8 @@ public sealed class HdrMonitor : IMonitoredSetting
                 CurrentValue: current ? "On" : "Off",
                 DesiredValue: desired ? "On" : "Off",
                 AutoApply: pref.Hdr.AutoApply,
-                Apply: () => Task.Run(() => SetHdrState(display, desired)));
+                Apply: () => Task.Run(() => SetHdrState(display, desired)),
+                IsMonitored: pref.Hdr.Monitor);
         }
     }
 

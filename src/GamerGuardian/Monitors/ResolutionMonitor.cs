@@ -17,7 +17,6 @@ public sealed class ResolutionMonitor : IMonitoredSetting
                 pref = new DisplayPreference { DisplayLabel = display.DisplayLabel };
                 config.Displays[display.StableKey] = pref;
             }
-            if (!pref.Resolution.Monitor) continue;
             if (pref.Resolution.DesiredWidth is null || pref.Resolution.DesiredHeight is null) continue;
             if (string.IsNullOrEmpty(display.GdiDeviceName)) continue;
 
@@ -37,7 +36,8 @@ public sealed class ResolutionMonitor : IMonitoredSetting
                 CurrentValue: $"{current.Value.Width}x{current.Value.Height}",
                 DesiredValue: $"{dw}x{dh}",
                 AutoApply: pref.Resolution.AutoApply,
-                Apply: () => Task.Run(() => Apply(captured.GdiDeviceName, dw, dh)));
+                Apply: () => Task.Run(() => Apply(captured.GdiDeviceName, dw, dh)),
+                IsMonitored: pref.Resolution.Monitor);
         }
     }
 

@@ -20,7 +20,6 @@ public sealed class GamesTaskProfileMonitor : IMonitoredSetting
     public IEnumerable<DriftItem> CheckDrift(AppConfig config)
     {
         var pref = config.Global.GamesTaskProfile;
-        if (!pref.Monitor) yield break;
 
         var current = ReadCurrent();
         if (current is null) yield break;
@@ -35,7 +34,8 @@ public sealed class GamesTaskProfileMonitor : IMonitoredSetting
             CurrentValue: current.Value ? "Gaming" : "Default",
             DesiredValue: desired ? "Gaming" : "Default",
             AutoApply: pref.AutoApply,
-            Apply: () => Task.Run(() => ApplyValues(desired)));
+            Apply: () => Task.Run(() => ApplyValues(desired)),
+            IsMonitored: pref.Monitor);
     }
 
     public static bool? ReadCurrent()

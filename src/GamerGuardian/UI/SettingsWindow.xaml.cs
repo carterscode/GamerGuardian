@@ -56,10 +56,32 @@ public partial class SettingsWindow : FluentWindow
     private static string GamingDefaultText(bool? state) =>
         state is null ? "not detected" : (state.Value ? "Gaming-optimized" : "Default");
 
+    private static void SyncIfUnmonitored(ToggleSettingPref pref, Func<bool?> readCurrent)
+    {
+        if (pref.Monitor) return;
+        bool? cur;
+        try { cur = readCurrent(); } catch { return; }
+        if (cur.HasValue) pref.DesiredOn = cur.Value;
+    }
+
     private void LoadGlobals()
     {
         GlobalToggleRows.Clear();
         var g = _config.Global;
+
+        // For settings the user hasn't opted into monitoring, default Want to Current
+        // so the radios reflect the actual system state instead of a "ghost" recommendation.
+        SyncIfUnmonitored(g.GameMode, GameModeMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.GameDvr, GameDvrMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.Hags, HagsMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.MemoryIntegrity, MemoryIntegrityMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.SystemResponsiveness, SystemResponsivenessMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.NetworkThrottling, NetworkThrottlingMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.UsbSelectiveSuspend, UsbSelectiveSuspendMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.GamesTaskProfile, GamesTaskProfileMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.MousePrecision, MousePrecisionMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.FullscreenOptimizations, FullscreenOptimizationsMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.Vrr, VrrMonitor.ReadCurrent);
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Game Mode",

@@ -13,7 +13,6 @@ public sealed class VrrMonitor : IMonitoredSetting
     public IEnumerable<DriftItem> CheckDrift(AppConfig config)
     {
         var pref = config.Global.Vrr;
-        if (!pref.Monitor) yield break;
 
         var current = ReadCurrent();
         if (current is null) yield break;
@@ -28,7 +27,8 @@ public sealed class VrrMonitor : IMonitoredSetting
             CurrentValue: current.Value ? "On" : "Off",
             DesiredValue: desired ? "On" : "Off",
             AutoApply: pref.AutoApply,
-            Apply: () => Task.Run(() => Apply(desired)));
+            Apply: () => Task.Run(() => Apply(desired)),
+            IsMonitored: pref.Monitor);
     }
 
     public static bool? ReadCurrent()

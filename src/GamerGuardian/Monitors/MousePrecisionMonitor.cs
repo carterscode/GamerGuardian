@@ -11,7 +11,6 @@ public sealed class MousePrecisionMonitor : IMonitoredSetting
     public IEnumerable<DriftItem> CheckDrift(AppConfig config)
     {
         var pref = config.Global.MousePrecision;
-        if (!pref.Monitor) yield break;
 
         var current = ReadCurrent();
         if (current is null) yield break;
@@ -26,7 +25,8 @@ public sealed class MousePrecisionMonitor : IMonitoredSetting
             CurrentValue: current.Value ? "On" : "Off",
             DesiredValue: desired ? "On" : "Off",
             AutoApply: pref.AutoApply,
-            Apply: () => Task.Run(() => Apply(desired)));
+            Apply: () => Task.Run(() => Apply(desired)),
+            IsMonitored: pref.Monitor);
     }
 
     public static bool? ReadCurrent()

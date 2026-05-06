@@ -71,7 +71,7 @@ public sealed class MonitorService : IDisposable
             var drifted = new List<DriftItem>();
             foreach (var m in _monitors)
             {
-                try { drifted.AddRange(m.CheckDrift(config)); }
+                try { drifted.AddRange(m.CheckDrift(config).Where(d => d.IsMonitored)); }
                 catch { /* swallow per-monitor failure to keep loop alive */ }
             }
             _store.Save(config);

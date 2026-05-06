@@ -16,7 +16,6 @@ public sealed class SystemResponsivenessMonitor : IMonitoredSetting
     public IEnumerable<DriftItem> CheckDrift(AppConfig config)
     {
         var pref = config.Global.SystemResponsiveness;
-        if (!pref.Monitor) yield break;
 
         var current = ReadCurrent();
         if (current is null) yield break;
@@ -33,7 +32,8 @@ public sealed class SystemResponsivenessMonitor : IMonitoredSetting
             AutoApply: pref.AutoApply,
             Apply: () => Task.Run(() => ElevatedRegistry.SetHklmDword(
                 SubKey, ValueName, desired ? GamingValue : DefaultValue)),
-            RequiresReboot: true);
+            RequiresReboot: true,
+            IsMonitored: pref.Monitor);
     }
 
     public static bool? ReadCurrent()

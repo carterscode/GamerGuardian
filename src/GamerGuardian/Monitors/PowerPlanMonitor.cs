@@ -15,7 +15,6 @@ public sealed class PowerPlanMonitor : IMonitoredSetting
     public IEnumerable<DriftItem> CheckDrift(AppConfig config)
     {
         var pref = config.Global.PowerPlan;
-        if (!pref.Monitor) yield break;
 
         var active = GetActivePlan();
         if (active == Guid.Empty) yield break;
@@ -34,7 +33,8 @@ public sealed class PowerPlanMonitor : IMonitoredSetting
             CurrentValue: available.GetValueOrDefault(active, active.ToString()),
             DesiredValue: pref.Desired.ToString(),
             AutoApply: pref.AutoApply,
-            Apply: () => Task.Run(() => SetActivePlan(desiredGuid)));
+            Apply: () => Task.Run(() => SetActivePlan(desiredGuid)),
+            IsMonitored: pref.Monitor);
     }
 
     public static Guid ToGuid(PowerPlanChoice c) => c switch

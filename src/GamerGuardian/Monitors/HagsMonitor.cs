@@ -13,7 +13,6 @@ public sealed class HagsMonitor : IMonitoredSetting
     public IEnumerable<DriftItem> CheckDrift(AppConfig config)
     {
         var pref = config.Global.Hags;
-        if (!pref.Monitor) yield break;
 
         var current = ReadCurrent();
         if (current is null) yield break;
@@ -29,7 +28,8 @@ public sealed class HagsMonitor : IMonitoredSetting
             DesiredValue: desired ? "On" : "Off",
             AutoApply: pref.AutoApply,
             Apply: () => Task.Run(() => ElevatedRegistry.SetHklmDword(SubKey, ValueName, desired ? 2u : 1u)),
-            RequiresReboot: true);
+            RequiresReboot: true,
+            IsMonitored: pref.Monitor);
     }
 
     public static bool? ReadCurrent()

@@ -16,7 +16,6 @@ public sealed class NetworkThrottlingMonitor : IMonitoredSetting
     public IEnumerable<DriftItem> CheckDrift(AppConfig config)
     {
         var pref = config.Global.NetworkThrottling;
-        if (!pref.Monitor) yield break;
 
         var current = ReadCurrent();
         if (current is null) yield break;
@@ -32,7 +31,8 @@ public sealed class NetworkThrottlingMonitor : IMonitoredSetting
             DesiredValue: desired ? "Disabled (gaming)" : "Default",
             AutoApply: pref.AutoApply,
             Apply: () => Task.Run(() => ElevatedRegistry.SetHklmDword(
-                SubKey, ValueName, desired ? DisabledValue : DefaultValue)));
+                SubKey, ValueName, desired ? DisabledValue : DefaultValue)),
+            IsMonitored: pref.Monitor);
     }
 
     public static bool? ReadCurrent()
