@@ -75,6 +75,20 @@
                                 <CheckBox Grid.Column="0" x:Name="CheckForUpdatesCheck" Content="Check for updates on startup" VerticalAlignment="Center"/>
                                 <ui:Button Grid.Column="1" x:Name="CheckUpdatesNowButton" Content="Check now" MinWidth="110" Click="CheckUpdatesNowButton_Click"/>
                             </Grid>
+                            <Grid Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Change log"/>
+                                    <TextBlock Text="Every applied change (manual or silent) is recorded with a timestamp, before/after values, and verification status."
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               FontSize="12"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ui:Button Grid.Column="1" Content="Open change log" MinWidth="140" Click="OpenChangeLogButton_Click"/>
+                            </Grid>
 
                             <Grid Margin="0,8,0,0">
                                 <Grid.ColumnDefinitions>

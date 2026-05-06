@@ -44,6 +44,24 @@ public partial class ApplyResultsWindow : FluentWindow
             catch { }
         }
     }
+
+    private void OpenLogButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var path = GamerGuardian.Services.ChangeLogger.LogPath;
+            if (!System.IO.File.Exists(path))
+            {
+                System.IO.File.WriteAllText(path, "(no changes have been applied yet)\n");
+            }
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = path,
+                UseShellExecute = true,
+            });
+        }
+        catch { }
+    }
 }
 
 public sealed class ResultRow

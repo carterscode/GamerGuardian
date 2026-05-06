@@ -225,9 +225,17 @@ GamerGuardian doesn't ask you to take its word for it.
 | Power plan | `powercfg /getactivescheme` |
 | HDR / Refresh / Resolution | Settings → System → Display, or `dxdiag` |
 
-**4. The `--test` CLI flag** (`GamerGuardian.exe --test`) writes every monitor's current readout to `%TEMP%\gamerguardian_selftest.txt` — same call paths the live UI uses, so the file is always in sync with what Settings shows.
+**4. The change log.** `%APPDATA%\GamerGuardian\changes.log` — every applied change (manual or silent auto-apply) is appended with a timestamp, source, before/after values, and verification status. Open it from *Settings → General → Open change log*, or from the Apply Results window. Sample line:
 
-**5. The source.** Every monitor is a single file under [`src/GamerGuardian/Monitors/`](src/GamerGuardian/Monitors/) that does exactly one thing each. Read [`HagsMonitor.cs`](src/GamerGuardian/Monitors/HagsMonitor.cs), say, to see the full code that reads and writes HAGS — about 30 lines.
+```
+[2026-05-06 22:14:08] [manual] OK     USB Selective Suspend (global override)  |  Default -> Disabled (gaming)  |  now: Disabled (gaming) | reboot pending
+```
+
+Auto-rotates at ~1 MB (`changes.log.1` keeps the previous batch).
+
+**5. The `--test` CLI flag** (`GamerGuardian.exe --test`) writes every monitor's current readout to `%TEMP%\gamerguardian_selftest.txt` — same call paths the live UI uses, so the file is always in sync with what Settings shows.
+
+**6. The source.** Every monitor is a single file under [`src/GamerGuardian/Monitors/`](src/GamerGuardian/Monitors/) that does exactly one thing each. Read [`HagsMonitor.cs`](src/GamerGuardian/Monitors/HagsMonitor.cs), say, to see the full code that reads and writes HAGS — about 30 lines.
 
 ## Compatibility
 

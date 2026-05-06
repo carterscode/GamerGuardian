@@ -272,6 +272,26 @@ public partial class SettingsWindow : FluentWindow
             ThemeService.Apply(c);
     }
 
+    private void OpenChangeLogButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var path = ChangeLogger.LogPath;
+            if (!System.IO.File.Exists(path))
+            {
+                var dir = System.IO.Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(dir)) System.IO.Directory.CreateDirectory(dir);
+                System.IO.File.WriteAllText(path, "(no changes have been applied yet)\n");
+            }
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = path,
+                UseShellExecute = true,
+            });
+        }
+        catch { }
+    }
+
     private async void CheckUpdatesNowButton_Click(object sender, RoutedEventArgs e)
     {
         var btn = CheckUpdatesNowButton;
@@ -333,35 +353,11 @@ public partial class SettingsWindow : FluentWindow
             catch { /* per-monitor failures shouldn't break Apply */ }
         }
 
-        foreach (var d in drifted)
-        {
-            try { await d.Apply(); }
-            catch { /* keep going; verification will catch failure */ }
-        }
+        var results = await ChangeApplier.ApplyAndVerifyAsync(drifted, _monitors, _config);
 
-        var afterDrift = new List<DriftItem>();
-        foreach (var m in _monitors)
+        if (results.Count > 0)
         {
-            try { afterDrift.AddRange(m.CheckDrift(_config)); }
-            catch { }
-        }
-
-        var results = new List<ApplyResult>();
-        foreach (var d in drifted)
-        {
-            var stillDrifted = afterDrift.FirstOrDefault(a => a.SettingId == d.SettingId);
-            var verified = stillDrifted is null;
-            var afterValue = verified ? d.DesiredValue : (stillDrifted?.CurrentValue ?? d.CurrentValue);
-            results.Add(new ApplyResult(
-                SettingId: d.SettingId,
-                Description: d.Description,
-                Before: d.CurrentValue,
-                Desired: d.DesiredValue,
-                After: afterValue,
-                Verified: verified,
-                RequiresReboot: d.RequiresReboot,
-                Mechanism: SettingDocs.MechanismFor(d.SettingId),
-                VerifyCommand: SettingDocs.VerifyCommandFor(d.SettingId)));
+            ChangeLogger.LogApplyResults(results, "manual");
         }
 
         Saved?.Invoke();

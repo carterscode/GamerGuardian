@@ -77,18 +77,20 @@ public sealed class MonitorService : IDisposable
             _store.Save(config);
 
             var auto = drifted.Where(d => d.AutoApply).ToList();
-            var autoRebootRequired = new List<DriftItem>();
-            foreach (var item in auto)
+            if (auto.Count > 0)
             {
-                try
+                var results = await ChangeApplier.ApplyAndVerifyAsync(auto, _monitors, config);
+                ChangeLogger.LogApplyResults(results, "auto");
+
+                var rebootSettings = new List<DriftItem>();
+                for (int i = 0; i < auto.Count && i < results.Count; i++)
                 {
-                    await item.Apply();
-                    if (item.RequiresReboot) autoRebootRequired.Add(item);
+                    if (results[i].Verified && auto[i].RequiresReboot)
+                        rebootSettings.Add(auto[i]);
                 }
-                catch { }
+                if (rebootSettings.Count > 0)
+                    AutoAppliedRebootRequired?.Invoke(rebootSettings);
             }
-            if (autoRebootRequired.Count > 0)
-                AutoAppliedRebootRequired?.Invoke(autoRebootRequired);
 
             var prompt = drifted.Where(d => !d.AutoApply).ToList();
             if (prompt.Count > 0)
