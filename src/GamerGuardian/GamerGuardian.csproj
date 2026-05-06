@@ -16,4 +16,7 @@
     <Product>GamerGuardian</Product>
     <Copyright>Copyright (c) 2026 GamerGuardian Contributors</Copyright>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="WPF-UI" Version="3.0.5" />
+  </ItemGroup>
 </Project>

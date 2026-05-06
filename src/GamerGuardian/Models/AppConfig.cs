@@ -7,9 +7,18 @@ public sealed class AppConfig
     public bool LaunchAtStartup { get; set; } = true;
     public int PollIntervalSeconds { get; set; } = 30;
     public bool ConsolidateNotifications { get; set; } = true;
+    public AppThemeChoice Theme { get; set; } = AppThemeChoice.System;
 
     public Dictionary<string, DisplayPreference> Displays { get; set; } = new();
     public GlobalPreferences Global { get; set; } = new();
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum AppThemeChoice
+{
+    System,
+    Light,
+    Dark,
 }
 
 public sealed class DisplayPreference

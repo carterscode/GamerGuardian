@@ -3,14 +3,16 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Controls;
 using GamerGuardian.Models;
 using GamerGuardian.Monitors;
 using GamerGuardian.Native;
 using GamerGuardian.Services;
+using Wpf.Ui.Controls;
 
 namespace GamerGuardian.UI;
 
-public partial class SettingsWindow : Window
+public partial class SettingsWindow : FluentWindow
 {
     private readonly ConfigStore _store;
     private readonly AppConfig _config;
@@ -27,7 +29,10 @@ public partial class SettingsWindow : Window
 
         LaunchAtStartupCheck.IsChecked = _config.LaunchAtStartup;
         ConsolidateCheck.IsChecked = _config.ConsolidateNotifications;
-        PollSecondsBox.Text = _config.PollIntervalSeconds.ToString(CultureInfo.InvariantCulture);
+        PollSecondsBox.Value = _config.PollIntervalSeconds;
+
+        ThemeCombo.ItemsSource = Enum.GetValues<AppThemeChoice>();
+        ThemeCombo.SelectedItem = _config.Theme;
 
         DisplaysList.ItemsSource = DisplayRows;
         GlobalTogglesList.ItemsSource = GlobalToggleRows;
@@ -115,12 +120,20 @@ public partial class SettingsWindow : Window
         }
     }
 
+    private void ThemeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ThemeCombo.SelectedItem is AppThemeChoice c)
+            ThemeService.Apply(c);
+    }
+
     private void SaveButton_Click(object sender, RoutedEventArgs e)
     {
         _config.LaunchAtStartup = LaunchAtStartupCheck.IsChecked == true;
         _config.ConsolidateNotifications = ConsolidateCheck.IsChecked == true;
-        if (int.TryParse(PollSecondsBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var s) && s >= 5)
-            _config.PollIntervalSeconds = s;
+        if (PollSecondsBox.Value is double pv && pv >= 5)
+            _config.PollIntervalSeconds = (int)pv;
+        if (ThemeCombo.SelectedItem is AppThemeChoice tc)
+            _config.Theme = tc;
 
         _config.Global.PowerPlan.Monitor = PowerPlanMonitorCheck.IsChecked == true;
         _config.Global.PowerPlan.AutoApply = PowerPlanAutoApplyCheck.IsChecked == true;

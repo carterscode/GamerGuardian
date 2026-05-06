@@ -19,6 +19,14 @@ public partial class App : WpfApplication
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        AppDomain.CurrentDomain.UnhandledException += (_, ex) =>
+            LogException("unhandled", ex.ExceptionObject as Exception);
+        DispatcherUnhandledException += (_, ex) =>
+        {
+            LogException("dispatcher", ex.Exception);
+            ex.Handled = true;
+        };
+
         base.OnStartup(e);
 
         if (e.Args.Any(a => a == "--test"))
@@ -38,6 +46,7 @@ public partial class App : WpfApplication
         _store = new ConfigStore();
         var cfg = _store.Load();
         StartupRegistration.Sync(cfg.LaunchAtStartup);
+        ThemeService.Apply(cfg.Theme);
 
         _notifier = new Notifier();
         _monitor = new MonitorService(
@@ -65,20 +74,27 @@ public partial class App : WpfApplication
         _monitor.Start();
 
         bool isFirstRun = !System.IO.File.Exists(_store.ConfigPath);
-        if (isFirstRun) ShowSettings();
+        if (isFirstRun || e.Args.Any(a => a == "--show-settings")) ShowSettings();
     }
 
     private void ShowSettings()
     {
-        if (_settingsWindow is { IsLoaded: true })
+        try
         {
-            _settingsWindow.Activate();
-            return;
+            if (_settingsWindow is { IsLoaded: true })
+            {
+                _settingsWindow.Activate();
+                return;
+            }
+            _settingsWindow = new SettingsWindow(_store!);
+            _settingsWindow.Saved += () => _monitor?.TriggerNow();
+            _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+            _settingsWindow.Show();
         }
-        _settingsWindow = new SettingsWindow(_store!);
-        _settingsWindow.Saved += () => _monitor?.TriggerNow();
-        _settingsWindow.Closed += (_, _) => _settingsWindow = null;
-        _settingsWindow.Show();
+        catch (Exception ex)
+        {
+            LogException("ShowSettings", ex);
+        }
     }
 
     private void ExitApp()
@@ -86,6 +102,17 @@ public partial class App : WpfApplication
         _tray?.Dispose();
         _monitor?.Dispose();
         Shutdown();
+    }
+
+    private static void LogException(string source, Exception? ex)
+    {
+        try
+        {
+            var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gamerguardian_error.log");
+            System.IO.File.AppendAllText(path,
+                $"[{DateTime.Now:s}] {source}: {ex?.GetType().FullName}: {ex?.Message}\n{ex?.StackTrace}\n\n");
+        }
+        catch { }
     }
 
     private static void RunSelfTest()

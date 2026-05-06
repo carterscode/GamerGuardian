@@ -1,9 +1,10 @@
 using System.Windows;
 using GamerGuardian.Models;
+using Wpf.Ui.Controls;
 
 namespace GamerGuardian.UI;
 
-public partial class NotificationWindow : Window
+public partial class NotificationWindow : FluentWindow
 {
     private readonly DriftReport _report;
 
