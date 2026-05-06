@@ -36,6 +36,7 @@ public partial class SettingsWindow : FluentWindow
         ThemeCombo.SelectedItem = _config.Theme;
 
         VersionLink.Content = GetVersionDisplay();
+        VersionLink.ToolTip = GetVersionTooltip();
 
         DisplaysList.ItemsSource = DisplayRows;
         GlobalTogglesList.ItemsSource = GlobalToggleRows;
@@ -125,16 +126,39 @@ public partial class SettingsWindow : FluentWindow
 
     private static string GetVersionDisplay()
     {
+        var v = GetSemverString();
+#if DEBUG
+        return $"v{v} (dev)";
+#else
+        return $"v{v}";
+#endif
+    }
+
+    private static string GetSemverString()
+    {
         var asm = typeof(App).Assembly;
         var info = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
         if (!string.IsNullOrEmpty(info))
         {
             var idx = info.IndexOf('+');
-            if (idx > 0) info = info[..idx];
-            return $"v{info}";
+            return idx > 0 ? info[..idx] : info;
         }
         var v = asm.GetName().Version;
-        return v != null ? $"v{v.Major}.{v.Minor}.{v.Build}" : "v(dev)";
+        return v != null ? $"{v.Major}.{v.Minor}.{v.Build}" : "0.0.0";
+    }
+
+    private static string GetVersionTooltip()
+    {
+        var asm = typeof(App).Assembly;
+        var info = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "(unknown)";
+        var fileV = asm.GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version ?? "(unknown)";
+        var rt = Environment.Version.ToString();
+#if DEBUG
+        var build = "Debug";
+#else
+        var build = "Release";
+#endif
+        return $"Informational: {info}\nFile: {fileV}\n.NET: {rt}\nBuild: {build}\n\nClick to open releases page";
     }
 
     private void ThemeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)

@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Windows;
 using GamerGuardian.Monitors;
 using GamerGuardian.Services;
@@ -139,6 +140,27 @@ public partial class App : WpfApplication
             try { log.Add($"OK   {name,-44} = {f()}"); }
             catch (Exception ex) { log.Add($"FAIL {name,-44} = {ex.GetType().Name}: {ex.Message}"); }
         }
+
+        var asm = typeof(App).Assembly;
+        Run("Assembly.GetName().Version", () => asm.GetName().Version?.ToString() ?? "(null)");
+        Run("AssemblyInformationalVersion",
+            () => asm.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "(null)");
+        Run("AssemblyFileVersion",
+            () => asm.GetCustomAttribute<System.Reflection.AssemblyFileVersionAttribute>()?.Version ?? "(null)");
+        Run("AssemblyVersion",
+            () => asm.GetCustomAttribute<System.Reflection.AssemblyVersionAttribute>()?.Version ?? "(null)");
+        Run("FileVersionInfo.ProductVersion", () =>
+        {
+            var p = Environment.ProcessPath;
+            return string.IsNullOrEmpty(p) ? "(no path)"
+                : System.Diagnostics.FileVersionInfo.GetVersionInfo(p).ProductVersion ?? "(null)";
+        });
+        Run("FileVersionInfo.FileVersion", () =>
+        {
+            var p = Environment.ProcessPath;
+            return string.IsNullOrEmpty(p) ? "(no path)"
+                : System.Diagnostics.FileVersionInfo.GetVersionInfo(p).FileVersion ?? "(null)";
+        });
 
         Run("displays", () => string.Join(", ",
             GamerGuardian.Native.DisplayHelper.EnumerateActiveDisplays().Select(d => d.DisplayLabel)));
