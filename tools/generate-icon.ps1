@@ -94,3 +94,10 @@ function Save-MultiResIco([string]$out, [int[]]$sizes) {
 
 Save-MultiResIco -out $OutputPath -sizes @(16, 24, 32, 48, 64, 128, 256)
 "Wrote $OutputPath ({0:N0} bytes)" -f (Get-Item $OutputPath).Length
+
+# README banner PNG
+$pngPath = Join-Path (Split-Path $OutputPath) 'AppIcon-128.png'
+$pngBmp = New-LogoBitmap 128
+$pngBmp.Save($pngPath, [System.Drawing.Imaging.ImageFormat]::Png)
+$pngBmp.Dispose()
+"Wrote $pngPath ({0:N0} bytes)" -f (Get-Item $pngPath).Length
