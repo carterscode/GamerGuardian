@@ -36,6 +36,7 @@ It's also paranoid about not making your gaming worse. Polling pauses entirely d
 
 ## Table of contents
 
+- [Screenshots](#screenshots)
 - [Install](#install)
 - [What it watches](#what-it-watches)
 - [Usage](#usage)
@@ -45,6 +46,16 @@ It's also paranoid about not making your gaming worse. Polling pauses entirely d
 - [Compatibility](#compatibility)
 - [Contributing](#contributing)
 - [License](#license)
+
+## Screenshots
+
+<div align="center">
+
+<img src="docs/screenshots/settings-window.png" width="780" alt="GamerGuardian settings window" />
+
+*Settings window — General preferences, Global gaming settings (Game Mode, Game DVR shown). Each setting card shows a description, current state, Windows default, and per-setting Monitor / Want / Auto-apply controls. Bottom bar: clickable version label, Cancel / Apply / Save & close.*
+
+</div>
 
 ## Install
 
