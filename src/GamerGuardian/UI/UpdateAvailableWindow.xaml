@@ -1,0 +1,60 @@
+<ui:FluentWindow x:Class="GamerGuardian.UI.UpdateAvailableWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="GamerGuardian update"
+        Width="520"
+        SizeToContent="Height"
+        WindowStartupLocation="Manual"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Topmost="True"
+        WindowBackdropType="Mica"
+        ExtendsContentIntoTitleBar="True"
+        WindowCornerPreference="Round">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="Update available">
+            <ui:TitleBar.Icon>
+                <ui:SymbolIcon Symbol="ArrowDownload24"/>
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+
+        <StackPanel Grid.Row="1" Margin="20,8,20,16">
+            <TextBlock x:Name="HeaderText"
+                       FontSize="15" FontWeight="SemiBold"
+                       Margin="0,0,0,4"/>
+            <TextBlock x:Name="SubText"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       FontSize="12"
+                       Margin="0,0,0,12"/>
+            <TextBlock Text="Release notes" FontWeight="SemiBold" Margin="0,0,0,4"/>
+            <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,0,12">
+                <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                    <TextBlock x:Name="NotesText"
+                               TextWrapping="Wrap"
+                               FontSize="12"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                </ScrollViewer>
+            </Border>
+
+            <StackPanel x:Name="ProgressPanel" Visibility="Collapsed" Margin="0,0,0,12">
+                <ProgressBar x:Name="DownloadProgress" Height="6" Maximum="1.0"/>
+                <TextBlock x:Name="StatusText" FontSize="11"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Margin="0,4,0,0"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <ui:Button x:Name="SkipButton" Content="Skip this version" MinWidth="120" Margin="0,0,8,0" Click="SkipButton_Click"/>
+                <ui:Button x:Name="LaterButton" Content="Later" MinWidth="80" Margin="0,0,8,0" Click="LaterButton_Click"/>
+                <ui:Button x:Name="InstallButton" Content="Download and install" Appearance="Primary" MinWidth="170" Click="InstallButton_Click"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</ui:FluentWindow>

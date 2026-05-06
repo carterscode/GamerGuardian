@@ -67,6 +67,7 @@
 
                             <CheckBox x:Name="LaunchAtStartupCheck" Content="Launch at Windows startup" Margin="0,4,0,4"/>
                             <CheckBox x:Name="ConsolidateCheck" Content="Group multiple drifts into one notification" Margin="0,4,0,4"/>
+                            <CheckBox x:Name="CheckForUpdatesCheck" Content="Check for updates on startup" Margin="0,4,0,4"/>
 
                             <Grid Margin="0,8,0,0">
                                 <Grid.ColumnDefinitions>

@@ -8,6 +8,8 @@ public sealed class AppConfig
     public int PollIntervalSeconds { get; set; } = 30;
     public bool ConsolidateNotifications { get; set; } = true;
     public AppThemeChoice Theme { get; set; } = AppThemeChoice.System;
+    public bool CheckForUpdatesOnStartup { get; set; } = true;
+    public string? SkippedUpdateVersion { get; set; }
 
     public Dictionary<string, DisplayPreference> Displays { get; set; } = new();
     public GlobalPreferences Global { get; set; } = new();

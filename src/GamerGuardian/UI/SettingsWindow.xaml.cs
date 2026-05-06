@@ -32,6 +32,7 @@ public partial class SettingsWindow : FluentWindow
 
         LaunchAtStartupCheck.IsChecked = _config.LaunchAtStartup;
         ConsolidateCheck.IsChecked = _config.ConsolidateNotifications;
+        CheckForUpdatesCheck.IsChecked = _config.CheckForUpdatesOnStartup;
         PollSecondsBox.Value = _config.PollIntervalSeconds;
 
         ThemeCombo.ItemsSource = Enum.GetValues<AppThemeChoice>();
@@ -294,6 +295,7 @@ public partial class SettingsWindow : FluentWindow
     {
         _config.LaunchAtStartup = LaunchAtStartupCheck.IsChecked == true;
         _config.ConsolidateNotifications = ConsolidateCheck.IsChecked == true;
+        _config.CheckForUpdatesOnStartup = CheckForUpdatesCheck.IsChecked == true;
         if (PollSecondsBox.Value is double pv && pv >= 5)
             _config.PollIntervalSeconds = (int)pv;
         if (ThemeCombo.SelectedItem is AppThemeChoice tc)

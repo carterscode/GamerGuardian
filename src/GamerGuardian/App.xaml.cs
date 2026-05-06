@@ -96,11 +96,46 @@ public partial class App : WpfApplication
         bool isFirstRun = !System.IO.File.Exists(_store.ConfigPath);
         if (isFirstRun || e.Args.Any(a => a == "--show-settings")) ShowSettings();
 
+        if (cfg.CheckForUpdatesOnStartup)
+            _ = Task.Run(async () => await CheckForUpdatesAsync());
+
         _ = Dispatcher.BeginInvoke(() =>
         {
             GC.Collect();
             GamerGuardian.Native.Psapi.TrimSelf();
         }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+    }
+
+    private async Task CheckForUpdatesAsync()
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(5));
+            var info = await GamerGuardian.Services.UpdateService.CheckLatestAsync();
+            if (info is null) return;
+            var cfg = _store?.Load();
+            if (cfg is null) return;
+            if (cfg.SkippedUpdateVersion == info.Version) return;
+
+            await Dispatcher.InvokeAsync(() =>
+            {
+                try
+                {
+                    var win = new GamerGuardian.UI.UpdateAvailableWindow(
+                        info,
+                        _store!,
+                        onAppShouldExit: () =>
+                        {
+                            _tray?.Dispose();
+                            _monitor?.Dispose();
+                            Shutdown();
+                        });
+                    win.Show();
+                }
+                catch (Exception ex) { LogException("UpdateAvailable", ex); }
+            });
+        }
+        catch (Exception ex) { LogException("UpdateCheck", ex); }
     }
 
     private void ShowSettings()
