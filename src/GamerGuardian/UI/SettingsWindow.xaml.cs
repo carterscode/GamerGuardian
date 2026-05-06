@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -33,6 +34,8 @@ public partial class SettingsWindow : FluentWindow
 
         ThemeCombo.ItemsSource = Enum.GetValues<AppThemeChoice>();
         ThemeCombo.SelectedItem = _config.Theme;
+
+        VersionLink.Content = GetVersionDisplay();
 
         DisplaysList.ItemsSource = DisplayRows;
         GlobalTogglesList.ItemsSource = GlobalToggleRows;
@@ -118,6 +121,20 @@ public partial class SettingsWindow : FluentWindow
 
             DisplayRows.Add(new DisplayRow(d.StableKey, d.DisplayLabel, status, pref, rates, resStrings));
         }
+    }
+
+    private static string GetVersionDisplay()
+    {
+        var asm = typeof(App).Assembly;
+        var info = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        if (!string.IsNullOrEmpty(info))
+        {
+            var idx = info.IndexOf('+');
+            if (idx > 0) info = info[..idx];
+            return $"v{info}";
+        }
+        var v = asm.GetName().Version;
+        return v != null ? $"v{v.Major}.{v.Minor}.{v.Build}" : "v(dev)";
     }
 
     private void ThemeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)

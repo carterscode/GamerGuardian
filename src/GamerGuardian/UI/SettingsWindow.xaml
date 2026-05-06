@@ -23,12 +23,24 @@
 
         <DockPanel Grid.Row="1" Margin="20,8,20,16" LastChildFill="True">
 
-            <Border DockPanel.Dock="Bottom" Margin="0,16,0,0">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Grid DockPanel.Dock="Bottom" Margin="0,16,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <ui:HyperlinkButton x:Name="VersionLink" Grid.Column="0"
+                                    NavigateUri="https://github.com/carterscode/GamerGuardian/releases"
+                                    Padding="4,0"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Center"
+                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                    FontSize="11"
+                                    ToolTip="Open releases page"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
                     <ui:Button Content="Cancel" MinWidth="96" Margin="0,0,8,0" Click="CancelButton_Click"/>
                     <ui:Button Content="Save" Appearance="Primary" MinWidth="96" Click="SaveButton_Click"/>
                 </StackPanel>
-            </Border>
+            </Grid>
 
             <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
                 <StackPanel>
