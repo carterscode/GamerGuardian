@@ -69,6 +69,10 @@ public sealed class GlobalPreferences
     public ToggleSettingPref FullscreenOptimizations { get; set; } = new() { DesiredOn = true };
     public ToggleSettingPref Vrr { get; set; } = new() { DesiredOn = true };
     public ToggleSettingPref MemoryIntegrity { get; set; } = new() { DesiredOn = false };
+    public ToggleSettingPref SystemResponsiveness { get; set; } = new() { DesiredOn = true };
+    public ToggleSettingPref NetworkThrottling { get; set; } = new() { DesiredOn = true };
+    public ToggleSettingPref UsbSelectiveSuspend { get; set; } = new() { DesiredOn = true };
+    public ToggleSettingPref GamesTaskProfile { get; set; } = new() { DesiredOn = true };
     public PowerPlanPref PowerPlan { get; set; } = new();
 }
 

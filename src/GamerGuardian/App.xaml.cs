@@ -60,6 +60,10 @@ public partial class App : WpfApplication
                 new VrrMonitor(),
                 new HagsMonitor(),
                 new MemoryIntegrityMonitor(),
+                new SystemResponsivenessMonitor(),
+                new NetworkThrottlingMonitor(),
+                new UsbSelectiveSuspendMonitor(),
+                new GamesTaskProfileMonitor(),
                 new GameModeMonitor(),
                 new GameDvrMonitor(),
                 new MousePrecisionMonitor(),
@@ -176,6 +180,14 @@ public partial class App : WpfApplication
             () => GamerGuardian.Monitors.HagsMonitor.ReadCurrent()?.ToString() ?? "(null)");
         Run("MemoryIntegrityMonitor.ReadCurrent",
             () => GamerGuardian.Monitors.MemoryIntegrityMonitor.ReadCurrent()?.ToString() ?? "(null)");
+        Run("SystemResponsivenessMonitor.ReadCurrent",
+            () => GamerGuardian.Monitors.SystemResponsivenessMonitor.ReadCurrent()?.ToString() ?? "(null)");
+        Run("NetworkThrottlingMonitor.ReadCurrent",
+            () => GamerGuardian.Monitors.NetworkThrottlingMonitor.ReadCurrent()?.ToString() ?? "(null)");
+        Run("UsbSelectiveSuspendMonitor.ReadCurrent",
+            () => GamerGuardian.Monitors.UsbSelectiveSuspendMonitor.ReadCurrent()?.ToString() ?? "(null)");
+        Run("GamesTaskProfileMonitor.ReadCurrent",
+            () => GamerGuardian.Monitors.GamesTaskProfileMonitor.ReadCurrent()?.ToString() ?? "(null)");
         Run("GameModeMonitor.ReadCurrent",
             () => GamerGuardian.Monitors.GameModeMonitor.ReadCurrent()?.ToString() ?? "(null)");
         Run("GameDvrMonitor.ReadCurrent",

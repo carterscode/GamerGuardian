@@ -45,8 +45,13 @@ public partial class SettingsWindow : FluentWindow
         LoadDisplays();
     }
 
-    private static string CurrentText(bool? state, string verb = "Now") =>
-        state is null ? $"{verb}: not detected" : $"{verb}: {(state.Value ? "On" : "Off")}";
+    private static string CurrentText(bool? state, string verb = "Now", bool gamingMeansOn = false)
+    {
+        if (state is null) return $"{verb}: not detected";
+        if (gamingMeansOn)
+            return $"{verb}: {(state.Value ? "Gaming-optimized" : "Default")}";
+        return $"{verb}: {(state.Value ? "On" : "Off")}";
+    }
 
     private void LoadGlobals()
     {
@@ -63,6 +68,18 @@ public partial class SettingsWindow : FluentWindow
         GlobalToggleRows.Add(new GlobalToggleRow(
             "Memory Integrity / VBS (Core Isolation) — disable for gaming perf, reboot required",
             CurrentText(SafeRead(MemoryIntegrityMonitor.ReadCurrent)), g.MemoryIntegrity, "memint"));
+        GlobalToggleRows.Add(new GlobalToggleRow(
+            "System Responsiveness — frees ~10% CPU reserved for non-multimedia",
+            CurrentText(SafeRead(SystemResponsivenessMonitor.ReadCurrent), gamingMeansOn: true), g.SystemResponsiveness, "sysresp"));
+        GlobalToggleRows.Add(new GlobalToggleRow(
+            "Network Throttling — disable to reduce online-game packet jitter",
+            CurrentText(SafeRead(NetworkThrottlingMonitor.ReadCurrent), gamingMeansOn: true), g.NetworkThrottling, "netthr"));
+        GlobalToggleRows.Add(new GlobalToggleRow(
+            "USB Selective Suspend (global) — disable so peripherals never sleep mid-input",
+            CurrentText(SafeRead(UsbSelectiveSuspendMonitor.ReadCurrent), gamingMeansOn: true), g.UsbSelectiveSuspend, "usbsus"));
+        GlobalToggleRows.Add(new GlobalToggleRow(
+            "Games multimedia task profile — boosts priority/scheduling for game processes",
+            CurrentText(SafeRead(GamesTaskProfileMonitor.ReadCurrent), gamingMeansOn: true), g.GamesTaskProfile, "gtask"));
         GlobalToggleRows.Add(new GlobalToggleRow(
             "Mouse \"Enhance pointer precision\"",
             CurrentText(SafeRead(MousePrecisionMonitor.ReadCurrent)), g.MousePrecision, "mp"));
