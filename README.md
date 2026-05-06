@@ -225,7 +225,9 @@ GamerGuardian doesn't ask you to take its word for it.
 | Power plan | `powercfg /getactivescheme` |
 | HDR / Refresh / Resolution | Settings → System → Display, or `dxdiag` |
 
-**4. The change log.** `%APPDATA%\GamerGuardian\changes.log` — every applied change (manual or silent auto-apply) is appended with a timestamp, source, before/after values, and verification status. Open it from *Settings → General → Open change log*, or from the Apply Results window. Sample line:
+**4. The change log.** `%APPDATA%\GamerGuardian\changes.log` — every applied change (manual or silent auto-apply) is appended with a timestamp, source, before/after values, and verification status. Open it from *Settings → General → Open change log*, or from the Apply Results window. Auto-rotates at ~1 MB.
+
+Sample line:
 
 ```
 [2026-05-06 22:14:08] [manual] OK     USB Selective Suspend (global override)  |  Default -> Disabled (gaming)  |  now: Disabled (gaming) | reboot pending
@@ -236,6 +238,20 @@ Auto-rotates at ~1 MB (`changes.log.1` keeps the previous batch).
 **5. The `--test` CLI flag** (`GamerGuardian.exe --test`) writes every monitor's current readout to `%TEMP%\gamerguardian_selftest.txt` — same call paths the live UI uses, so the file is always in sync with what Settings shows.
 
 **6. The source.** Every monitor is a single file under [`src/GamerGuardian/Monitors/`](src/GamerGuardian/Monitors/) that does exactly one thing each. Read [`HagsMonitor.cs`](src/GamerGuardian/Monitors/HagsMonitor.cs), say, to see the full code that reads and writes HAGS — about 30 lines.
+
+## Files GamerGuardian writes
+
+| Path | Purpose | Lifetime |
+|---|---|---|
+| `%LOCALAPPDATA%\Programs\GamerGuardian\GamerGuardian.exe` | Installed app | Until uninstall |
+| `%APPDATA%\GamerGuardian\config.json` | Your monitor / want / auto-apply preferences | Persists; survives upgrades |
+| `%APPDATA%\GamerGuardian\changes.log` | Append-only audit of every applied change | Auto-rotates at ~1 MB → `changes.log.1` |
+| `%TEMP%\gamerguardian_error.log` | Unhandled-exception stack traces (rare) | Auto-rotates at ~1 MB → `.log.1` |
+| `%TEMP%\gamerguardian_selftest.txt` | Output of `GamerGuardian.exe --test` | Overwritten each run |
+| `%TEMP%\GamerGuardian-Setup-x.y.z.exe` | Installer downloaded by the auto-update flow before it launches | **Auto-cleaned on next launch** if older than 1 day |
+| `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\GamerGuardian` | Launch-at-startup entry | Created/removed by the *Launch at Windows startup* checkbox |
+
+If you see leftover `GamerGuardian-Setup-*.exe` files in `%TEMP%` from before v0.1.20, you can delete them — they were the previous auto-update flow's downloaded installers. v0.1.20+ cleans them up automatically.
 
 ## Compatibility
 

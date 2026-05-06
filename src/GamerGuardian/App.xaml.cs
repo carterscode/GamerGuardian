@@ -49,6 +49,7 @@ public partial class App : WpfApplication
         var cfg = _store.Load();
         StartupRegistration.Sync(cfg.LaunchAtStartup);
         ThemeService.Apply(cfg.Theme);
+        TempCleanup.Run();
 
         _notifier = new Notifier();
         _allMonitors = new IMonitoredSetting[]
@@ -180,6 +181,18 @@ public partial class App : WpfApplication
         try
         {
             var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gamerguardian_error.log");
+            // Cap at ~1 MB by rotating to .1
+            try
+            {
+                var fi = new System.IO.FileInfo(path);
+                if (fi.Exists && fi.Length > 1_000_000)
+                {
+                    var prev = path + ".1";
+                    if (System.IO.File.Exists(prev)) System.IO.File.Delete(prev);
+                    System.IO.File.Move(path, prev);
+                }
+            }
+            catch { }
             System.IO.File.AppendAllText(path,
                 $"[{DateTime.Now:s}] {source}: {ex?.GetType().FullName}: {ex?.Message}\n{ex?.StackTrace}\n\n");
         }

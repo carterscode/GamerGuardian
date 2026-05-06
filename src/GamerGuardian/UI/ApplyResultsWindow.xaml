@@ -69,16 +69,16 @@
                                         </Border>
                                     </Grid>
                                     <TextBlock Margin="30,4,0,0" FontSize="12">
-                                        <Run Text="Before: "/><Run Text="{Binding Before}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                        <Run Text="Before: "/><Run Text="{Binding Before, Mode=OneWay}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                                         <Run Text="    →    "/>
-                                        <Run Text="Want: "/><Run Text="{Binding Desired}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                        <Run Text="Want: "/><Run Text="{Binding Desired, Mode=OneWay}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                                         <Run Text="    →    "/>
-                                        <Run Text="Now: "/><Run Text="{Binding After}" Foreground="{Binding IconColor}" FontWeight="SemiBold"/>
+                                        <Run Text="Now: "/><Run Text="{Binding After, Mode=OneWay}" Foreground="{Binding IconColor}" FontWeight="SemiBold"/>
                                     </TextBlock>
                                     <TextBlock Margin="30,6,0,0" FontSize="11"
                                                Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                                TextWrapping="Wrap">
-                                        <Run Text="Mechanism: "/><Run Text="{Binding Mechanism}"/>
+                                        <Run Text="Mechanism: "/><Run Text="{Binding Mechanism, Mode=OneWay}"/>
                                     </TextBlock>
                                     <Grid Margin="30,4,0,0" Visibility="{Binding HasVerifyCommandVisibility}">
                                         <Grid.ColumnDefinitions>
