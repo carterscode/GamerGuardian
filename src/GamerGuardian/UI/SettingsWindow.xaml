@@ -44,7 +44,9 @@
                 </StackPanel>
             </Grid>
 
-            <TabControl x:Name="MainTabs" Padding="0,8,0,0">
+            <TabControl x:Name="MainTabs" Padding="0,8,0,0"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch">
 
                 <TabItem Header="General">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,8,8,0">
