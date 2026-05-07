@@ -8,6 +8,7 @@
 **Develop**
 - [Build from source](Build-from-source)
 - [Source file reference](Source-file-reference)
+- [Architecture rationale](Architecture-rationale)
 
 **Trust**
 - [Security](Security)

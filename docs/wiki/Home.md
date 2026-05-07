@@ -13,6 +13,7 @@ A Windows 11 tray app that watches gaming-related display and system settings, a
 
 - **[Build from source](Build-from-source)** — local debug, local release, local installer
 - **[Source file reference](Source-file-reference)** — what every `.cs` file does
+- **[Architecture rationale](Architecture-rationale)** — why GamerGuardian looks the way it does (no kernel driver, polling, single-file publish, etc.)
 
 ## Trust & security
 

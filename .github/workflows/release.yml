@@ -26,7 +26,7 @@ jobs:
   release:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -55,7 +55,7 @@ jobs:
           Write-Host "Building version $v (create_tag=$createTag)"
 
       - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: '8.0.x'
 
@@ -115,24 +115,62 @@ jobs:
         run: |
           Get-ChildItem -Recurse installer\Output, publish | Select-Object FullName, Length
 
+      - name: Initialize extra release notes
+        shell: pwsh
+        run: New-Item -ItemType File -Path release-notes-extra.md -Force | Out-Null
+
+      # Optional: scan with VirusTotal and surface the per-engine result URLs
+      # in the run summary. Skips silently unless both the repository variable
+      # `ENABLE_VIRUSTOTAL=true` is set *and* a `VIRUSTOTAL_API_KEY` secret is
+      # configured. Get a free public API key at https://www.virustotal.com/.
+      - name: Scan release artifacts on VirusTotal
+        id: vt
+        if: ${{ vars.ENABLE_VIRUSTOTAL == 'true' }}
+        uses: crazy-max/ghaction-virustotal@d34968c958ae283fe976efed637081b9f9dcf74f # v4.2.0
+        with:
+          vt_api_key: ${{ secrets.VIRUSTOTAL_API_KEY }}
+          files: |
+            installer/Output/GamerGuardian-Setup-${{ steps.ver.outputs.version }}.exe
+            publish/GamerGuardian.exe
+
+      - name: Append VirusTotal URLs to release notes (if scan ran)
+        if: ${{ vars.ENABLE_VIRUSTOTAL == 'true' && steps.vt.outputs.analysis != '' }}
+        shell: pwsh
+        run: |
+          $body = "`n`n## VirusTotal scans`n`n"
+          # steps.vt.outputs.analysis is "filename=url,filename=url,..."
+          $entries = "${{ steps.vt.outputs.analysis }}".Split(',')
+          foreach ($e in $entries) {
+            $parts = $e.Split('=', 2)
+            if ($parts.Length -eq 2) {
+              $name = Split-Path $parts[0] -Leaf
+              $body += "- [``$name``]($($parts[1]))`n"
+            }
+          }
+          $body | Out-File -FilePath release-notes-extra.md -Encoding utf8 -Append
+          Write-Host $body
+
       - name: Upload installer artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: GamerGuardian-Setup-${{ steps.ver.outputs.version }}
           path: installer/Output/GamerGuardian-Setup-${{ steps.ver.outputs.version }}.exe
 
       - name: Upload portable EXE artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: GamerGuardian-${{ steps.ver.outputs.version }}-portable
           path: publish/GamerGuardian.exe
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: v${{ steps.ver.outputs.version }}
           name: GamerGuardian ${{ steps.ver.outputs.version }}
           generate_release_notes: true
+          # If VirusTotal ran, append its URLs after the auto-generated notes.
+          body_path: release-notes-extra.md
+          append_body: true
           target_commitish: ${{ github.sha }}
           files: |
             installer/Output/GamerGuardian-Setup-${{ steps.ver.outputs.version }}.exe
