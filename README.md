@@ -11,6 +11,7 @@ A lightweight Windows 11 tray app that watches gaming-related display and system
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/carterscode/GamerGuardian/codeql.yml?branch=main&label=CodeQL)](https://github.com/carterscode/GamerGuardian/actions/workflows/codeql.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/carterscode/GamerGuardian/badge)](https://scorecard.dev/viewer/?uri=github.com/carterscode/GamerGuardian)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12779/badge)](https://www.bestpractices.dev/projects/12779)
+[![VirusTotal](https://img.shields.io/badge/VirusTotal-scanned_per_release-brightgreen?logo=virustotal&logoColor=white)](https://github.com/carterscode/GamerGuardian/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2011-0078d4)](#compatibility)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512bd4)](https://dotnet.microsoft.com/)
@@ -119,8 +120,9 @@ GamerGuardian doesn't ask you to take its word for it. Six independent ways to c
 
 ## Security
 
-CodeQL static analysis, Dependabot vulnerability watch, OpenSSF Scorecard public score, and SHA-256 checksums on every Release. Code signing via the SignPath Foundation is on the roadmap. Full details + spot-check guide: [Security](https://github.com/carterscode/GamerGuardian/wiki/Security).
+CodeQL static analysis, Dependabot vulnerability watch, OpenSSF Scorecard public score, SHA-256 checksums on every Release, and per-release VirusTotal scans (linked from each release's notes). Code signing via the SignPath Foundation is on the roadmap. Full details + spot-check guide: [Security](https://github.com/carterscode/GamerGuardian/wiki/Security).
 
+- **Verifying your download:** three independent integrity checks (VirusTotal scan link, SHA-256 checksum, SLSA Build Provenance attestation) — see [Verifying your download](https://github.com/carterscode/GamerGuardian/wiki/Verifying-your-download).
 - Reporting a vulnerability: [SECURITY.md](SECURITY.md)
 - Privacy policy: [PRIVACY.md](PRIVACY.md) — short version: nothing is collected, nothing is transmitted, no first-party server exists.
 

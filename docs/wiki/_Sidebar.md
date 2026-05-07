@@ -1,6 +1,7 @@
 **Getting started**
 - [Home](Home)
 - [Installation](Installation)
+- [Verifying your download](Verifying-your-download)
 - [Verification](Verification)
 - [File locations](File-locations)
 - [Logging](Logging)
