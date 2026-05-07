@@ -23,3 +23,6 @@ jobs:
 
       - name: Build (Release)
         run: dotnet build GamerGuardian.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test GamerGuardian.sln -c Release --no-build --verbosity normal
