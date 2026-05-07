@@ -1,0 +1,96 @@
+name: dev-build
+
+on:
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - 'src/**'
+      - 'installer/**'
+      - '.github/workflows/dev-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dev-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Resolve dev version
+        id: ver
+        shell: pwsh
+        run: |
+          $latest = (git tag --list 'v*.*.*' --sort=-v:refname | Where-Object { $_ -notmatch '-' } | Select-Object -First 1)
+          if ([string]::IsNullOrWhiteSpace($latest)) { $latest = 'v0.0.0' }
+          $parts = ($latest -replace '^v','').Split('.')
+          $patch = [int]$parts[2] + 1
+          $base = "$($parts[0]).$($parts[1]).$patch"
+          $sha = $env:GITHUB_SHA.Substring(0,7)
+          $full = "$base-dev.$sha"
+          "base=$base" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "version=$full" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "sha=$sha" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Building dev version $full (numeric base $base) on $env:GITHUB_REF_NAME"
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore GamerGuardian.sln
+
+      - name: Publish (self-contained, single-file, win-x64)
+        run: >
+          dotnet publish src/GamerGuardian/GamerGuardian.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:Version=${{ steps.ver.outputs.version }}
+          -p:AssemblyVersion=${{ steps.ver.outputs.base }}.0
+          -p:FileVersion=${{ steps.ver.outputs.base }}.0
+          -p:InformationalVersion=${{ steps.ver.outputs.version }}
+          -o publish
+
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion=${{ steps.ver.outputs.version }} installer\GamerGuardian.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
+
+      - name: List artifacts
+        shell: pwsh
+        run: |
+          Get-ChildItem -Recurse installer\Output, publish | Select-Object FullName, Length
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GamerGuardian-Setup-${{ steps.ver.outputs.version }}
+          path: installer/Output/GamerGuardian-Setup-${{ steps.ver.outputs.version }}.exe
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload portable EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GamerGuardian-${{ steps.ver.outputs.version }}-portable
+          path: publish/GamerGuardian.exe
+          retention-days: 30
+          if-no-files-found: error

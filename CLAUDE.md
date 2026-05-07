@@ -93,6 +93,7 @@ GamerGuardian.exe --show-settings # opens Settings even when config exists (othe
 CI:
 - `.github/workflows/build.yml` runs on PRs (just `dotnet build`)
 - `.github/workflows/release.yml` runs on push to `main` paths `src/**`, `installer/**`, `.github/workflows/release.yml` AND on tag pushes `v*.*.*` AND on `workflow_dispatch`. Auto-bumps the patch version from the latest `git tag --list 'v*.*.*' --sort=-v:refname`. `softprops/action-gh-release@v2` creates the tag + release.
+- `.github/workflows/dev-build.yml` runs on push to any branch *except* `main` (paths `src/**`, `installer/**`, `.github/workflows/dev-build.yml`) AND on `workflow_dispatch`. Produces installer + portable EXE as **workflow artifacts only** — no GitHub Release, so the auto-updater can't see them. Version stamped as `{nextStable}-dev.{sha7}` (e.g. `0.1.30-dev.abc1234`); `TryParseSemver` strips the `-dev.*` suffix so the dev build's parsed version is *higher* than latest stable, meaning it never prompts itself to "upgrade" to stable. Artifacts retained 30 days. Download from the run page → Artifacts panel.
 - README changes do NOT trigger a release (path filter).
 - gh CLI: `C:\Program Files\GitHub CLI\gh.exe`. Token has `workflow` scope.
 - HTTPS remote (auto-configured by `gh auth setup-git`).
