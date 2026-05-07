@@ -3,7 +3,7 @@
 ## Quick install
 
 1. Grab the latest **`GamerGuardian-Setup-x.y.z.exe`** from the [Releases page](https://github.com/carterscode/GamerGuardian/releases/latest).
-2. Run it. Windows SmartScreen will warn that the installer is unsigned — click **More info** → **Run anyway**. Code signing via [SignPath OSS](https://signpath.io/) is on the roadmap.
+2. Run it. Windows SmartScreen will warn that the installer is unsigned — click **More info** → **Run anyway**. Code signing via the [SignPath Foundation](https://signpath.org/) is on the roadmap.
 3. Per-user install — no admin needed, lands at `%LOCALAPPDATA%\Programs\GamerGuardian`.
 4. The app launches and opens its settings window the first time.
 

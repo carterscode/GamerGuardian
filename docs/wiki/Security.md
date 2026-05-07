@@ -61,7 +61,7 @@ Expect a first response within 48 hours. Severity-driven fix cadence — critica
 
 ## Code signing (roadmap)
 
-GamerGuardian is **not** code-signed today, which is why Windows SmartScreen warns on first install. Code signing via [SignPath OSS](https://signpath.io/) is on the roadmap — once enabled, the warning goes away and the app's identity is cryptographically tied to this repo. No timeline yet.
+GamerGuardian is **not** code-signed today, which is why Windows SmartScreen warns on first install. Code signing via the [SignPath Foundation](https://signpath.org/) (free for qualifying OSS projects — [apply here](https://signpath.org/apply)) is on the roadmap. Once enabled, the warning goes away and the app's identity is cryptographically tied to this repo. No timeline yet.
 
 In the meantime, the SHA-256 verification above gives you a way to confirm what you downloaded matches what CI built.
 
