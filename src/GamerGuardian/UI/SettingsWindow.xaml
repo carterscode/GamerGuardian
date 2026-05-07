@@ -48,7 +48,9 @@
                         HorizontalContentAlignment="Stretch"
                         VerticalContentAlignment="Stretch">
 
-                <TabItem Header="General">
+                <TabItem Header="General"
+                         HorizontalContentAlignment="Stretch"
+                         VerticalContentAlignment="Stretch">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,8,8,0">
                         <ui:Card Padding="16" Margin="0,0,0,8">
                             <StackPanel>
@@ -112,7 +114,9 @@
                     </ScrollViewer>
                 </TabItem>
 
-                <TabItem Header="Global gaming">
+                <TabItem Header="Global gaming"
+                         HorizontalContentAlignment="Stretch"
+                         VerticalContentAlignment="Stretch">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,8,8,0">
                         <StackPanel>
                             <ItemsControl x:Name="GlobalTogglesList" Margin="0,0,0,8">
@@ -125,16 +129,16 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                                                        <Border Visibility="{Binding RebootBadgeVisibility}"
-                                                                Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
-                                                                CornerRadius="3" Padding="6,1" Margin="8,0,0,0">
-                                                            <TextBlock Text="reboot required"
-                                                                       Foreground="{DynamicResource SystemFillColorCautionBrush}"
-                                                                       FontSize="10" FontWeight="SemiBold"/>
-                                                        </Border>
-                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                    <Border Visibility="{Binding RebootBadgeVisibility}"
+                                                            Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                                                            CornerRadius="3" Padding="6,1"
+                                                            HorizontalAlignment="Left"
+                                                            Margin="0,4,0,0">
+                                                        <TextBlock Text="reboot required"
+                                                                   Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                                                   FontSize="10" FontWeight="SemiBold"/>
+                                                    </Border>
                                                     <TextBlock Text="{Binding Description}"
                                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                                FontSize="12" Margin="0,3,0,0"
@@ -203,7 +207,9 @@
                     </ScrollViewer>
                 </TabItem>
 
-                <TabItem Header="Windows services">
+                <TabItem Header="Windows services"
+                         HorizontalContentAlignment="Stretch"
+                         VerticalContentAlignment="Stretch">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,8,8,0">
                         <StackPanel>
                             <ui:Card Padding="16" Margin="0,0,0,8">
@@ -298,7 +304,9 @@
                     </ScrollViewer>
                 </TabItem>
 
-                <TabItem Header="Display">
+                <TabItem Header="Display"
+                         HorizontalContentAlignment="Stretch"
+                         VerticalContentAlignment="Stretch">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,8,8,0">
                         <ItemsControl x:Name="DisplaysList">
                             <ItemsControl.ItemTemplate>
