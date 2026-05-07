@@ -19,11 +19,14 @@ public sealed class PowerPlanMonitor : IMonitoredSetting
         var active = GetActivePlan();
         if (active == Guid.Empty) yield break;
 
-        var desiredGuid = ToGuid(pref.Desired);
+        var desiredGuid = ResolveDesiredGuid(pref);
+        if (desiredGuid == Guid.Empty) yield break;
         if (active == desiredGuid) yield break;
 
         var available = ListAvailablePlans();
         if (!available.ContainsKey(desiredGuid)) yield break;
+
+        var desiredName = pref.DesiredName ?? available[desiredGuid];
 
         yield return new DriftItem(
             SettingId: Id,
@@ -31,12 +34,19 @@ public sealed class PowerPlanMonitor : IMonitoredSetting
             DisplayLabel: "Global",
             Description: "Windows power plan",
             CurrentValue: available.GetValueOrDefault(active, active.ToString()),
-            DesiredValue: pref.Desired.ToString(),
+            DesiredValue: desiredName,
             AutoApply: pref.AutoApply,
             Apply: () => Task.Run(() => SetActivePlan(desiredGuid)),
             IsMonitored: pref.Monitor,
             RawBefore: active.ToString(),
             RawDesired: desiredGuid.ToString());
+    }
+
+    public static Guid ResolveDesiredGuid(PowerPlanPref pref)
+    {
+        if (!string.IsNullOrEmpty(pref.DesiredGuid) && Guid.TryParse(pref.DesiredGuid, out var g))
+            return g;
+        return ToGuid(pref.Desired);
     }
 
     public static Guid ToGuid(PowerPlanChoice c) => c switch

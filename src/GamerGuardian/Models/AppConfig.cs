@@ -89,6 +89,10 @@ public sealed class PowerPlanPref
 {
     public bool Monitor { get; set; } = false;
     public PowerPlanChoice Desired { get; set; } = PowerPlanChoice.HighPerformance;
+    /// <summary>Specific power scheme GUID the user picked. Takes precedence over <see cref="Desired"/> when set.</summary>
+    public string? DesiredGuid { get; set; }
+    /// <summary>Friendly name cached at selection time (for display when the GUID isn't currently installed).</summary>
+    public string? DesiredName { get; set; }
     public bool AutoApply { get; set; } = false;
 }
 

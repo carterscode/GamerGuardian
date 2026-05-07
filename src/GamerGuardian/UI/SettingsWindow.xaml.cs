@@ -283,6 +283,39 @@ public partial class SettingsWindow : FluentWindow
             ThemeService.Apply(c);
     }
 
+    private void PowerPlanCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (PowerPlanCombo.SelectedItem is not PowerPlanItem pi) return;
+        var oldGuid = _config.Global.PowerPlan.DesiredGuid;
+        var oldName = _config.Global.PowerPlan.DesiredName;
+        _config.Global.PowerPlan.DesiredGuid = pi.Guid.ToString();
+        _config.Global.PowerPlan.DesiredName = pi.Name;
+        try { _store.Save(_config); } catch { }
+        if (oldGuid != pi.Guid.ToString())
+            ChangeLogger.LogPreferenceChange("Power plan", "Want",
+                oldName ?? oldGuid ?? "(unset)", pi.Name);
+    }
+
+    private void PowerPlanMonitorCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        var v = PowerPlanMonitorCheck.IsChecked == true;
+        if (_config.Global.PowerPlan.Monitor == v) return;
+        var before = _config.Global.PowerPlan.Monitor;
+        _config.Global.PowerPlan.Monitor = v;
+        try { _store.Save(_config); } catch { }
+        ChangeLogger.LogPreferenceChange("Power plan", "Monitor", before.ToString(), v.ToString());
+    }
+
+    private void PowerPlanAutoApplyCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        var v = PowerPlanAutoApplyCheck.IsChecked == true;
+        if (_config.Global.PowerPlan.AutoApply == v) return;
+        var before = _config.Global.PowerPlan.AutoApply;
+        _config.Global.PowerPlan.AutoApply = v;
+        try { _store.Save(_config); } catch { }
+        ChangeLogger.LogPreferenceChange("Power plan", "AutoApply", before.ToString(), v.ToString());
+    }
+
     private void OpenChangeLogButton_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -397,8 +430,11 @@ public partial class SettingsWindow : FluentWindow
 
         _config.Global.PowerPlan.Monitor = PowerPlanMonitorCheck.IsChecked == true;
         _config.Global.PowerPlan.AutoApply = PowerPlanAutoApplyCheck.IsChecked == true;
-        if (PowerPlanCombo.SelectedItem is PowerPlanChoice c)
-            _config.Global.PowerPlan.Desired = c;
+        if (PowerPlanCombo.SelectedItem is PowerPlanItem pi)
+        {
+            _config.Global.PowerPlan.DesiredGuid = pi.Guid.ToString();
+            _config.Global.PowerPlan.DesiredName = pi.Name;
+        }
 
         foreach (var row in GlobalToggleRows) row.WriteBack();
         foreach (var row in DisplayRows) row.WriteTo(_config);
@@ -441,6 +477,14 @@ public partial class SettingsWindow : FluentWindow
         _suppressSaveOnClose = true;
         Close();
     }
+}
+
+public sealed class PowerPlanItem
+{
+    public Guid Guid { get; }
+    public string Name { get; }
+    public PowerPlanItem(Guid guid, string name) { Guid = guid; Name = name; }
+    public override string ToString() => Name;
 }
 
 public sealed class GlobalToggleRow : INotifyPropertyChanged

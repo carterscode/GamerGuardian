@@ -183,12 +183,17 @@
                                 </StackPanel>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Vertical">
-                                <CheckBox x:Name="PowerPlanMonitorCheck" Content="Monitor"/>
+                                <CheckBox x:Name="PowerPlanMonitorCheck" Content="Monitor"
+                                          Checked="PowerPlanMonitorCheck_Changed"
+                                          Unchecked="PowerPlanMonitorCheck_Changed"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
                                     <TextBlock Text="Want:" Margin="0,6,8,0"/>
-                                    <ComboBox x:Name="PowerPlanCombo" Width="180"/>
+                                    <ComboBox x:Name="PowerPlanCombo" Width="240"
+                                              SelectionChanged="PowerPlanCombo_SelectionChanged"/>
                                 </StackPanel>
-                                <CheckBox x:Name="PowerPlanAutoApplyCheck" Content="Auto-apply silently"/>
+                                <CheckBox x:Name="PowerPlanAutoApplyCheck" Content="Auto-apply silently"
+                                          Checked="PowerPlanAutoApplyCheck_Changed"
+                                          Unchecked="PowerPlanAutoApplyCheck_Changed"/>
                             </StackPanel>
                         </Grid>
                     </ui:Card>
