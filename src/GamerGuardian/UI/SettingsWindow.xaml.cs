@@ -66,31 +66,59 @@ public partial class SettingsWindow : FluentWindow
             }
 
             var installed = WindowsServiceController.Exists(def.Name);
-            var current = installed
-                ? WindowsServiceController.ReadStartType(def.Name)
-                : ServiceStartType.Unknown;
+            string currentText;
+            string defaultText;
 
-            // For services the user hasn't opted into monitoring, mirror current state
-            // into Want so the radio doesn't lie about a "recommendation" the user never asked for.
-            if (!pref.Monitor && installed && current != ServiceStartType.Unknown)
+            if (def.PolicyOverride is { } po)
             {
-                pref.Desired = current switch
-                {
-                    ServiceStartType.Disabled => ServiceTargetState.Disabled,
-                    ServiceStartType.Manual when def.DefaultStartType != ServiceStartType.Manual
-                        => ServiceTargetState.Manual,
-                    _ => ServiceTargetState.Default,
-                };
-            }
+                // Policy-managed service (DoSvc et al.). The service start type is
+                // owned by Windows and reverts under WaaSMedicSvc — we don't display
+                // it. What's user-relevant here is the policy registry value.
+                int? policy = ReadPolicyDword(po);
+                bool currentlyDisabledByPolicy = policy.HasValue && (uint)policy.Value == po.DisabledValue;
 
-            var status = installed
-                ? WindowsServiceController.ReadStatus(def.Name)
-                : null;
-            var statusSuffix = status is null ? "" : $", {status.Value}";
-            var currentText = installed
-                ? $"Current: {WindowsServiceMonitor.DescribeStart(current)}{statusSuffix}"
-                : "Current: not installed on this system";
-            var defaultText = $"Default: {WindowsServiceMonitor.DescribeStart(def.DefaultStartType)}";
+                currentText = currentlyDisabledByPolicy
+                    ? "Current: Disabled by Group Policy"
+                    : (policy.HasValue
+                        ? $"Current: policy {po.PolicyValue}={policy.Value}"
+                        : "Current: Windows default (no policy override)");
+                defaultText = "Default: Windows default (no policy override)";
+
+                if (!pref.Monitor && installed)
+                {
+                    pref.Desired = currentlyDisabledByPolicy
+                        ? ServiceTargetState.Disabled
+                        : ServiceTargetState.Default;
+                }
+            }
+            else
+            {
+                var current = installed
+                    ? WindowsServiceController.ReadStartType(def.Name)
+                    : ServiceStartType.Unknown;
+
+                // For services the user hasn't opted into monitoring, mirror current state
+                // into Want so the radio doesn't lie about a "recommendation" the user never asked for.
+                if (!pref.Monitor && installed && current != ServiceStartType.Unknown)
+                {
+                    pref.Desired = current switch
+                    {
+                        ServiceStartType.Disabled => ServiceTargetState.Disabled,
+                        ServiceStartType.Manual when def.DefaultStartType != ServiceStartType.Manual
+                            => ServiceTargetState.Manual,
+                        _ => ServiceTargetState.Default,
+                    };
+                }
+
+                var status = installed
+                    ? WindowsServiceController.ReadStatus(def.Name)
+                    : null;
+                var statusSuffix = status is null ? "" : $", {status.Value}";
+                currentText = installed
+                    ? $"Current: {WindowsServiceMonitor.DescribeStart(current)}{statusSuffix}"
+                    : "Current: not installed on this system";
+                defaultText = $"Default: {WindowsServiceMonitor.DescribeStart(def.DefaultStartType)}";
+            }
 
             ServiceRows.Add(new ServiceRow(
                 def: def,
@@ -102,6 +130,21 @@ public partial class SettingsWindow : FluentWindow
         }
 
         UpdatePresetRadio();
+    }
+
+    /// <summary>
+    /// Reads a DWORD policy value without elevation. Reading HKLM Policies
+    /// keys doesn't require admin — only writing does. Returns null if the
+    /// key/value doesn't exist or isn't a DWORD.
+    /// </summary>
+    private static int? ReadPolicyDword(GamerGuardian.Models.PolicyOverride po)
+    {
+        try
+        {
+            using var k = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(po.PolicyKey, writable: false);
+            return k?.GetValue(po.PolicyValue) as int?;
+        }
+        catch { return null; }
     }
 
     private void UpdatePresetRadio()
