@@ -7,13 +7,14 @@
 A lightweight Windows 11 tray app that watches gaming-related display and system settings, alerts you (or auto-fixes) when they drift from your preferences, and stays out of the way during gameplay and benchmarks.
 
 [![Latest release](https://img.shields.io/github/v/release/carterscode/GamerGuardian?label=latest&color=brightgreen)](https://github.com/carterscode/GamerGuardian/releases/latest)
-[![Releases](https://img.shields.io/badge/releases-download-blue)](https://github.com/carterscode/GamerGuardian/releases)
 [![Build](https://img.shields.io/github/actions/workflow/status/carterscode/GamerGuardian/release.yml?branch=main&label=build)](https://github.com/carterscode/GamerGuardian/actions/workflows/release.yml)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/carterscode/GamerGuardian/codeql.yml?branch=main&label=CodeQL)](https://github.com/carterscode/GamerGuardian/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/carterscode/GamerGuardian/badge)](https://scorecard.dev/viewer/?uri=github.com/carterscode/GamerGuardian)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2011-0078d4)](#compatibility)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512bd4)](https://dotnet.microsoft.com/)
 
-[Install](#install) · [What it watches](#what-it-watches) · [Performance](#performance--gaming-impact) · [How it works](#how-it-works) · [Build from source](#build-from-source)
+[Install](https://github.com/carterscode/GamerGuardian/wiki/Installation) · [Build](https://github.com/carterscode/GamerGuardian/wiki/Build-from-source) · [Verification](https://github.com/carterscode/GamerGuardian/wiki/Verification) · [Logging](https://github.com/carterscode/GamerGuardian/wiki/Logging) · [Security](https://github.com/carterscode/GamerGuardian/wiki/Security)
 
 </div>
 
@@ -21,317 +22,105 @@ A lightweight Windows 11 tray app that watches gaming-related display and system
 
 ## Why this exists
 
-If you've ever fired up a game and realized 30 minutes later that HDR turned itself off after the last driver update, or that you've been gaming at 60Hz instead of your monitor's actual max — GamerGuardian is for that. It periodically compares Windows settings against your preferences and either prompts you to fix drift in one click, or silently corrects it in the background.
+If you've ever fired up a game and realized 30 minutes later that HDR turned itself off after the last driver update, or that you've been gaming at 60 Hz instead of your monitor's actual max — GamerGuardian is for that. It periodically compares Windows settings against your preferences and either prompts you to fix drift in one click, or silently corrects it in the background.
 
 It's also paranoid about not making your gaming worse. Polling pauses entirely during fullscreen games (including borderless windowed) and benchmark runs. Working set is trimmed back to ~25 MB at idle. No process spawning, no kernel hooks, no DPC callbacks.
 
 ## Highlights
 
-- 🎯 **17 monitored settings** spanning display, security, performance, capture, and input
+- 🎯 **17+ monitored settings** spanning display, security, performance, capture, input, and Windows services
 - 🎮 **Pauses during gameplay** — fullscreen, borderless, *and* during benchmark runs (3DMark, Cinebench, Geekbench, etc.)
 - ⚡ **One-click apply** with a per-setting auto-apply opt-in
 - 🪟 **Native Win11 Fluent design** with light / dark / system themes
 - 🔄 **Auto-update** — checks GitHub Releases on startup, one-click install
-- 🪶 **~23 MB idle working set**, ~10ms per polling tick
+- 🪶 **~23 MB idle working set**, ~10 ms per polling tick
 
-## Table of contents
-
-- [Screenshots](#screenshots)
-- [Install](#install)
-- [What it watches](#what-it-watches)
-- [Usage](#usage)
-- [Performance & gaming impact](#performance--gaming-impact)
-- [How it works](#how-it-works)
-- [Verification](#verification--how-do-you-know-its-actually-doing-what-it-says)
-- [Change log format](#change-log-format)
-- [Files GamerGuardian writes](#files-gamerguardian-writes)
-- [Build from source](#build-from-source)
-- [Compatibility](#compatibility)
-- [Contributing](#contributing)
-- [License](#license)
-
-## Screenshots
+## Screenshot
 
 <div align="center">
 
 <img src="docs/screenshots/settings-window.png" width="780" alt="GamerGuardian settings window" />
 
-*Settings window — General preferences, Global gaming settings (Game Mode, Game DVR shown). Each setting card shows a description, current state, Windows default, and per-setting Monitor / Want / Auto-apply controls. Bottom bar: clickable version label, Cancel / Apply / Save & close.*
+*Settings window — General, Global gaming, Windows services, and Display tabs. Each card shows a description, current state, Windows default, and per-setting Monitor / Want / Auto-apply controls.*
 
 </div>
 
-## Install
-
-1. Grab the latest **`GamerGuardian-Setup-x.y.z.exe`** from the [Releases page](https://github.com/carterscode/GamerGuardian/releases/latest).
-2. Run it. Windows SmartScreen will warn that the installer is unsigned — click **More info** → **Run anyway**. (Code signing via [SignPath OSS](https://signpath.io/) is on the roadmap.)
-3. Per-user install — no admin needed, lands at `%LOCALAPPDATA%\Programs\GamerGuardian`.
-4. The app launches and opens its settings window the first time. Pick what to monitor per display, save, and forget about it.
-
-A portable single-file `GamerGuardian.exe` is also attached to each release if you don't want the installer.
-
-After v0.1.14, every running copy auto-checks for new releases on startup and offers a one-click in-place upgrade.
-
 ## What it watches
 
-For each setting you choose: **monitor or not**, **desired value**, and whether to **auto-apply silently** when it drifts. Setting names below link to authoritative documentation — open an [issue](https://github.com/carterscode/GamerGuardian/issues) if any are stale.
+For each setting you choose: **monitor or not**, **desired value**, and whether to **auto-apply silently** when it drifts.
 
 ### Per-display
 
 | Setting | Notes |
 |---|---|
-| [**HDR**](https://support.microsoft.com/en-us/windows/hdr-settings-in-windows-2d767185-38ec-7fdc-6f97-bbc6c5ef24e6) | On/off via Windows Display Configuration (CCD) API. |
-| [**Refresh rate**](https://support.microsoft.com/en-us/windows/change-the-refresh-rate-on-your-monitor-in-windows-c8ea729e-0678-015c-c415-f806f04aae5a) | Maximum supported, or pin a specific Hz. |
-| [**Resolution**](https://support.microsoft.com/en-us/windows/change-your-screen-resolution-and-layout-in-windows-5effefe3-2eac-e306-0b5d-2073b765876b) | Pin to a specific resolution (opt-in). |
+| [**HDR**](https://support.microsoft.com/en-us/windows/hdr-settings-in-windows-2d767185-38ec-7fdc-6f97-bbc6c5ef24e6) | On/off via Windows Display Configuration (CCD) API |
+| [**Refresh rate**](https://support.microsoft.com/en-us/windows/change-the-refresh-rate-on-your-monitor-in-windows-c8ea729e-0678-015c-c415-f806f04aae5a) | Maximum supported, or pin a specific Hz |
+| [**Resolution**](https://support.microsoft.com/en-us/windows/change-your-screen-resolution-and-layout-in-windows-5effefe3-2eac-e306-0b5d-2073b765876b) | Pin to a specific resolution (opt-in) |
 
 ### Global gaming settings
 
 | Setting | What it does | Reboot |
 |---|---|:---:|
-| [**HAGS** (Hardware-accelerated GPU Scheduling)](https://devblogs.microsoft.com/directx/hardware-accelerated-gpu-scheduling/) | Lets the GPU manage its own command queue. Lower latency on supported GPUs. | ✓ |
-| [**Memory Integrity / VBS**](https://support.microsoft.com/en-us/windows/core-isolation-e30ed737-17d8-42f3-a2a9-87521df09b78) | Hypervisor-Enforced Code Integrity. Disabling recovers ~5–15% gaming perf at the cost of reduced malware protection. | ✓ |
+| [**HAGS**](https://devblogs.microsoft.com/directx/hardware-accelerated-gpu-scheduling/) | Lets the GPU manage its own command queue. Lower latency on supported GPUs. | ✓ |
+| [**Memory Integrity / VBS**](https://support.microsoft.com/en-us/windows/core-isolation-e30ed737-17d8-42f3-a2a9-87521df09b78) | HVCI. Disabling recovers ~5–15% gaming perf at the cost of reduced malware protection. | ✓ |
 | [**Game Mode**](https://support.xbox.com/en-US/help/games-apps/game-setup-and-play/use-game-mode-gaming-on-pc) | Tells Windows to prioritize the running game and suppress background work. | |
-| [**Game DVR background recording**](https://support.xbox.com/help/games-apps/game-dvr/game-dvr-windows-10) | Always-on game capture. Costs CPU/GPU during gameplay; off is gaming-recommended. | |
-| [**Mouse "Enhance pointer precision"**](https://support.microsoft.com/en-us/windows/change-mouse-settings-e81356a4-0e74-fe38-7d01-9d79fbf8712b) | Acceleration curve applied to mouse movement. Most gamers want this off for consistent aim. | |
+| [**Game DVR background recording**](https://support.xbox.com/help/games-apps/game-dvr/game-dvr-windows-10) | Always-on game capture. Costs CPU/GPU during gameplay. | |
+| [**Mouse "Enhance pointer precision"**](https://support.microsoft.com/en-us/windows/change-mouse-settings-e81356a4-0e74-fe38-7d01-9d79fbf8712b) | Acceleration curve applied to mouse movement. | |
 | [**Fullscreen optimizations**](https://devblogs.microsoft.com/directx/demystifying-full-screen-optimizations/) | Borderless-windowed compositing layer for fullscreen apps. | |
-| [**Variable Refresh Rate (DirectX)**](https://devblogs.microsoft.com/directx/os-variable-refresh-rate/) | G-Sync / FreeSync compatibility flag exposed in Settings → Display → Graphics. **Not** the same as Dynamic Refresh Rate (DRR) in Advanced Display — DRR isn't currently monitored. | |
-| [**Power plan**](https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/configure-power-settings) | Active Windows power scheme. High Performance keeps CPU clocks elevated. | |
-| [**System Responsiveness**](https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service) | CPU percentage Windows reserves for non-multimedia tasks. Default 20 → 10 frees that headroom for games. | ✓ |
-| [**Network Throttling**](https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service) | Multimedia packet pacing. Disabling reduces network jitter for online games. | |
-| [**USB Selective Suspend (global)**](https://learn.microsoft.com/en-us/windows-hardware/drivers/usbcon/usb-selective-suspend) | Lets Windows suspend idle USB devices. Disabling keeps mice/keyboards/headsets always responsive. | ✓ |
-| [**Games multimedia task profile**](https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service) | Priority + scheduling values for processes registered with the MMCSS Games task. | |
+| [**Variable Refresh Rate (DirectX)**](https://devblogs.microsoft.com/directx/os-variable-refresh-rate/) | G-Sync / FreeSync compatibility flag. Not the same as Dynamic Refresh Rate (DRR). | |
+| [**Power plan**](https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/configure-power-settings) | Active Windows power scheme. | |
+| [**System Responsiveness**](https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service) | MMCSS reservation percentage. | ✓ |
+| [**Network Throttling**](https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service) | MMCSS network packet pacing. | |
+| [**USB Selective Suspend**](https://learn.microsoft.com/en-us/windows-hardware/drivers/usbcon/usb-selective-suspend) | Lets Windows suspend idle USB devices. | ✓ |
+| [**Games multimedia task profile**](https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service) | Priority + scheduling values for the MMCSS Games task. | |
 
-Reboot ✓ means the change is written immediately to the registry but Windows requires a restart to apply it.
+### Windows services
 
-## Usage
-
-- **Tray icon** (right-click): *Settings* · *Check now* · *Pause monitoring* · *Exit*. Double-click → settings.
-- **Settings window**: per-monitor and global gaming settings. Each card has *Monitor* / *Want* / *Auto-apply silently*. Bottom buttons: *Cancel* · *Apply* (saves + applies + refreshes without closing) · *Save & close*.
-- **Drift popup** (bottom-right) when something differs from your preference and you haven't enabled auto-apply.
-- **Reboot prompt** appears after Apply if any reboot-required setting was changed. Auto-apply cases get a non-modal "reboot pending" popup instead of a forced confirmation dialog.
-- **Manual pause** from the tray menu suspends polling for one-off tasks the auto-detector doesn't recognize.
-- **Self-test**: `GamerGuardian.exe --test` writes every monitor's current state to `%TEMP%\gamerguardian_selftest.txt`. Useful for QA on weird hardware or for bug reports.
-
-Config lives in `%APPDATA%\GamerGuardian\config.json`.
+A curated catalog of services GamerGuardian can stop + disable (or set to Manual). One-click "Gaming optimized" preset, plus per-service Default/Manual/Disabled. Includes `DiagTrack` (telemetry), `MapsBroker`, `Fax`, `lfsvc` (Geolocation), Xbox services, `DoSvc` (Delivery Optimization), `iphlpsvc` (IP Helper), and more. See [`ServiceCatalog.cs`](src/GamerGuardian/Services/ServiceCatalog.cs) for the full list.
 
 ## Performance & gaming impact
 
-Designed to be invisible during gameplay. Concrete numbers from the Release build:
+Designed to be invisible during gameplay.
 
-### Memory footprint
+- **~23 MB working set** at idle, **~10 ms** per polling tick (default 30 s interval).
+- **Pauses entirely** during fullscreen games, borderless-fullscreen games, and known benchmarks (3DMark, Cinebench, Geekbench, AIDA64, Unigine, OCCT, etc.).
+- **No process spawning** for reads. Power plan reads/writes go through `powrprof.dll` directly.
+- **No kernel hooks, no drivers, no admin** — only HKLM writes need elevation, which prompts UAC.
 
-| State | Working set | Private memory |
-|---|---|---|
-| Idle in tray (no window) | ~23 MB | ~30 MB |
-| Settings window open | ~70 MB | ~158 MB |
-| Settings window closed | ~18 MB | ~136 MB |
-
-The ~136 MB private (committed) memory is the irreducible cost of bundling .NET 8 + WPF + WPF-UI. Windows pages it out under memory pressure so games can use the physical RAM.
-
-### CPU during polling
-
-- Default 30s interval. Each poll runs ~10 ms of in-memory API calls — below the noise floor on any modern CPU.
-- No process spawning. Power plan reads/writes go through `powrprof.dll` P/Invoke directly (microseconds, no disk I/O).
-
-### Pauses automatically during gameplay or benchmarks
-
-Three independent detectors. If any fires, the poll tick is skipped — no drift checks, no notifications, no registry calls.
-
-1. **Exclusive fullscreen / presentation mode** — `SHQueryUserNotificationState` from `shell32.dll`. Catches games in true fullscreen and Win11 UWP fullscreen apps.
-2. **Borderless fullscreen** — covers most modern titles (Apex, Valorant, CS2, Fortnite, etc.). Compares the foreground window's rect to the monitor's full bounds via `GetForegroundWindow` + `MonitorFromWindow` + `GetMonitorInfo`. Edge-to-edge match (`rcMonitor`, not `rcWork`) → fullscreen-like. Maximized regular windows match `rcWork` and are correctly ignored.
-3. **Known benchmarks** — process list checked against an allow-list of common benchmark executables (3DMark, Cinebench, Geekbench, AIDA64, FurMark, Unigine Heaven/Valley/Superposition, OCCT, Prime95, y-cruncher, CrystalDiskMark, PCMark, PassMark, etc.). Polling pauses while any are running.
-
-You can also **manually pause** monitoring from the tray menu for tools the auto-detector doesn't recognize.
-
-### Working-set trimming
-
-- After closing the settings window, the WPF visual tree is GC'd (Gen 2, compacting) and `EmptyWorkingSet` is called to return resident pages to the OS.
-- A periodic trim runs every ~5 minutes from the polling timer to keep the idle footprint minimal.
-- Workstation GC mode + `RetainVMGarbageCollection=false` so the runtime returns memory to the OS aggressively.
-
-### Wake-up rate / interrupts
-
-- One timer wake every 30 seconds (configurable), skipped when paused / fullscreen / benchmark detected.
-- No high-frequency event subscriptions, no DPC callbacks, no kernel hooks.
-- Only persistent threads are the tray icon's message loop and the polling timer.
-
-**Net effect**: during gameplay or benchmarks, GamerGuardian is paused. While you're on the desktop, it's a ~25 MB tray app that wakes for ~10 ms every 30 seconds.
+Memory + pause-detection details: [Build from source](https://github.com/carterscode/GamerGuardian/wiki/Build-from-source) (CI build flags) and [`MonitorService.cs`](src/GamerGuardian/Services/MonitorService.cs).
 
 ## How it works
 
-Pure user-mode P/Invoke — no drivers, no kernel modules, no admin required for monitoring (only for applying changes to `HKLM` registry hives, which trigger UAC).
+Pure user-mode P/Invoke. Each monitored setting is an `IMonitoredSetting` implementation in [`src/GamerGuardian/Monitors/`](src/GamerGuardian/Monitors/) — adding a new one is ~30 lines. Full source-file reference: [Source file reference](https://github.com/carterscode/GamerGuardian/wiki/Source-file-reference).
 
 | API surface | Used for |
 |---|---|
 | Connecting and Configuring Displays (CCD) | HDR state, VRR, display enumeration |
 | `EnumDisplaySettingsEx` / `ChangeDisplaySettingsEx` | Refresh rate, resolution |
-| `powrprof.dll` (`PowerGetActiveScheme`, `PowerEnumerate`) | Power plan |
+| `powrprof.dll` | Power plan |
 | `SystemParametersInfo` | Mouse precision |
 | Direct `HKCU` / `HKLM` registry access | All registry-backed settings |
+| `sc.exe` (via `Verb=runas`) | Windows service start type + stop |
 | `SHQueryUserNotificationState` | Fullscreen game / presentation detection |
 | `Process.GetProcesses` | Benchmark detection |
 | `EmptyWorkingSet` (psapi) | Working-set trimming |
 
-Each monitored setting is an `IMonitoredSetting` implementation in [`src/GamerGuardian/Monitors/`](src/GamerGuardian/Monitors/). Adding a new one is ~30 lines of code following the [`HdrMonitor`](src/GamerGuardian/Monitors/HdrMonitor.cs) pattern.
+## Verification
 
-## Build from source
+GamerGuardian doesn't ask you to take its word for it. Six independent ways to confirm what it's doing — see [Verification](https://github.com/carterscode/GamerGuardian/wiki/Verification) for the full rundown:
 
-Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
+1. The Settings UI re-reads from the OS after every Apply
+2. The Apply Results window shows before / target / after for each setting
+3. Every change writes a copy-pasteable PowerShell verify command to [`changes.log`](https://github.com/carterscode/GamerGuardian/wiki/Logging)
+4. `GamerGuardian.exe --test` dumps every monitor's current readout to `%TEMP%`
+5. Every Release ships with a [`SHA256SUMS.txt`](https://github.com/carterscode/GamerGuardian/wiki/Security#reproducibility) you can verify against your local download
+6. Every monitor is one ~30-line file in [`src/GamerGuardian/Monitors/`](src/GamerGuardian/Monitors/)
 
-```powershell
-git clone https://github.com/carterscode/GamerGuardian.git
-cd GamerGuardian
-dotnet build
-```
+## Security
 
-To produce the installer locally, install [Inno Setup 6](https://jrsoftware.org/isinfo.php), then:
+CodeQL static analysis, Dependabot vulnerability watch, OpenSSF Scorecard public score, and SHA-256 checksums on every Release. Code signing via SignPath OSS is on the roadmap. Full details + spot-check guide: [Security](https://github.com/carterscode/GamerGuardian/wiki/Security).
 
-```powershell
-dotnet publish src/GamerGuardian/GamerGuardian.csproj `
-    -c Release -r win-x64 --self-contained `
-    -p:PublishSingleFile=true `
-    -p:IncludeNativeLibrariesForSelfExtract=true `
-    -p:EnableCompressionInSingleFile=true `
-    -p:Version=0.0.0 -o publish
-
-& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion=0.0.0 installer\GamerGuardian.iss
-```
-
-CI runs the same flags on every push to `main` (touching `src/`, `installer/`, or the release workflow) — see [`.github/workflows/release.yml`](.github/workflows/release.yml).
-
-## Verification — how do you know it's actually doing what it says?
-
-GamerGuardian doesn't ask you to take its word for it.
-
-**1. The Settings UI re-reads from the OS after Apply.** The "Current" line under each setting comes directly from the same Win32 / registry call any other tool would use. If that line changes after you click Apply, the change happened.
-
-**2. The Apply Results window** (v0.1.18+) shows per-setting:
-- Before value, target value, and the **after** value (re-read from the OS post-apply)
-- ✓ Verified or ✗ Failed
-- The exact registry path or Win32 API used
-- A copy-pasteable PowerShell command you can run yourself
-
-**3. Verify externally.** Every setting reads/writes a documented Windows location. Sample PowerShell:
-
-| Setting | PowerShell |
-|---|---|
-| HAGS | `(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers' -Name HwSchMode).HwSchMode` |
-| Memory Integrity | `(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity' -Name Enabled).Enabled` |
-| Game Mode | `(Get-ItemProperty 'HKCU:\Software\Microsoft\GameBar' -Name AutoGameModeEnabled).AutoGameModeEnabled` |
-| Game DVR | `(Get-ItemProperty 'HKCU:\System\GameConfigStore' -Name GameDVR_Enabled).GameDVR_Enabled` |
-| Mouse precision | `(Get-ItemProperty 'HKCU:\Control Panel\Mouse' -Name MouseSpeed).MouseSpeed` |
-| Fullscreen optimizations | `(Get-ItemProperty 'HKCU:\System\GameConfigStore' -Name GameDVR_FSEBehaviorMode).GameDVR_FSEBehaviorMode` |
-| VRR | `(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers' -Name VRROptimizeEnable).VRROptimizeEnable` |
-| System Responsiveness | `(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile' -Name SystemResponsiveness).SystemResponsiveness` |
-| Network Throttling | `(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile' -Name NetworkThrottlingIndex).NetworkThrottlingIndex` |
-| USB Selective Suspend | `(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\USB' -Name DisableSelectiveSuspend).DisableSelectiveSuspend` |
-| Games task profile | `Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games'` |
-| Power plan | `powercfg /getactivescheme` |
-| HDR / Refresh / Resolution | Settings → System → Display, or `dxdiag` |
-
-**4. The change log.** `%APPDATA%\GamerGuardian\changes.log` — every applied change (manual or silent auto-apply) is appended with full detail of the actual registry write or API call. See [Change log format](#change-log-format) below for the full schema and a worked example. Open it from *Settings → General → Open change log* or from the Apply Results window. Auto-rotates at ~1 MB.
-
-**5. The `--test` CLI flag** (`GamerGuardian.exe --test`) writes every monitor's current readout to `%TEMP%\gamerguardian_selftest.txt` — same call paths the live UI uses, so the file is always in sync with what Settings shows.
-
-**6. The source.** Every monitor is a single file under [`src/GamerGuardian/Monitors/`](src/GamerGuardian/Monitors/) that does exactly one thing each. Read [`HagsMonitor.cs`](src/GamerGuardian/Monitors/HagsMonitor.cs), say, to see the full code that reads and writes HAGS — about 30 lines.
-
-## Change log format
-
-`%APPDATA%\GamerGuardian\changes.log` is the authoritative record of every registry write or API call GamerGuardian makes. Each entry is multi-line and shows exactly what was touched and what the raw values were. Format:
-
-```
---------------------------------------------------------------------------------
-[YYYY-MM-DD HH:MM:SS] [source] STATUS Description
-  Mechanism : <registry path or API call>
-  Before    : <raw before value>  (<friendly description>)
-  Wrote     : <raw target value>  (<friendly description>)
-  After     : <raw after value>  (<friendly description>)  <- verified | NOT VERIFIED
-  Reboot    : required to take effect       (only for reboot-required settings)
-  Verify    : <PowerShell snippet to read the same value yourself>
-```
-
-Fields:
-
-| Field | Meaning |
-|---|---|
-| **timestamp** | Local time of the apply |
-| **source** | `manual` (you clicked Apply) · `auto` (silent auto-apply during a poll tick) · `ui` (preference toggle in Settings) · `pause` (polling paused/resumed for fullscreen, benchmark, or manual pause) · `trim` (periodic memory snapshot — useful for verifying the app doesn't leak over hours of runtime) |
-| **STATUS** | `OK` if the after-read matched the target; `FAILED` otherwise (UAC declined, registry locked, etc.) |
-| **Mechanism** | The exact registry path + value type, or the Win32 / DLL function called for non-registry settings |
-| **Before** | The raw bytes / number / string GamerGuardian read before the write, plus a parenthesized friendly description |
-| **Wrote** | The raw value GamerGuardian asked the OS to set |
-| **After** | What GamerGuardian saw when it re-read the value post-apply. Should equal **Wrote** for verified entries. |
-| **Reboot** | Present only when the setting needs a Windows restart to actually take effect |
-| **Verify** | A PowerShell one-liner you can paste into a fresh terminal to read the same value yourself |
-
-### Worked example
-
-A manual Apply that flipped USB Selective Suspend to gaming-optimized:
-
-```
---------------------------------------------------------------------------------
-[2026-05-06 22:14:08] [manual] OK     USB Selective Suspend (global override)
-  Mechanism : HKLM\SYSTEM\CurrentControlSet\Services\USB\DisableSelectiveSuspend (DWORD)
-  Before    : 0  (Default)
-  Wrote     : 1  (Disabled (gaming))
-  After     : 1  (Disabled (gaming))  <- verified
-  Reboot    : required to take effect
-  Verify    : (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\USB' -Name DisableSelectiveSuspend).DisableSelectiveSuspend
-```
-
-A silent auto-apply that fixed Game Mode after a Windows update reset it:
-
-```
---------------------------------------------------------------------------------
-[2026-05-07 09:14:33] [auto  ] OK     Windows Game Mode
-  Mechanism : HKCU\Software\Microsoft\GameBar\AutoGameModeEnabled / AllowAutoGameMode
-  Before    : AutoGameModeEnabled=0, AllowAutoGameMode=0  (Off)
-  Wrote     : AutoGameModeEnabled=1, AllowAutoGameMode=1  (On)
-  After     : AutoGameModeEnabled=1, AllowAutoGameMode=1  (On)  <- verified
-  Verify    : (Get-ItemProperty 'HKCU:\Software\Microsoft\GameBar' -Name AutoGameModeEnabled).AutoGameModeEnabled
-```
-
-A pause / resume cycle while a fullscreen game runs:
-
-```
-[2026-05-06 19:42:01] [pause ] PAUSED  fullscreen (Cyberpunk2077)
-[2026-05-06 21:18:14] [pause ] RESUMED was: fullscreen (Cyberpunk2077)
-```
-
-A preference toggle in the Settings UI:
-
-```
-[2026-05-06 22:42:15] [ui    ] PREF   Fullscreen optimizations (global)  |  Monitor: False -> True
-[2026-05-06 22:42:16] [ui    ] PREF   Fullscreen optimizations (global)  |  AutoApply: False -> True
-```
-
-A failed Apply where the user cancelled the UAC prompt:
-
-```
---------------------------------------------------------------------------------
-[2026-05-07 09:18:02] [manual] FAILED Memory Integrity (Core Isolation) — requires reboot
-  Mechanism : HKLM\SYSTEM\...\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity\Enabled (DWORD)
-  Before    : 1  (On)
-  Wrote     : 0  (Off)
-  After     : 1  (On)  <- NOT VERIFIED
-  Reboot    : required to take effect
-  Verify    : (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity' -Name Enabled).Enabled
-```
-
-The `<- NOT VERIFIED` marker plus matching Before/After tells you the write didn't land. For HKLM-write settings, the most common cause is a UAC cancel.
-
-## Files GamerGuardian writes
-
-| Path | Purpose | Lifetime |
-|---|---|---|
-| `%LOCALAPPDATA%\Programs\GamerGuardian\GamerGuardian.exe` | Installed app | Until uninstall |
-| `%APPDATA%\GamerGuardian\config.json` | Your monitor / want / auto-apply preferences | Persists; survives upgrades |
-| `%APPDATA%\GamerGuardian\changes.log` | Append-only audit of every applied change | Auto-rotates at ~1 MB → `changes.log.1` |
-| `%TEMP%\gamerguardian_error.log` | Unhandled-exception stack traces (rare) | Auto-rotates at ~1 MB → `.log.1` |
-| `%TEMP%\gamerguardian_selftest.txt` | Output of `GamerGuardian.exe --test` | Overwritten each run |
-| `%TEMP%\GamerGuardian-Setup-x.y.z.exe` | Installer downloaded by the auto-update flow before it launches | **Auto-cleaned on next launch** if older than 1 day |
-| `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\GamerGuardian` | Launch-at-startup entry | Created/removed by the *Launch at Windows startup* checkbox |
-
-If you see leftover `GamerGuardian-Setup-*.exe` files in `%TEMP%` from before v0.1.20, you can delete them — they were the previous auto-update flow's downloaded installers. v0.1.20+ cleans them up automatically.
+Reporting a vulnerability: [SECURITY.md](SECURITY.md).
 
 ## Compatibility
 
@@ -340,9 +129,7 @@ If you see leftover `GamerGuardian-Setup-*.exe` files in `%TEMP%` from before v0
 
 ## Contributing
 
-Issues and PRs welcome. New monitor modules just need to implement [`IMonitoredSetting`](src/GamerGuardian/Monitors/IMonitoredSetting.cs) — see [`HdrMonitor.cs`](src/GamerGuardian/Monitors/HdrMonitor.cs) for the canonical example.
-
-If a setting reference link in the table above 404s, please open an issue or PR with the corrected URL.
+Issues and PRs welcome. New monitor modules just need to implement [`IMonitoredSetting`](src/GamerGuardian/Monitors/IMonitoredSetting.cs) — see [`HdrMonitor.cs`](src/GamerGuardian/Monitors/HdrMonitor.cs) for the canonical example. Setting-reference link rot is a known maintenance task; PRs welcome.
 
 ## License
 

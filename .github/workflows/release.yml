@@ -62,6 +62,17 @@ jobs:
       - name: Restore
         run: dotnet restore GamerGuardian.sln
 
+      - name: Check for vulnerable NuGet packages
+        shell: pwsh
+        run: |
+          # Lists known-vulnerable transitive deps. Exits with the report
+          # text only — fails the job if anything shows up.
+          $out = dotnet list GamerGuardian.sln package --vulnerable --include-transitive 2>&1 | Out-String
+          Write-Host $out
+          if ($out -match 'has the following vulnerable packages') {
+            throw "Vulnerable NuGet packages detected. Run 'dotnet list package --vulnerable' locally and bump the affected dependency."
+          }
+
       - name: Publish (self-contained, single-file, win-x64)
         run: >
           dotnet publish src/GamerGuardian/GamerGuardian.csproj
@@ -84,6 +95,20 @@ jobs:
         run: |
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion=${{ steps.ver.outputs.version }} installer\GamerGuardian.iss
           if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
+
+      - name: Generate SHA-256 checksums
+        shell: pwsh
+        run: |
+          # Produces SHA256SUMS.txt with the same format as `sha256sum -b`,
+          # so users can verify with PowerShell's Get-FileHash or `sha256sum -c`.
+          $installer = Get-Item "installer\Output\GamerGuardian-Setup-${{ steps.ver.outputs.version }}.exe"
+          $portable  = Get-Item "publish\GamerGuardian.exe"
+          $lines = @(
+            (Get-FileHash $installer -Algorithm SHA256).Hash.ToLower() + " *" + $installer.Name
+            (Get-FileHash $portable  -Algorithm SHA256).Hash.ToLower() + " *" + $portable.Name
+          )
+          $lines | Set-Content -Path "installer\Output\SHA256SUMS.txt" -Encoding ASCII
+          Write-Host (Get-Content "installer\Output\SHA256SUMS.txt" -Raw)
 
       - name: List artifacts
         shell: pwsh
@@ -112,3 +137,4 @@ jobs:
           files: |
             installer/Output/GamerGuardian-Setup-${{ steps.ver.outputs.version }}.exe
             publish/GamerGuardian.exe
+            installer/Output/SHA256SUMS.txt
