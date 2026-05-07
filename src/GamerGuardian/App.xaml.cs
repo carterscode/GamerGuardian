@@ -52,7 +52,7 @@ public partial class App : WpfApplication
         TempCleanup.Run();
 
         _notifier = new Notifier();
-        _allMonitors = new IMonitoredSetting[]
+        var fixedMonitors = new IMonitoredSetting[]
         {
             new HdrMonitor(),
             new RefreshRateMonitor(),
@@ -70,6 +70,9 @@ public partial class App : WpfApplication
             new FullscreenOptimizationsMonitor(),
             new PowerPlanMonitor(),
         };
+        var serviceMonitors = GamerGuardian.Services.ServiceCatalog.All
+            .Select(d => (IMonitoredSetting)new WindowsServiceMonitor(d));
+        _allMonitors = fixedMonitors.Concat(serviceMonitors).ToArray();
         _monitor = new MonitorService(_store, _allMonitors, report => _notifier.ShowAsync(report));
         _monitor.AutoAppliedRebootRequired += items =>
         {
@@ -162,7 +165,6 @@ public partial class App : WpfApplication
                     GC.WaitForPendingFinalizers();
                     GC.Collect();
                     GamerGuardian.Native.Psapi.TrimSelf();
-                    GamerGuardian.Services.ChangeLogger.LogMemorySnapshot("settings-closed");
                 }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
             };
             _settingsWindow.Show();

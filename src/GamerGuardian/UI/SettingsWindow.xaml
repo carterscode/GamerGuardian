@@ -4,8 +4,8 @@
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         Title="GamerGuardian - Settings"
         Closing="OnWindowClosing"
-        Width="780" Height="760"
-        MinWidth="640" MinHeight="500"
+        Width="820" Height="720"
+        MinWidth="680" MinHeight="500"
         WindowStartupLocation="CenterScreen"
         WindowBackdropType="Mica"
         ExtendsContentIntoTitleBar="True"
@@ -44,206 +44,317 @@
                 </StackPanel>
             </Grid>
 
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
-                <StackPanel>
+            <TabControl x:Name="MainTabs" Padding="0,8,0,0"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch">
 
-                    <TextBlock Text="General"
-                               FontSize="18" FontWeight="SemiBold"
-                               Margin="0,4,0,8"/>
-                    <ui:Card Padding="16" Margin="0,0,0,20">
+                <TabItem Header="General"
+                         HorizontalContentAlignment="Stretch"
+                         VerticalContentAlignment="Stretch">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,8,8,0">
                         <StackPanel>
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0">
-                                    <TextBlock Text="Theme"/>
-                                    <TextBlock Text="Use system, force light, or force dark."
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               FontSize="12"/>
-                                </StackPanel>
-                                <ComboBox x:Name="ThemeCombo" Grid.Column="1" Width="160" SelectionChanged="ThemeCombo_SelectionChanged"/>
-                            </Grid>
-
-                            <CheckBox x:Name="LaunchAtStartupCheck" Content="Launch at Windows startup" Margin="0,4,0,4"/>
-                            <CheckBox x:Name="ConsolidateCheck" Content="Group multiple drifts into one notification" Margin="0,4,0,4"/>
-                            <Grid Margin="0,4,0,4">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <CheckBox Grid.Column="0" x:Name="CheckForUpdatesCheck" Content="Check for updates on startup" VerticalAlignment="Center"/>
-                                <ui:Button Grid.Column="1" x:Name="CheckUpdatesNowButton" Content="Check now" MinWidth="110" Click="CheckUpdatesNowButton_Click"/>
-                            </Grid>
-                            <Grid Margin="0,8,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0">
-                                    <TextBlock Text="Change log"/>
-                                    <TextBlock Text="Every applied change (manual or silent) is recorded with a timestamp, before/after values, and verification status."
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               FontSize="12"
-                                               TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <ui:Button Grid.Column="1" Content="Open change log" MinWidth="140" Click="OpenChangeLogButton_Click"/>
-                            </Grid>
-
-                            <Grid Margin="0,8,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0">
-                                    <TextBlock Text="Polling interval"/>
-                                    <TextBlock Text="How often the monitor compares current settings against your preferences."
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               FontSize="12"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <ui:NumberBox x:Name="PollSecondsBox" Width="120" Minimum="5" Maximum="3600" Value="30"/>
-                                    <TextBlock Text="seconds" Margin="8,0,0,0" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Grid>
-                        </StackPanel>
-                    </ui:Card>
-
-                    <TextBlock Text="Global gaming settings"
-                               FontSize="18" FontWeight="SemiBold"
-                               Margin="0,4,0,8"/>
-                    <ItemsControl x:Name="GlobalTogglesList" Margin="0,0,0,8">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <ui:Card Padding="16" Margin="0,0,0,8">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                                                <Border Visibility="{Binding RebootBadgeVisibility}"
-                                                        Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
-                                                        CornerRadius="3" Padding="6,1" Margin="8,0,0,0">
-                                                    <TextBlock Text="reboot required"
-                                                               Foreground="{DynamicResource SystemFillColorCautionBrush}"
-                                                               FontSize="10" FontWeight="SemiBold"/>
-                                                </Border>
-                                            </StackPanel>
-                                            <TextBlock Text="{Binding Description}"
-                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                       FontSize="12" Margin="0,3,0,0"
-                                                       TextWrapping="Wrap"/>
-                                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                                                <TextBlock Text="{Binding CurrentText}"
-                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                           FontSize="11" Margin="0,0,12,0"/>
-                                                <TextBlock Text="{Binding DefaultText}"
-                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                           FontSize="11"/>
-                                            </StackPanel>
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="1" Orientation="Vertical">
-                                            <CheckBox Content="Monitor" IsChecked="{Binding Monitor}"/>
-                                            <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
-                                                <TextBlock Text="Want:" Margin="0,4,8,0"/>
-                                                <RadioButton GroupName="{Binding GroupName}" Content="{Binding OnLabel}" IsChecked="{Binding DesiredOn}" Margin="0,0,8,0"/>
-                                                <RadioButton GroupName="{Binding GroupName}" Content="{Binding OffLabel}" IsChecked="{Binding DesiredOff}"/>
-                                            </StackPanel>
-                                            <CheckBox Content="Auto-apply silently" IsChecked="{Binding AutoApply}"/>
-                                        </StackPanel>
-                                    </Grid>
-                                </ui:Card>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-
-                    <ui:Card Padding="16" Margin="0,0,0,20">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
-                                <TextBlock Text="Power plan" FontWeight="SemiBold"/>
-                                <TextBlock Text="Active Windows power scheme — High Performance keeps CPU clocks elevated."
-                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           FontSize="12" Margin="0,3,0,0"
-                                           TextWrapping="Wrap"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                                    <TextBlock x:Name="PowerPlanCurrentText"
-                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                               FontSize="11" Margin="0,0,12,0"/>
-                                    <TextBlock Text="Default: Balanced"
-                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                               FontSize="11"/>
-                                </StackPanel>
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Vertical">
-                                <CheckBox x:Name="PowerPlanMonitorCheck" Content="Monitor"
-                                          Checked="PowerPlanMonitorCheck_Changed"
-                                          Unchecked="PowerPlanMonitorCheck_Changed"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
-                                    <TextBlock Text="Want:" Margin="0,6,8,0"/>
-                                    <ComboBox x:Name="PowerPlanCombo" Width="240"
-                                              SelectionChanged="PowerPlanCombo_SelectionChanged"/>
-                                </StackPanel>
-                                <CheckBox x:Name="PowerPlanAutoApplyCheck" Content="Auto-apply silently"
-                                          Checked="PowerPlanAutoApplyCheck_Changed"
-                                          Unchecked="PowerPlanAutoApplyCheck_Changed"/>
-                            </StackPanel>
-                        </Grid>
-                    </ui:Card>
-
-                    <TextBlock Text="Per-display settings"
-                               FontSize="18" FontWeight="SemiBold"
-                               Margin="0,4,0,8"/>
-                    <ItemsControl x:Name="DisplaysList">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <ui:CardExpander Header="{Binding HeaderText}" Margin="0,0,0,8" IsExpanded="True">
-                                    <ui:CardExpander.Icon>
-                                        <ui:SymbolIcon Symbol="Desktop24"/>
-                                    </ui:CardExpander.Icon>
-                                    <StackPanel Margin="0,4,0,0">
-                                        <TextBlock Text="{Binding StatusText}"
+                            <ui:Card Padding="16" Margin="0,0,0,8">
+                                <StackPanel>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Theme"/>
+                                        <TextBlock Text="Use system, force light, or force dark."
                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                   FontSize="12" Margin="0,0,0,12"/>
-
-                                        <TextBlock Text="HDR" FontWeight="SemiBold" Margin="0,4,0,4"/>
-                                        <CheckBox Content="Monitor this setting" IsChecked="{Binding HdrMonitor}"/>
-                                        <CheckBox Content="Desired: Enabled" IsChecked="{Binding HdrDesiredOn}"/>
-                                        <CheckBox Content="Auto-apply silently when it drifts" IsChecked="{Binding HdrAutoApply}"/>
-
-                                        <Separator Margin="0,12,0,8"/>
-                                        <TextBlock Text="Refresh Rate" FontWeight="SemiBold" Margin="0,4,0,4"/>
-                                        <CheckBox Content="Monitor this setting" IsChecked="{Binding RefreshMonitor}"/>
-                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
-                                            <RadioButton GroupName="{Binding RateGroupName}" Content="Maximum supported" IsChecked="{Binding RefreshUseMax}" Margin="0,0,16,0"/>
-                                            <RadioButton GroupName="{Binding RateGroupName}" Content="Fixed:" IsChecked="{Binding RefreshUseFixed}" Margin="0,0,8,0"/>
-                                            <ComboBox ItemsSource="{Binding AvailableHz}" SelectedItem="{Binding FixedHz}" Width="80" IsEnabled="{Binding RefreshUseFixed}"/>
-                                            <TextBlock Text="Hz" Margin="6,0,0,0" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                        <CheckBox Content="Auto-apply silently when it drifts" IsChecked="{Binding RefreshAutoApply}"/>
-
-                                        <Separator Margin="0,12,0,8"/>
-                                        <TextBlock Text="Resolution" FontWeight="SemiBold" Margin="0,4,0,4"/>
-                                        <CheckBox Content="Monitor this setting" IsChecked="{Binding ResolutionMonitor}"/>
-                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
-                                            <TextBlock Text="Pin to:" Margin="0,6,8,0"/>
-                                            <ComboBox ItemsSource="{Binding AvailableResolutions}" SelectedItem="{Binding DesiredResolution}" Width="160" IsEnabled="{Binding ResolutionMonitor}"/>
-                                        </StackPanel>
-                                        <CheckBox Content="Auto-apply silently when it drifts" IsChecked="{Binding ResolutionAutoApply}"/>
+                                                   FontSize="12"/>
                                     </StackPanel>
-                                </ui:CardExpander>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </ScrollViewer>
+                                    <ComboBox x:Name="ThemeCombo" Grid.Column="1" Width="160" SelectionChanged="ThemeCombo_SelectionChanged"/>
+                                </Grid>
+
+                                <CheckBox x:Name="LaunchAtStartupCheck" Content="Launch at Windows startup" Margin="0,4,0,4"/>
+                                <CheckBox x:Name="ConsolidateCheck" Content="Group multiple drifts into one notification" Margin="0,4,0,4"/>
+                                <Grid Margin="0,4,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <CheckBox Grid.Column="0" x:Name="CheckForUpdatesCheck" Content="Check for updates on startup" VerticalAlignment="Center"/>
+                                    <ui:Button Grid.Column="1" x:Name="CheckUpdatesNowButton" Content="Check now" MinWidth="110" Click="CheckUpdatesNowButton_Click"/>
+                                </Grid>
+                                <Grid Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Change log"/>
+                                        <TextBlock Text="Every applied change (manual or silent) is recorded with a timestamp, before/after values, and verification status."
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   FontSize="12"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ui:Button Grid.Column="1" Content="Open change log" MinWidth="140" Click="OpenChangeLogButton_Click"/>
+                                </Grid>
+
+                                <Grid Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Polling interval"/>
+                                        <TextBlock Text="How often the monitor compares current settings against your preferences."
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   FontSize="12"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <ui:NumberBox x:Name="PollSecondsBox" Width="120" Minimum="5" Maximum="3600" Value="30"/>
+                                        <TextBlock Text="seconds" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </ui:Card>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <TabItem Header="Global gaming"
+                         HorizontalContentAlignment="Stretch"
+                         VerticalContentAlignment="Stretch">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,8,8,0">
+                        <StackPanel>
+                            <ItemsControl x:Name="GlobalTogglesList" Margin="0,0,0,8">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <ui:Card Padding="16" Margin="0,0,0,8">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                    <Border Visibility="{Binding RebootBadgeVisibility}"
+                                                            Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                                                            CornerRadius="3" Padding="6,1"
+                                                            HorizontalAlignment="Left"
+                                                            Margin="0,4,0,0">
+                                                        <TextBlock Text="reboot required"
+                                                                   Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                                                   FontSize="10" FontWeight="SemiBold"/>
+                                                    </Border>
+                                                    <TextBlock Text="{Binding Description}"
+                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                               FontSize="12" Margin="0,3,0,0"
+                                                               TextWrapping="Wrap"/>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                        <TextBlock Text="{Binding CurrentText}"
+                                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                   FontSize="11" Margin="0,0,12,0"/>
+                                                        <TextBlock Text="{Binding DefaultText}"
+                                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                   FontSize="11"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Orientation="Vertical">
+                                                    <CheckBox Content="Monitor" IsChecked="{Binding Monitor}"/>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
+                                                        <TextBlock Text="Want:" Margin="0,4,8,0"/>
+                                                        <RadioButton GroupName="{Binding GroupName}" Content="{Binding OnLabel}" IsChecked="{Binding DesiredOn}" Margin="0,0,8,0"/>
+                                                        <RadioButton GroupName="{Binding GroupName}" Content="{Binding OffLabel}" IsChecked="{Binding DesiredOff}"/>
+                                                    </StackPanel>
+                                                    <CheckBox Content="Auto-apply silently" IsChecked="{Binding AutoApply}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </ui:Card>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <ui:Card Padding="16" Margin="0,0,0,8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <TextBlock Text="Power plan" FontWeight="SemiBold"/>
+                                        <TextBlock Text="Active Windows power scheme — High Performance keeps CPU clocks elevated."
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   FontSize="12" Margin="0,3,0,0"
+                                                   TextWrapping="Wrap"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                            <TextBlock x:Name="PowerPlanCurrentText"
+                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                       FontSize="11" Margin="0,0,12,0"/>
+                                            <TextBlock Text="Default: Balanced"
+                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                       FontSize="11"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Vertical">
+                                        <CheckBox x:Name="PowerPlanMonitorCheck" Content="Monitor"
+                                                  Checked="PowerPlanMonitorCheck_Changed"
+                                                  Unchecked="PowerPlanMonitorCheck_Changed"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
+                                            <TextBlock Text="Want:" Margin="0,6,8,0"/>
+                                            <ComboBox x:Name="PowerPlanCombo" Width="240"
+                                                      SelectionChanged="PowerPlanCombo_SelectionChanged"/>
+                                        </StackPanel>
+                                        <CheckBox x:Name="PowerPlanAutoApplyCheck" Content="Auto-apply silently"
+                                                  Checked="PowerPlanAutoApplyCheck_Changed"
+                                                  Unchecked="PowerPlanAutoApplyCheck_Changed"/>
+                                    </StackPanel>
+                                </Grid>
+                            </ui:Card>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <TabItem Header="Windows services"
+                         HorizontalContentAlignment="Stretch"
+                         VerticalContentAlignment="Stretch">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,8,8,0">
+                        <StackPanel>
+                            <ui:Card Padding="16" Margin="0,0,0,8">
+                                <StackPanel>
+                                    <TextBlock Text="Stop and disable Windows services that run by default but typically aren't needed for gaming. Each service is monitored against your preference and (optionally) re-applied when Windows or another app re-enables it."
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="One-click preset:" Margin="0,4,12,0"/>
+                                        <RadioButton x:Name="ServicesPresetGaming" GroupName="services_preset"
+                                                     Content="Gaming optimized" Margin="0,0,12,0"
+                                                     Checked="ServicesPresetGaming_Checked"/>
+                                        <RadioButton x:Name="ServicesPresetDefault" GroupName="services_preset"
+                                                     Content="Default"
+                                                     Checked="ServicesPresetDefault_Checked"/>
+                                    </StackPanel>
+                                    <TextBlock Text="Tip: the Gaming preset toggles the recommended subset; non-recommended services stay where you set them."
+                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                                </StackPanel>
+                            </ui:Card>
+                            <ItemsControl x:Name="ServicesList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <ui:Card Padding="16" Margin="0,0,0,8">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                    <WrapPanel Margin="0,4,0,0">
+                                                        <Border Background="{DynamicResource SubtleFillColorTertiaryBrush}"
+                                                                CornerRadius="3" Padding="6,1" Margin="0,0,6,4">
+                                                            <TextBlock Text="{Binding ServiceName}"
+                                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                       FontSize="10" FontFamily="Consolas"/>
+                                                        </Border>
+                                                        <Border Visibility="{Binding RecommendedBadgeVisibility}"
+                                                                Background="{DynamicResource SystemFillColorSuccessBackgroundBrush}"
+                                                                CornerRadius="3" Padding="6,1" Margin="0,0,6,4">
+                                                            <TextBlock Text="recommended"
+                                                                       Foreground="{DynamicResource SystemFillColorSuccessBrush}"
+                                                                       FontSize="10" FontWeight="SemiBold"/>
+                                                        </Border>
+                                                        <Border Visibility="{Binding RebootBadgeVisibility}"
+                                                                Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                                                                CornerRadius="3" Padding="6,1" Margin="0,0,6,4">
+                                                            <TextBlock Text="reboot required"
+                                                                       Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                                                       FontSize="10" FontWeight="SemiBold"/>
+                                                        </Border>
+                                                        <Border Visibility="{Binding NotInstalledBadgeVisibility}"
+                                                                Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                                                                CornerRadius="3" Padding="6,1" Margin="0,0,6,4">
+                                                            <TextBlock Text="not installed"
+                                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                       FontSize="10" FontWeight="SemiBold"/>
+                                                        </Border>
+                                                    </WrapPanel>
+                                                    <TextBlock Text="{Binding Description}"
+                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                               FontSize="12" Margin="0,3,0,0"
+                                                               TextWrapping="Wrap"/>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                        <TextBlock Text="{Binding CurrentText}"
+                                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                   FontSize="11" Margin="0,0,12,0"/>
+                                                        <TextBlock Text="{Binding DefaultText}"
+                                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                   FontSize="11"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Orientation="Vertical"
+                                                            IsEnabled="{Binding IsInstalled}">
+                                                    <CheckBox Content="Monitor" IsChecked="{Binding Monitor}"/>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
+                                                        <TextBlock Text="Want:" Margin="0,4,8,0"/>
+                                                        <RadioButton GroupName="{Binding GroupName}" Content="Default" IsChecked="{Binding DesiredDefault}" Margin="0,0,6,0"/>
+                                                        <RadioButton GroupName="{Binding GroupName}" Content="Manual" IsChecked="{Binding DesiredManual}" Margin="0,0,6,0"/>
+                                                        <RadioButton GroupName="{Binding GroupName}" Content="Disabled" IsChecked="{Binding DesiredDisabled}"/>
+                                                    </StackPanel>
+                                                    <CheckBox Content="Auto-apply silently" IsChecked="{Binding AutoApply}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </ui:Card>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <TabItem Header="Display"
+                         HorizontalContentAlignment="Stretch"
+                         VerticalContentAlignment="Stretch">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,8,8,0">
+                        <ItemsControl x:Name="DisplaysList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <ui:CardExpander Header="{Binding HeaderText}" Margin="0,0,0,8" IsExpanded="True">
+                                        <ui:CardExpander.Icon>
+                                            <ui:SymbolIcon Symbol="Desktop24"/>
+                                        </ui:CardExpander.Icon>
+                                        <StackPanel Margin="0,4,0,0">
+                                            <TextBlock Text="{Binding StatusText}"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       FontSize="12" Margin="0,0,0,12"/>
+
+                                            <TextBlock Text="HDR" FontWeight="SemiBold" Margin="0,4,0,4"/>
+                                            <CheckBox Content="Monitor this setting" IsChecked="{Binding HdrMonitor}"/>
+                                            <CheckBox Content="Desired: Enabled" IsChecked="{Binding HdrDesiredOn}"/>
+                                            <CheckBox Content="Auto-apply silently when it drifts" IsChecked="{Binding HdrAutoApply}"/>
+
+                                            <Separator Margin="0,12,0,8"/>
+                                            <TextBlock Text="Refresh Rate" FontWeight="SemiBold" Margin="0,4,0,4"/>
+                                            <CheckBox Content="Monitor this setting" IsChecked="{Binding RefreshMonitor}"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
+                                                <RadioButton GroupName="{Binding RateGroupName}" Content="Maximum supported" IsChecked="{Binding RefreshUseMax}" Margin="0,0,16,0"/>
+                                                <RadioButton GroupName="{Binding RateGroupName}" Content="Fixed:" IsChecked="{Binding RefreshUseFixed}" Margin="0,0,8,0"/>
+                                                <ComboBox ItemsSource="{Binding AvailableHz}" SelectedItem="{Binding FixedHz}" Width="80" IsEnabled="{Binding RefreshUseFixed}"/>
+                                                <TextBlock Text="Hz" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <CheckBox Content="Auto-apply silently when it drifts" IsChecked="{Binding RefreshAutoApply}"/>
+
+                                            <Separator Margin="0,12,0,8"/>
+                                            <TextBlock Text="Resolution" FontWeight="SemiBold" Margin="0,4,0,4"/>
+                                            <CheckBox Content="Monitor this setting" IsChecked="{Binding ResolutionMonitor}"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
+                                                <TextBlock Text="Pin to:" Margin="0,6,8,0"/>
+                                                <ComboBox ItemsSource="{Binding AvailableResolutions}" SelectedItem="{Binding DesiredResolution}" Width="160" IsEnabled="{Binding ResolutionMonitor}"/>
+                                            </StackPanel>
+                                            <CheckBox Content="Auto-apply silently when it drifts" IsChecked="{Binding ResolutionAutoApply}"/>
+                                        </StackPanel>
+                                    </ui:CardExpander>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </TabItem>
+
+            </TabControl>
         </DockPanel>
     </Grid>
 </ui:FluentWindow>

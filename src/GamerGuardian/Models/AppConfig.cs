@@ -13,6 +13,14 @@ public sealed class AppConfig
 
     public Dictionary<string, DisplayPreference> Displays { get; set; } = new();
     public GlobalPreferences Global { get; set; } = new();
+    public Dictionary<string, ServicePref> Services { get; set; } = new();
+}
+
+public sealed class ServicePref
+{
+    public bool Monitor { get; set; } = false;
+    public ServiceTargetState Desired { get; set; } = ServiceTargetState.Default;
+    public bool AutoApply { get; set; } = false;
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

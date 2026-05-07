@@ -12,6 +12,11 @@ public static class SettingDocs
         if (settingId.StartsWith("hdr:")) return "DisplayConfigSetDeviceInfo (CCD API)";
         if (settingId.StartsWith("refresh:")) return "ChangeDisplaySettingsEx (DEVMODE.dmDisplayFrequency)";
         if (settingId.StartsWith("resolution:")) return "ChangeDisplaySettingsEx (DEVMODE.dmPelsWidth/Height)";
+        if (settingId.StartsWith("service:"))
+        {
+            var name = settingId["service:".Length..];
+            return $"sc.exe stop / config (writes HKLM\\SYSTEM\\CurrentControlSet\\Services\\{name}\\Start)";
+        }
         return settingId switch
         {
             "hags" => @"HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\HwSchMode (DWORD)",
@@ -34,6 +39,11 @@ public static class SettingDocs
     {
         if (settingId.StartsWith("hdr:") || settingId.StartsWith("refresh:") || settingId.StartsWith("resolution:"))
             return "Open Settings → System → Display, or run: dxdiag";
+        if (settingId.StartsWith("service:"))
+        {
+            var name = settingId["service:".Length..];
+            return $"sc qc \"{name}\"   # look for START_TYPE";
+        }
         return settingId switch
         {
             "hags" => @"(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers' -Name HwSchMode).HwSchMode",

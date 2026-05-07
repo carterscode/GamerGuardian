@@ -126,7 +126,6 @@ public sealed class MonitorService : IDisposable
                 GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
                 GC.Collect(2, GCCollectionMode.Optimized, blocking: false, compacting: true);
                 Psapi.TrimSelf();
-                ChangeLogger.LogMemorySnapshot("trim");
             }
         }
         finally
