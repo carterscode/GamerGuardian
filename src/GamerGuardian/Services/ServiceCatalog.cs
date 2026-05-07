@@ -98,8 +98,14 @@ public static class ServiceCatalog
         new(
             Name: "DoSvc",
             DisplayName: "Delivery Optimization",
-            Description: "Peer-to-peer Windows Update / Store delivery. Disabling stops your machine seeding updates to other PCs but doesn't break your own updates.",
-            DefaultStartType: ServiceStartType.AutomaticDelayed),
+            Description: "Peer-to-peer Windows Update / Store delivery. Windows actively reverts attempts to disable this service via standard tools. Instead, GamerGuardian uses the documented Group Policy (DODownloadMode = 0) to put DoSvc in HTTP-only mode — your machine still gets updates but stops uploading them to other PCs. Reboot recommended for the policy to apply across all OS components.",
+            DefaultStartType: ServiceStartType.AutomaticDelayed,
+            RequiresReboot: true,
+            PolicyOverride: new PolicyOverride(
+                PolicyKey: @"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization",
+                PolicyValue: "DODownloadMode",
+                DisabledValue: 0,
+                Description: "DODownloadMode = 0 disables P2P sharing (HTTP-only mode).")),
 
         new(
             Name: "iphlpsvc",

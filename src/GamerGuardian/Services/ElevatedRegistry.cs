@@ -11,6 +11,16 @@ public static class ElevatedRegistry
     public static bool SetHklmString(string subkey, string value, string data) =>
         Run($"add \"HKLM\\{subkey}\" /v \"{value}\" /t REG_SZ /d \"{data}\" /f");
 
+    /// <summary>
+    /// Deletes a single value from an HKLM subkey. Used by policy-based
+    /// service overrides when the user wants to restore Windows defaults —
+    /// removing the policy value is the documented way to "unset" a Group
+    /// Policy entry. Reg.exe returns non-zero if the value doesn't exist;
+    /// callers should only invoke this after confirming the value is set.
+    /// </summary>
+    public static bool DeleteHklmValue(string subkey, string value) =>
+        Run($"delete \"HKLM\\{subkey}\" /v \"{value}\" /f");
+
     public static bool SetHklmMulti(IEnumerable<(string subkey, string name, string kind, string data)> values)
     {
         // Combines multiple writes into a single elevation prompt by chaining them in cmd.

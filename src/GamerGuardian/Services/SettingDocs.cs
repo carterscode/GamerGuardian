@@ -15,6 +15,10 @@ public static class SettingDocs
         if (settingId.StartsWith("service:"))
         {
             var name = settingId["service:".Length..];
+            var def = ServiceCatalog.All.FirstOrDefault(d =>
+                d.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (def?.PolicyOverride is { } po)
+                return $"reg add HKLM\\{po.PolicyKey} /v {po.PolicyValue} (Group Policy override; Windows reverts the standard sc.exe path)";
             return $"sc.exe stop / config (writes HKLM\\SYSTEM\\CurrentControlSet\\Services\\{name}\\Start)";
         }
         return settingId switch
@@ -42,6 +46,10 @@ public static class SettingDocs
         if (settingId.StartsWith("service:"))
         {
             var name = settingId["service:".Length..];
+            var def = ServiceCatalog.All.FirstOrDefault(d =>
+                d.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (def?.PolicyOverride is { } po)
+                return $"(Get-ItemProperty 'HKLM:\\{po.PolicyKey}' -Name {po.PolicyValue} -EA SilentlyContinue).{po.PolicyValue}";
             return $"sc qc \"{name}\"   # look for START_TYPE";
         }
         return settingId switch

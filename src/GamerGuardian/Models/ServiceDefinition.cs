@@ -13,7 +13,24 @@ public sealed record ServiceDefinition(
     string Description,
     ServiceStartType DefaultStartType,
     bool RequiresReboot = false,
-    ServiceTargetState? RecommendedTarget = null);
+    ServiceTargetState? RecommendedTarget = null,
+    PolicyOverride? PolicyOverride = null);
+
+/// <summary>
+/// Some Windows services (DoSvc, etc.) are protected by Windows Update's
+/// self-healing pipeline (WaaSMedicSvc) — sc.exe writes to the service
+/// start type are accepted but reverted within seconds. The right way to
+/// influence them is via the documented Group Policy registry surface
+/// instead. When a <see cref="ServiceDefinition"/> has a non-null
+/// <see cref="ServiceDefinition.PolicyOverride"/>, the monitor stops
+/// trying to change the service start type and writes this policy value
+/// instead — Windows Update respects its own policy and doesn't revert.
+/// </summary>
+public sealed record PolicyOverride(
+    string PolicyKey,
+    string PolicyValue,
+    uint DisabledValue,
+    string Description);
 
 public enum ServiceStartType
 {
