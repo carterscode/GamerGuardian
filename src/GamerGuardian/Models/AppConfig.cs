@@ -19,7 +19,7 @@ public sealed class AppConfig
 public sealed class ServicePref
 {
     public bool Monitor { get; set; } = false;
-    public bool DesiredDisabled { get; set; } = false;
+    public ServiceTargetState Desired { get; set; } = ServiceTargetState.Default;
     public bool AutoApply { get; set; } = false;
 }
 

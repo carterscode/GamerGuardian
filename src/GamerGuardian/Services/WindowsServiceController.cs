@@ -73,6 +73,16 @@ public static class WindowsServiceController
             $"sc config \"{serviceName}\" start= disabled");
 
     /// <summary>
+    /// Stop the service (if running) and set start type to Manual. Useful for
+    /// services where Disabled is risky (IP Helper, etc.) — Manual lets a
+    /// trigger or app start it on demand but it won't be loaded at boot.
+    /// </summary>
+    public static bool SetManualElevated(string serviceName) =>
+        RunChained(
+            $"sc stop \"{serviceName}\"",
+            $"sc config \"{serviceName}\" start= demand");
+
+    /// <summary>
     /// Restore a service's start type to its default. Does not start it — the
     /// next reboot or trigger will pick that up if/when needed.
     /// </summary>

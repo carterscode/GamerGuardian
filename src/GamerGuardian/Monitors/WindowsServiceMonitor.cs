@@ -24,30 +24,54 @@ public sealed class WindowsServiceMonitor : IMonitoredSetting
         var current = WindowsServiceController.ReadStartType(_def.Name);
         if (current == ServiceStartType.Unknown) yield break;
 
-        var desired = pref.DesiredDisabled ? ServiceStartType.Disabled : _def.DefaultStartType;
+        var desired = pref.Desired switch
+        {
+            ServiceTargetState.Manual => ServiceStartType.Manual,
+            ServiceTargetState.Disabled => ServiceStartType.Disabled,
+            _ => _def.DefaultStartType,
+        };
         if (current == desired) yield break;
 
-        // For "default" preference we only flag drift if the current state is *Disabled* —
-        // otherwise we'd churn on services Windows naturally promotes Manual → Automatic
-        // via triggers. The user explicitly chose to disable; the user explicitly chose
-        // not to. Anything in between is fine.
-        if (!pref.DesiredDisabled && current != ServiceStartType.Disabled) yield break;
+        // For Want=Default we only flag drift when the current state matches one we
+        // might have set ourselves (Disabled, or Manual when default isn't Manual).
+        // This prevents churning on Windows-side state changes (triggers, updates)
+        // for services the user hasn't asked us to enforce.
+        if (pref.Desired == ServiceTargetState.Default)
+        {
+            bool weMightHaveSetIt = current == ServiceStartType.Disabled
+                || (current == ServiceStartType.Manual && _def.DefaultStartType != ServiceStartType.Manual);
+            if (!weMightHaveSetIt) yield break;
+        }
 
-        bool desiredDisabled = pref.DesiredDisabled;
+        var actionWord = pref.Desired switch
+        {
+            ServiceTargetState.Disabled => "stop and disable",
+            ServiceTargetState.Manual => "stop and set to Manual",
+            _ => $"restore to {DescribeStart(_def.DefaultStartType)}",
+        };
+        var capturedDesired = pref.Desired;
         yield return new DriftItem(
             SettingId: Id,
             DisplayKey: "service",
             DisplayLabel: _def.DisplayName,
-            Description: $"{_def.DisplayName} — {(desiredDisabled ? "stop and disable" : $"restore to {DescribeStart(_def.DefaultStartType)}")}",
+            Description: $"{_def.DisplayName} — {actionWord}",
             CurrentValue: DescribeStart(current),
             DesiredValue: DescribeStart(desired),
             AutoApply: pref.AutoApply,
             Apply: () => Task.Run(() =>
             {
-                if (desiredDisabled)
-                    WindowsServiceController.DisableElevated(_def.Name);
-                else
-                    WindowsServiceController.RestoreDefaultElevated(_def.Name, _def.DefaultStartType);
+                switch (capturedDesired)
+                {
+                    case ServiceTargetState.Disabled:
+                        WindowsServiceController.DisableElevated(_def.Name);
+                        break;
+                    case ServiceTargetState.Manual:
+                        WindowsServiceController.SetManualElevated(_def.Name);
+                        break;
+                    default:
+                        WindowsServiceController.RestoreDefaultElevated(_def.Name, _def.DefaultStartType);
+                        break;
+                }
             }),
             RequiresReboot: _def.RequiresReboot,
             IsMonitored: pref.Monitor,

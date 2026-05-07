@@ -281,8 +281,9 @@
                                                     <CheckBox Content="Monitor" IsChecked="{Binding Monitor}"/>
                                                     <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
                                                         <TextBlock Text="Want:" Margin="0,4,8,0"/>
-                                                        <RadioButton GroupName="{Binding GroupName}" Content="Disabled" IsChecked="{Binding DesiredDisabled}" Margin="0,0,8,0"/>
-                                                        <RadioButton GroupName="{Binding GroupName}" Content="Default" IsChecked="{Binding DesiredDefault}"/>
+                                                        <RadioButton GroupName="{Binding GroupName}" Content="Default" IsChecked="{Binding DesiredDefault}" Margin="0,0,6,0"/>
+                                                        <RadioButton GroupName="{Binding GroupName}" Content="Manual" IsChecked="{Binding DesiredManual}" Margin="0,0,6,0"/>
+                                                        <RadioButton GroupName="{Binding GroupName}" Content="Disabled" IsChecked="{Binding DesiredDisabled}"/>
                                                     </StackPanel>
                                                     <CheckBox Content="Auto-apply silently" IsChecked="{Binding AutoApply}"/>
                                                 </StackPanel>

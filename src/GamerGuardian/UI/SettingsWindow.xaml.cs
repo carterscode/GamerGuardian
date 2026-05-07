@@ -73,7 +73,15 @@ public partial class SettingsWindow : FluentWindow
             // For services the user hasn't opted into monitoring, mirror current state
             // into Want so the radio doesn't lie about a "recommendation" the user never asked for.
             if (!pref.Monitor && installed && current != ServiceStartType.Unknown)
-                pref.DesiredDisabled = current == ServiceStartType.Disabled;
+            {
+                pref.Desired = current switch
+                {
+                    ServiceStartType.Disabled => ServiceTargetState.Disabled,
+                    ServiceStartType.Manual when def.DefaultStartType != ServiceStartType.Manual
+                        => ServiceTargetState.Manual,
+                    _ => ServiceTargetState.Default,
+                };
+            }
 
             var status = installed
                 ? WindowsServiceController.ReadStatus(def.Name)
@@ -98,26 +106,29 @@ public partial class SettingsWindow : FluentWindow
 
     private void UpdatePresetRadio()
     {
-        // Reflects whether the current per-service prefs match the Gaming or Default preset.
-        // If neither matches (custom mix), both radios go unchecked.
-        bool matchesGaming = ServiceRows.All(r =>
-            !r.IsInstalled || r.DesiredDisabled == r.Definition.RecommendedDisable);
-        bool matchesDefault = ServiceRows.All(r => !r.IsInstalled || !r.DesiredDisabled);
+        // Default preset = every installed row at Default.
+        // Gaming preset = every installed row with a RecommendedTarget at that target.
+        //   Non-recommended rows can be anywhere — the preset doesn't manage them.
+        // The two are mutually exclusive in practice (recommended targets aren't Default).
+        bool matchesDefault = ServiceRows.All(r =>
+            !r.IsInstalled || r.DesiredDefault);
+        bool matchesGaming = !matchesDefault && ServiceRows
+            .Where(r => r.IsInstalled && r.Definition.RecommendedTarget.HasValue)
+            .All(r => GetDesired(r) == r.Definition.RecommendedTarget!.Value);
 
         _suppressPresetEvents = true;
         try
         {
-            ServicesPresetGaming.IsChecked = matchesGaming && !matchesDefault;
-            ServicesPresetDefault.IsChecked = matchesDefault && !matchesGaming;
-            // If both match (e.g. when no service has RecommendedDisable=true), prefer "Default".
-            if (matchesGaming && matchesDefault)
-            {
-                ServicesPresetGaming.IsChecked = false;
-                ServicesPresetDefault.IsChecked = true;
-            }
+            ServicesPresetGaming.IsChecked = matchesGaming;
+            ServicesPresetDefault.IsChecked = matchesDefault;
         }
         finally { _suppressPresetEvents = false; }
     }
+
+    private static ServiceTargetState GetDesired(ServiceRow r) =>
+        r.DesiredDisabled ? ServiceTargetState.Disabled
+        : r.DesiredManual ? ServiceTargetState.Manual
+        : ServiceTargetState.Default;
 
     private void ServicesPresetGaming_Checked(object sender, RoutedEventArgs e)
     {
@@ -136,8 +147,16 @@ public partial class SettingsWindow : FluentWindow
         foreach (var row in ServiceRows)
         {
             if (!row.IsInstalled) continue;
-            bool target = useRecommended && row.Definition.RecommendedDisable;
-            row.DesiredDisabled = target;
+            if (useRecommended)
+            {
+                // Only flip rows with a RecommendedTarget. Leave others alone.
+                if (row.Definition.RecommendedTarget is { } target)
+                    row.SetDesiredFromPreset(target);
+            }
+            else
+            {
+                row.SetDesiredFromPreset(ServiceTargetState.Default);
+            }
         }
         try { _store.Save(_config); } catch { }
         ChangeLogger.LogPreferenceChange(
@@ -692,7 +711,7 @@ public sealed class ServiceRow : INotifyPropertyChanged
     public Visibility RebootBadgeVisibility =>
         RequiresReboot ? Visibility.Visible : Visibility.Collapsed;
     public Visibility RecommendedBadgeVisibility =>
-        Definition.RecommendedDisable ? Visibility.Visible : Visibility.Collapsed;
+        Definition.RecommendedTarget.HasValue ? Visibility.Visible : Visibility.Collapsed;
     public Visibility NotInstalledBadgeVisibility =>
         IsInstalled ? Visibility.Collapsed : Visibility.Visible;
 
@@ -708,25 +727,35 @@ public sealed class ServiceRow : INotifyPropertyChanged
             _onPrefChanged?.Invoke($"Service: {Definition.DisplayName}", "Monitor", before.ToString(), value.ToString());
         }
     }
-    public bool DesiredDisabled
-    {
-        get => _pref.DesiredDisabled;
-        set
-        {
-            if (_pref.DesiredDisabled == value) return;
-            var before = _pref.DesiredDisabled;
-            _pref.DesiredDisabled = value;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(DesiredDefault));
-            _onPrefChanged?.Invoke($"Service: {Definition.DisplayName}", "Want",
-                before ? "Disabled" : "Default",
-                value ? "Disabled" : "Default");
-        }
-    }
     public bool DesiredDefault
     {
-        get => !_pref.DesiredDisabled;
-        set { if (value && _pref.DesiredDisabled) DesiredDisabled = false; }
+        get => _pref.Desired == ServiceTargetState.Default;
+        set { if (value) SetDesired(ServiceTargetState.Default); }
+    }
+    public bool DesiredManual
+    {
+        get => _pref.Desired == ServiceTargetState.Manual;
+        set { if (value) SetDesired(ServiceTargetState.Manual); }
+    }
+    public bool DesiredDisabled
+    {
+        get => _pref.Desired == ServiceTargetState.Disabled;
+        set { if (value) SetDesired(ServiceTargetState.Disabled); }
+    }
+
+    /// <summary>Direct setter that bypasses the per-radio plumbing. Used by the preset.</summary>
+    public void SetDesiredFromPreset(ServiceTargetState v) => SetDesired(v);
+
+    private void SetDesired(ServiceTargetState v)
+    {
+        if (_pref.Desired == v) return;
+        var before = _pref.Desired;
+        _pref.Desired = v;
+        OnPropertyChanged(nameof(DesiredDefault));
+        OnPropertyChanged(nameof(DesiredManual));
+        OnPropertyChanged(nameof(DesiredDisabled));
+        _onPrefChanged?.Invoke($"Service: {Definition.DisplayName}", "Want",
+            before.ToString(), v.ToString());
     }
     public bool AutoApply
     {
