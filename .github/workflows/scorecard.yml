@@ -29,6 +29,12 @@ jobs:
           results_file: results.sarif
           results_format: sarif
           publish_results: true
+          # SCORECARD_TOKEN is an optional fine-grained PAT with
+          # 'metadata: read' + 'administration: read' on this repo. When set,
+          # the Branch-Protection check can read protection rules and score
+          # them. Without it, that check returns -1 (internal error) because
+          # the default GITHUB_TOKEN can't read admin settings.
+          repo_token: ${{ secrets.SCORECARD_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

@@ -16,7 +16,7 @@ on:
         default: ''
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release
@@ -25,6 +25,10 @@ concurrency:
 jobs:
   release:
     runs-on: windows-latest
+    permissions:
+      contents: write       # create release + tag
+      id-token: write       # mint Sigstore OIDC token for provenance signing
+      attestations: write   # attach SLSA build-provenance attestation
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -162,6 +166,19 @@ jobs:
         with:
           name: GamerGuardian-${{ steps.ver.outputs.version }}-portable
           path: publish/GamerGuardian.exe
+
+      # Generate SLSA Build Provenance attestations for the release artifacts.
+      # GitHub records these in its public attestation log; Sigstore co-signs
+      # them via OIDC. Anyone can verify a downloaded binary was built from
+      # this exact source commit by this exact workflow with:
+      #   gh attestation verify GamerGuardian-Setup-x.y.z.exe --owner carterscode
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-path: |
+            installer/Output/GamerGuardian-Setup-${{ steps.ver.outputs.version }}.exe
+            publish/GamerGuardian.exe
+            installer/Output/SHA256SUMS.txt
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
