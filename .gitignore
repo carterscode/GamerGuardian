@@ -18,3 +18,6 @@ TestResults/
 # Installer outputs
 installer/Output/
 *.iss.user
+
+# Claude Code session-bridging notes — kept local, not committed
+CLAUDE.md
