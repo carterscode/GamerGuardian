@@ -235,36 +235,36 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                    <WrapPanel Margin="0,4,0,0">
                                                         <Border Background="{DynamicResource SubtleFillColorTertiaryBrush}"
-                                                                CornerRadius="3" Padding="6,1" Margin="8,0,0,0">
+                                                                CornerRadius="3" Padding="6,1" Margin="0,0,6,4">
                                                             <TextBlock Text="{Binding ServiceName}"
                                                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                                                        FontSize="10" FontFamily="Consolas"/>
                                                         </Border>
                                                         <Border Visibility="{Binding RecommendedBadgeVisibility}"
                                                                 Background="{DynamicResource SystemFillColorSuccessBackgroundBrush}"
-                                                                CornerRadius="3" Padding="6,1" Margin="8,0,0,0">
+                                                                CornerRadius="3" Padding="6,1" Margin="0,0,6,4">
                                                             <TextBlock Text="recommended"
                                                                        Foreground="{DynamicResource SystemFillColorSuccessBrush}"
                                                                        FontSize="10" FontWeight="SemiBold"/>
                                                         </Border>
                                                         <Border Visibility="{Binding RebootBadgeVisibility}"
                                                                 Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
-                                                                CornerRadius="3" Padding="6,1" Margin="8,0,0,0">
+                                                                CornerRadius="3" Padding="6,1" Margin="0,0,6,4">
                                                             <TextBlock Text="reboot required"
                                                                        Foreground="{DynamicResource SystemFillColorCautionBrush}"
                                                                        FontSize="10" FontWeight="SemiBold"/>
                                                         </Border>
                                                         <Border Visibility="{Binding NotInstalledBadgeVisibility}"
                                                                 Background="{DynamicResource SubtleFillColorSecondaryBrush}"
-                                                                CornerRadius="3" Padding="6,1" Margin="8,0,0,0">
+                                                                CornerRadius="3" Padding="6,1" Margin="0,0,6,4">
                                                             <TextBlock Text="not installed"
                                                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                                                        FontSize="10" FontWeight="SemiBold"/>
                                                         </Border>
-                                                    </StackPanel>
+                                                    </WrapPanel>
                                                     <TextBlock Text="{Binding Description}"
                                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                                FontSize="12" Margin="0,3,0,0"
