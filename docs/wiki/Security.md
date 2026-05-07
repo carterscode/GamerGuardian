@@ -49,6 +49,10 @@ Get-FileHash -Algorithm SHA256 GamerGuardian-Setup-x.y.z.exe
 
 To verify a Release matches what the source code would produce, build locally with the same `-p:Version` value and compare hashes — see [Build from source](Build-from-source). Note that `dotnet publish` output is mostly but not fully deterministic; the embedded build timestamp will differ. The portable EXE's payload (the actual code section) does match between local and CI builds at the same source commit.
 
+## Privacy
+
+GamerGuardian collects no personal data and operates no first-party server. The full [Privacy Policy](https://github.com/carterscode/GamerGuardian/blob/main/PRIVACY.md) lives at the repo root and the git history of that file is the authoritative record of any future change.
+
 ## Reporting a vulnerability
 
 If you've found a security issue, please **do not** open a public GitHub issue. Email **security@example.com** (or the address listed in [SECURITY.md](https://github.com/carterscode/GamerGuardian/blob/main/SECURITY.md)) with:

@@ -118,9 +118,10 @@ GamerGuardian doesn't ask you to take its word for it. Six independent ways to c
 
 ## Security
 
-CodeQL static analysis, Dependabot vulnerability watch, OpenSSF Scorecard public score, and SHA-256 checksums on every Release. Code signing via SignPath OSS is on the roadmap. Full details + spot-check guide: [Security](https://github.com/carterscode/GamerGuardian/wiki/Security).
+CodeQL static analysis, Dependabot vulnerability watch, OpenSSF Scorecard public score, and SHA-256 checksums on every Release. Code signing via the SignPath Foundation is on the roadmap. Full details + spot-check guide: [Security](https://github.com/carterscode/GamerGuardian/wiki/Security).
 
-Reporting a vulnerability: [SECURITY.md](SECURITY.md).
+- Reporting a vulnerability: [SECURITY.md](SECURITY.md)
+- Privacy policy: [PRIVACY.md](PRIVACY.md) — short version: nothing is collected, nothing is transmitted, no first-party server exists.
 
 ## Compatibility
 
