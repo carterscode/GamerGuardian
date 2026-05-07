@@ -66,4 +66,32 @@ public class ServiceCatalogTests
         Assert.Contains(ServiceCatalog.All, d =>
             d.Name.Equals(serviceName, StringComparison.OrdinalIgnoreCase));
     }
+
+    [Fact]
+    public void DoSvc_UsesPolicyOverride()
+    {
+        // DoSvc is protected by Windows Update Medic Service — sc.exe writes
+        // are reverted within seconds. The catalog must use the documented
+        // Group Policy registry surface instead.
+        var def = ServiceCatalog.All.Single(d =>
+            d.Name.Equals("DoSvc", StringComparison.OrdinalIgnoreCase));
+        Assert.NotNull(def.PolicyOverride);
+        Assert.Equal(@"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", def.PolicyOverride!.PolicyKey);
+        Assert.Equal("DODownloadMode", def.PolicyOverride.PolicyValue);
+        Assert.Equal(0u, def.PolicyOverride.DisabledValue);
+        Assert.True(def.RequiresReboot, "policy-managed services should mark RequiresReboot");
+    }
+
+    [Fact]
+    public void PolicyOverride_OnlyOnServicesThatNeedIt()
+    {
+        // PolicyOverride is reserved for services Windows Update actively reverts.
+        // If we ever add a regular service with a PolicyOverride by mistake we'd
+        // bypass the SCM path with no good reason. Keep this list explicit.
+        var withOverride = ServiceCatalog.All
+            .Where(d => d.PolicyOverride is not null)
+            .Select(d => d.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(new[] { "DoSvc" }, withOverride.OrderBy(s => s).ToArray());
+    }
 }

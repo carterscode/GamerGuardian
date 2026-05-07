@@ -1,5 +1,6 @@
 using GamerGuardian.Models;
 using GamerGuardian.Services;
+using Microsoft.Win32;
 
 namespace GamerGuardian.Monitors;
 
@@ -7,6 +8,11 @@ namespace GamerGuardian.Monitors;
 /// Monitors a single Windows service start type against the user's preference.
 /// One instance per <see cref="ServiceDefinition"/>; registered N times in
 /// <c>App.xaml.cs</c> from <see cref="ServiceCatalog.All"/>.
+///
+/// Most services use the standard SCM path (sc.exe stop / config). For services
+/// Windows actively reverts (DoSvc et al.) the definition can specify a
+/// <see cref="PolicyOverride"/>; the monitor then writes the documented Group
+/// Policy registry value instead, which Windows Update respects without revert.
 /// </summary>
 public sealed class WindowsServiceMonitor : IMonitoredSetting
 {
@@ -18,8 +24,15 @@ public sealed class WindowsServiceMonitor : IMonitoredSetting
 
     public IEnumerable<DriftItem> CheckDrift(AppConfig config)
     {
-        if (!WindowsServiceController.Exists(_def.Name)) yield break;
         if (!config.Services.TryGetValue(_def.Name, out var pref) || pref is null) yield break;
+
+        if (_def.PolicyOverride is { } po)
+        {
+            foreach (var d in CheckPolicyDrift(po, pref)) yield return d;
+            yield break;
+        }
+
+        if (!WindowsServiceController.Exists(_def.Name)) yield break;
 
         var current = WindowsServiceController.ReadStartType(_def.Name);
         if (current == ServiceStartType.Unknown) yield break;
@@ -77,6 +90,67 @@ public sealed class WindowsServiceMonitor : IMonitoredSetting
             IsMonitored: pref.Monitor,
             RawBefore: ToRegistryStartValue(current).ToString(),
             RawDesired: ToRegistryStartValue(desired).ToString());
+    }
+
+    /// <summary>
+    /// Drift check for services that have a <see cref="PolicyOverride"/>. We
+    /// don't touch the service start type at all — Windows reverts that. We
+    /// read/write the policy registry value instead, which is what Windows
+    /// Update components actually consult.
+    ///
+    /// "Disabled" maps to writing <see cref="PolicyOverride.DisabledValue"/>;
+    /// "Default" maps to deleting the policy value (lets Windows use its built-in
+    /// default). "Manual" is treated as Disabled because the policy surface is
+    /// usually binary — if a service has a meaningful Manual state we wouldn't
+    /// have given it a PolicyOverride.
+    /// </summary>
+    private IEnumerable<DriftItem> CheckPolicyDrift(PolicyOverride po, ServicePref pref)
+    {
+        int? current;
+        try
+        {
+            using var k = Registry.LocalMachine.OpenSubKey(po.PolicyKey, writable: false);
+            current = k?.GetValue(po.PolicyValue) as int?;
+        }
+        catch
+        {
+            yield break;
+        }
+
+        bool wantDisabled = pref.Desired == ServiceTargetState.Disabled
+            || pref.Desired == ServiceTargetState.Manual;
+        bool currentlyDisabled = current.HasValue && (uint)current.Value == po.DisabledValue;
+
+        if (wantDisabled == currentlyDisabled) yield break;
+
+        // Same Want=Default churn-prevention as the service path: only flag
+        // drift when the current state matches one we might have set ourselves
+        // (i.e. the policy is set to the Disabled value). If the policy holds
+        // some other value the user or another tool wrote, leave it alone.
+        if (!wantDisabled && !currentlyDisabled) yield break;
+
+        var captured = pref.Desired;
+        yield return new DriftItem(
+            SettingId: Id,
+            DisplayKey: "service",
+            DisplayLabel: _def.DisplayName,
+            Description: wantDisabled
+                ? $"{_def.DisplayName} — apply Group Policy override ({po.Description})"
+                : $"{_def.DisplayName} — restore Group Policy default (delete {po.PolicyValue})",
+            CurrentValue: currentlyDisabled ? "Disabled by policy" : (current.HasValue ? $"policy={current.Value}" : "Default"),
+            DesiredValue: wantDisabled ? "Disabled by policy" : "Default",
+            AutoApply: pref.AutoApply,
+            Apply: () => Task.Run(() =>
+            {
+                if (captured == ServiceTargetState.Default)
+                    ElevatedRegistry.DeleteHklmValue(po.PolicyKey, po.PolicyValue);
+                else
+                    ElevatedRegistry.SetHklmDword(po.PolicyKey, po.PolicyValue, po.DisabledValue);
+            }),
+            RequiresReboot: _def.RequiresReboot,
+            IsMonitored: pref.Monitor,
+            RawBefore: current?.ToString() ?? "(unset)",
+            RawDesired: wantDisabled ? po.DisabledValue.ToString() : "(deleted)");
     }
 
     /// <summary>

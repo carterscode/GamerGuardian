@@ -64,4 +64,26 @@ public class SettingDocsTests
     {
         Assert.Equal("(unknown)", SettingDocs.MechanismFor("definitely_not_a_real_setting"));
     }
+
+    [Fact]
+    public void MechanismFor_DoSvc_SurfacesPolicyPath()
+    {
+        // DoSvc has a PolicyOverride; mechanism should reference the policy
+        // registry path, not the Services\DoSvc\Start path that sc.exe would
+        // touch (and that Windows would revert).
+        var mech = SettingDocs.MechanismFor("service:dosvc");
+        Assert.Contains("Policies\\Microsoft\\Windows\\DeliveryOptimization", mech);
+        Assert.Contains("DODownloadMode", mech);
+        Assert.DoesNotContain("CurrentControlSet\\Services", mech);
+    }
+
+    [Fact]
+    public void VerifyCommandFor_DoSvc_QueriesPolicyValue()
+    {
+        var cmd = SettingDocs.VerifyCommandFor("service:dosvc");
+        Assert.Contains("Policies\\Microsoft\\Windows\\DeliveryOptimization", cmd);
+        Assert.Contains("DODownloadMode", cmd);
+        // sc qc would query the Services hive; the policy verify shouldn't.
+        Assert.DoesNotContain("sc qc", cmd);
+    }
 }
