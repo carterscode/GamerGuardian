@@ -192,14 +192,18 @@ public partial class SettingsWindow : FluentWindow
         PowerPlanCurrentText.Text = $"Current: {activeName}";
         PowerPlanMonitorCheck.IsChecked = g.PowerPlan.Monitor;
         PowerPlanAutoApplyCheck.IsChecked = g.PowerPlan.AutoApply;
-        var availableChoices = Enum.GetValues<PowerPlanChoice>()
-            .Where(c => planNames.ContainsKey(PowerPlanMonitor.ToGuid(c)))
+
+        var planItems = planNames
+            .OrderBy(kv => kv.Value, StringComparer.OrdinalIgnoreCase)
+            .Select(kv => new PowerPlanItem(kv.Key, kv.Value))
             .ToList();
-        if (availableChoices.Count == 0) availableChoices = Enum.GetValues<PowerPlanChoice>().ToList();
-        PowerPlanCombo.ItemsSource = availableChoices;
-        PowerPlanCombo.SelectedItem = availableChoices.Contains(g.PowerPlan.Desired)
-            ? g.PowerPlan.Desired
-            : availableChoices[0];
+        PowerPlanCombo.ItemsSource = planItems;
+        PowerPlanCombo.DisplayMemberPath = nameof(PowerPlanItem.Name);
+
+        var savedGuid = PowerPlanMonitor.ResolveDesiredGuid(g.PowerPlan);
+        PowerPlanCombo.SelectedItem = planItems.FirstOrDefault(p => p.Guid == savedGuid)
+            ?? (active is Guid a ? planItems.FirstOrDefault(p => p.Guid == a) : null)
+            ?? planItems.FirstOrDefault();
     }
 
     private static bool? SafeRead(Func<bool?> f)
