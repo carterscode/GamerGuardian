@@ -21,6 +21,8 @@ public partial class SettingsWindow : FluentWindow
     private readonly Action _exitApp;
     public ObservableCollection<DisplayRow> DisplayRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> GlobalToggleRows { get; } = new();
+    public ObservableCollection<ServiceRow> ServiceRows { get; } = new();
+    private bool _suppressPresetEvents;
 
     public event Action? Saved;
 
@@ -45,9 +47,104 @@ public partial class SettingsWindow : FluentWindow
 
         DisplaysList.ItemsSource = DisplayRows;
         GlobalTogglesList.ItemsSource = GlobalToggleRows;
+        ServicesList.ItemsSource = ServiceRows;
 
         LoadGlobals();
         LoadDisplays();
+        LoadServices();
+    }
+
+    private void LoadServices()
+    {
+        ServiceRows.Clear();
+        foreach (var def in ServiceCatalog.All)
+        {
+            if (!_config.Services.TryGetValue(def.Name, out var pref) || pref is null)
+            {
+                pref = new ServicePref();
+                _config.Services[def.Name] = pref;
+            }
+
+            var installed = WindowsServiceController.Exists(def.Name);
+            var current = installed
+                ? WindowsServiceController.ReadStartType(def.Name)
+                : ServiceStartType.Unknown;
+
+            // For services the user hasn't opted into monitoring, mirror current state
+            // into Want so the radio doesn't lie about a "recommendation" the user never asked for.
+            if (!pref.Monitor && installed && current != ServiceStartType.Unknown)
+                pref.DesiredDisabled = current == ServiceStartType.Disabled;
+
+            var status = installed
+                ? WindowsServiceController.ReadStatus(def.Name)
+                : null;
+            var statusSuffix = status is null ? "" : $", {status.Value}";
+            var currentText = installed
+                ? $"Current: {WindowsServiceMonitor.DescribeStart(current)}{statusSuffix}"
+                : "Current: not installed on this system";
+            var defaultText = $"Default: {WindowsServiceMonitor.DescribeStart(def.DefaultStartType)}";
+
+            ServiceRows.Add(new ServiceRow(
+                def: def,
+                pref: pref,
+                isInstalled: installed,
+                currentText: currentText,
+                defaultText: defaultText,
+                onPrefChanged: OnRowPrefChanged));
+        }
+
+        UpdatePresetRadio();
+    }
+
+    private void UpdatePresetRadio()
+    {
+        // Reflects whether the current per-service prefs match the Gaming or Default preset.
+        // If neither matches (custom mix), both radios go unchecked.
+        bool matchesGaming = ServiceRows.All(r =>
+            !r.IsInstalled || r.DesiredDisabled == r.Definition.RecommendedDisable);
+        bool matchesDefault = ServiceRows.All(r => !r.IsInstalled || !r.DesiredDisabled);
+
+        _suppressPresetEvents = true;
+        try
+        {
+            ServicesPresetGaming.IsChecked = matchesGaming && !matchesDefault;
+            ServicesPresetDefault.IsChecked = matchesDefault && !matchesGaming;
+            // If both match (e.g. when no service has RecommendedDisable=true), prefer "Default".
+            if (matchesGaming && matchesDefault)
+            {
+                ServicesPresetGaming.IsChecked = false;
+                ServicesPresetDefault.IsChecked = true;
+            }
+        }
+        finally { _suppressPresetEvents = false; }
+    }
+
+    private void ServicesPresetGaming_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_suppressPresetEvents) return;
+        ApplyServicesPreset(useRecommended: true);
+    }
+
+    private void ServicesPresetDefault_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_suppressPresetEvents) return;
+        ApplyServicesPreset(useRecommended: false);
+    }
+
+    private void ApplyServicesPreset(bool useRecommended)
+    {
+        foreach (var row in ServiceRows)
+        {
+            if (!row.IsInstalled) continue;
+            bool target = useRecommended && row.Definition.RecommendedDisable;
+            row.DesiredDisabled = target;
+        }
+        try { _store.Save(_config); } catch { }
+        ChangeLogger.LogPreferenceChange(
+            "Windows services preset",
+            "Want",
+            "(custom)",
+            useRecommended ? "Gaming optimized" : "Default");
     }
 
     private static string OnOffText(bool? state) =>
@@ -412,6 +509,7 @@ public partial class SettingsWindow : FluentWindow
 
         LoadGlobals();
         LoadDisplays();
+        LoadServices();
 
         if (results.Count > 0)
         {
@@ -442,6 +540,7 @@ public partial class SettingsWindow : FluentWindow
 
         foreach (var row in GlobalToggleRows) row.WriteBack();
         foreach (var row in DisplayRows) row.WriteTo(_config);
+        foreach (var row in ServiceRows) row.WriteBack();
     }
 
     private bool _suppressSaveOnClose = false;
@@ -464,8 +563,10 @@ public partial class SettingsWindow : FluentWindow
         {
             DisplaysList.ItemsSource = null;
             GlobalTogglesList.ItemsSource = null;
+            ServicesList.ItemsSource = null;
             DisplayRows.Clear();
             GlobalToggleRows.Clear();
+            ServiceRows.Clear();
         }
         catch { }
     }
@@ -563,6 +664,97 @@ public sealed class GlobalToggleRow : INotifyPropertyChanged
         _pref = pref;
         GroupName = groupName;
         RequiresReboot = requiresReboot;
+        _onPrefChanged = onPrefChanged;
+    }
+
+    public void WriteBack() { /* mutations are direct; nothing to do */ }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+    private void OnPropertyChanged([CallerMemberName] string? name = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+}
+
+public sealed class ServiceRow : INotifyPropertyChanged
+{
+    private readonly ServicePref _pref;
+    private readonly Action<string, string, string, string>? _onPrefChanged;
+
+    public ServiceDefinition Definition { get; }
+    public string Name => Definition.DisplayName;
+    public string ServiceName => Definition.Name;
+    public string Description => Definition.Description;
+    public string CurrentText { get; }
+    public string DefaultText { get; }
+    public string GroupName { get; }
+    public bool IsInstalled { get; }
+
+    public bool RequiresReboot => Definition.RequiresReboot;
+    public Visibility RebootBadgeVisibility =>
+        RequiresReboot ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility RecommendedBadgeVisibility =>
+        Definition.RecommendedDisable ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility NotInstalledBadgeVisibility =>
+        IsInstalled ? Visibility.Collapsed : Visibility.Visible;
+
+    public bool Monitor
+    {
+        get => _pref.Monitor;
+        set
+        {
+            if (_pref.Monitor == value) return;
+            var before = _pref.Monitor;
+            _pref.Monitor = value;
+            OnPropertyChanged();
+            _onPrefChanged?.Invoke($"Service: {Definition.DisplayName}", "Monitor", before.ToString(), value.ToString());
+        }
+    }
+    public bool DesiredDisabled
+    {
+        get => _pref.DesiredDisabled;
+        set
+        {
+            if (_pref.DesiredDisabled == value) return;
+            var before = _pref.DesiredDisabled;
+            _pref.DesiredDisabled = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(DesiredDefault));
+            _onPrefChanged?.Invoke($"Service: {Definition.DisplayName}", "Want",
+                before ? "Disabled" : "Default",
+                value ? "Disabled" : "Default");
+        }
+    }
+    public bool DesiredDefault
+    {
+        get => !_pref.DesiredDisabled;
+        set { if (value && _pref.DesiredDisabled) DesiredDisabled = false; }
+    }
+    public bool AutoApply
+    {
+        get => _pref.AutoApply;
+        set
+        {
+            if (_pref.AutoApply == value) return;
+            var before = _pref.AutoApply;
+            _pref.AutoApply = value;
+            OnPropertyChanged();
+            _onPrefChanged?.Invoke($"Service: {Definition.DisplayName}", "AutoApply", before.ToString(), value.ToString());
+        }
+    }
+
+    public ServiceRow(
+        ServiceDefinition def,
+        ServicePref pref,
+        bool isInstalled,
+        string currentText,
+        string defaultText,
+        Action<string, string, string, string>? onPrefChanged)
+    {
+        Definition = def;
+        _pref = pref;
+        IsInstalled = isInstalled;
+        CurrentText = currentText;
+        DefaultText = defaultText;
+        GroupName = "svc_" + def.Name;
         _onPrefChanged = onPrefChanged;
     }
 

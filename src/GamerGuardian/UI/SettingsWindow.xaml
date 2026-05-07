@@ -198,6 +198,97 @@
                         </Grid>
                     </ui:Card>
 
+                    <TextBlock Text="Windows services"
+                               FontSize="18" FontWeight="SemiBold"
+                               Margin="0,4,0,8"/>
+                    <ui:Card Padding="16" Margin="0,0,0,8">
+                        <StackPanel>
+                            <TextBlock Text="Stop and disable Windows services that run by default but typically aren't needed for gaming. Each service is monitored against your preference and (optionally) re-applied when Windows or another app re-enables it."
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="One-click preset:" Margin="0,4,12,0"/>
+                                <RadioButton x:Name="ServicesPresetGaming" GroupName="services_preset"
+                                             Content="Gaming optimized" Margin="0,0,12,0"
+                                             Checked="ServicesPresetGaming_Checked"/>
+                                <RadioButton x:Name="ServicesPresetDefault" GroupName="services_preset"
+                                             Content="Default"
+                                             Checked="ServicesPresetDefault_Checked"/>
+                            </StackPanel>
+                            <TextBlock Text="Tip: the Gaming preset toggles the recommended subset; non-recommended services stay where you set them."
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                       FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </ui:Card>
+                    <ItemsControl x:Name="ServicesList" Margin="0,0,0,20">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <ui:Card Padding="16" Margin="0,0,0,8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                <Border Background="{DynamicResource SubtleFillColorTertiaryBrush}"
+                                                        CornerRadius="3" Padding="6,1" Margin="8,0,0,0">
+                                                    <TextBlock Text="{Binding ServiceName}"
+                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                               FontSize="10" FontFamily="Consolas"/>
+                                                </Border>
+                                                <Border Visibility="{Binding RecommendedBadgeVisibility}"
+                                                        Background="{DynamicResource SystemFillColorSuccessBackgroundBrush}"
+                                                        CornerRadius="3" Padding="6,1" Margin="8,0,0,0">
+                                                    <TextBlock Text="recommended"
+                                                               Foreground="{DynamicResource SystemFillColorSuccessBrush}"
+                                                               FontSize="10" FontWeight="SemiBold"/>
+                                                </Border>
+                                                <Border Visibility="{Binding RebootBadgeVisibility}"
+                                                        Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                                                        CornerRadius="3" Padding="6,1" Margin="8,0,0,0">
+                                                    <TextBlock Text="reboot required"
+                                                               Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                                               FontSize="10" FontWeight="SemiBold"/>
+                                                </Border>
+                                                <Border Visibility="{Binding NotInstalledBadgeVisibility}"
+                                                        Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                                                        CornerRadius="3" Padding="6,1" Margin="8,0,0,0">
+                                                    <TextBlock Text="not installed"
+                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                               FontSize="10" FontWeight="SemiBold"/>
+                                                </Border>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Description}"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       FontSize="12" Margin="0,3,0,0"
+                                                       TextWrapping="Wrap"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                <TextBlock Text="{Binding CurrentText}"
+                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                           FontSize="11" Margin="0,0,12,0"/>
+                                                <TextBlock Text="{Binding DefaultText}"
+                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                           FontSize="11"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Vertical"
+                                                    IsEnabled="{Binding IsInstalled}">
+                                            <CheckBox Content="Monitor" IsChecked="{Binding Monitor}"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
+                                                <TextBlock Text="Want:" Margin="0,4,8,0"/>
+                                                <RadioButton GroupName="{Binding GroupName}" Content="Disabled" IsChecked="{Binding DesiredDisabled}" Margin="0,0,8,0"/>
+                                                <RadioButton GroupName="{Binding GroupName}" Content="Default" IsChecked="{Binding DesiredDefault}"/>
+                                            </StackPanel>
+                                            <CheckBox Content="Auto-apply silently" IsChecked="{Binding AutoApply}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </ui:Card>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
                     <TextBlock Text="Per-display settings"
                                FontSize="18" FontWeight="SemiBold"
                                Margin="0,4,0,8"/>
