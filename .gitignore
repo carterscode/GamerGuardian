@@ -21,3 +21,7 @@ installer/Output/
 
 # Claude Code session-bridging notes — kept local, not committed
 CLAUDE.md
+
+# Per-developer local Claude Code settings (project-wide rules go in
+# .claude/settings.json, which IS committed; this is the personal override).
+.claude/settings.local.json
