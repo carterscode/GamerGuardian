@@ -55,13 +55,13 @@ internal static class Shell32
 
     public static bool IsFullscreenAppActive()
     {
-        if (SHQueryUserNotificationState(out var state) == 0)
-        {
-            if (state == QueryUserNotificationState.QUNS_BUSY
+        if (SHQueryUserNotificationState(out var state) == 0
+            && (state == QueryUserNotificationState.QUNS_BUSY
                 || state == QueryUserNotificationState.QUNS_RUNNING_D3D_FULL_SCREEN
                 || state == QueryUserNotificationState.QUNS_PRESENTATION_MODE
-                || state == QueryUserNotificationState.QUNS_APP)
-                return true;
+                || state == QueryUserNotificationState.QUNS_APP))
+        {
+            return true;
         }
         return IsForegroundBorderlessFullscreen();
     }
