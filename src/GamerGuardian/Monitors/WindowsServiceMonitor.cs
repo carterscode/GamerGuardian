@@ -75,9 +75,26 @@ public sealed class WindowsServiceMonitor : IMonitoredSetting
             }),
             RequiresReboot: _def.RequiresReboot,
             IsMonitored: pref.Monitor,
-            RawBefore: ((int)current).ToString(),
-            RawDesired: ((int)desired).ToString());
+            RawBefore: ToRegistryStartValue(current).ToString(),
+            RawDesired: ToRegistryStartValue(desired).ToString());
     }
+
+    /// <summary>
+    /// Maps our enum to the actual Windows-side <c>Start</c> registry value, so
+    /// log lines match what <c>sc qc</c> or <c>reg query</c> would show. Note
+    /// that AutomaticDelayed is also written as 2 — the "delayed" part lives in
+    /// a separate <c>DelayedAutostart</c> DWORD next to it.
+    /// </summary>
+    private static int ToRegistryStartValue(ServiceStartType s) => s switch
+    {
+        ServiceStartType.Boot => 0,
+        ServiceStartType.System => 1,
+        ServiceStartType.Automatic => 2,
+        ServiceStartType.AutomaticDelayed => 2,
+        ServiceStartType.Manual => 3,
+        ServiceStartType.Disabled => 4,
+        _ => -1,
+    };
 
     public static string DescribeStart(ServiceStartType s) => s switch
     {
