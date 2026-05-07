@@ -52,8 +52,9 @@
                          HorizontalContentAlignment="Stretch"
                          VerticalContentAlignment="Stretch">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,8,8,0">
-                        <ui:Card Padding="16" Margin="0,0,0,8">
-                            <StackPanel>
+                        <StackPanel>
+                            <ui:Card Padding="16" Margin="0,0,0,8">
+                                <StackPanel>
                                 <Grid Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -111,6 +112,7 @@
                                 </Grid>
                             </StackPanel>
                         </ui:Card>
+                        </StackPanel>
                     </ScrollViewer>
                 </TabItem>
 
