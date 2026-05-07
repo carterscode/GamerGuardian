@@ -165,7 +165,6 @@ public partial class App : WpfApplication
                     GC.WaitForPendingFinalizers();
                     GC.Collect();
                     GamerGuardian.Native.Psapi.TrimSelf();
-                    GamerGuardian.Services.ChangeLogger.LogMemorySnapshot("settings-closed");
                 }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
             };
             _settingsWindow.Show();

@@ -141,9 +141,4 @@ Latest released version: **v0.1.29**. https://github.com/carterscode/GamerGuardi
 
 Working set after the v0.1.26 memory fixes is stable in the 40–80 MB band over hours of runtime. LOH compaction + visual-tree release on window close brought it down from a peak of 135 MB → ~25 MB at idle.
 
-The `[trim ]` snapshots in `changes.log` are the canonical way to verify memory health over time:
-```
-[2026-05-07 02:14:08] [trim  ] MEM    WS=42MB  Priv=128MB  Handles=812  Threads=18  (trim)
-```
-
-If a future session sees memory creeping back up, those entries point straight at when the regression happened.
+`ChangeLogger.LogMemorySnapshot` still exists but is no longer auto-called from `MonitorService` or the settings-closed path — the periodic `[trim ]` lines were too noisy in `changes.log`. Re-enable temporarily by adding the call back at either site if you need to track a regression.
