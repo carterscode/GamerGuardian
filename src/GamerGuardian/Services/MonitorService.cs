@@ -17,6 +17,16 @@ public sealed class MonitorService : IDisposable
     private bool _userPaused;
     private string? _activePauseReason;
 
+    /// <summary>
+    /// When an auto-apply fails to verify (Apply ran but the re-read still
+    /// shows drift — e.g. Windows immediately reverts a change to a protected
+    /// service like DoSvc), back off auto-applying that specific setting for
+    /// 15 minutes. Without this we'd spam UAC every 30 s for the same setting.
+    /// Per-process state, in-memory only — clears on app restart.
+    /// </summary>
+    private readonly Dictionary<string, DateTimeOffset> _autoApplyBackoff = new();
+    private static readonly TimeSpan AutoApplyBackoffWindow = TimeSpan.FromMinutes(15);
+
     public bool IsUserPaused => _userPaused;
     public event Action<bool>? PauseChanged;
     public event Action<IReadOnlyList<DriftItem>>? AutoAppliedRebootRequired;
@@ -100,11 +110,26 @@ public sealed class MonitorService : IDisposable
             }
             _store.Save(config);
 
-            var auto = drifted.Where(d => d.AutoApply).ToList();
+            var now = DateTimeOffset.UtcNow;
+            var auto = drifted
+                .Where(d => d.AutoApply)
+                .Where(d => !_autoApplyBackoff.TryGetValue(d.SettingId, out var until) || now >= until)
+                .ToList();
             if (auto.Count > 0)
             {
                 var results = await ChangeApplier.ApplyAndVerifyAsync(auto, _monitors, config);
                 ChangeLogger.LogApplyResults(results, "auto");
+
+                // Update backoff: failed verifies get a 15-minute pause to stop
+                // UAC spam on settings Windows refuses to actually change. Successes
+                // clear any prior backoff entry.
+                for (int i = 0; i < auto.Count && i < results.Count; i++)
+                {
+                    if (results[i].Verified)
+                        _autoApplyBackoff.Remove(auto[i].SettingId);
+                    else
+                        _autoApplyBackoff[auto[i].SettingId] = now + AutoApplyBackoffWindow;
+                }
 
                 var rebootSettings = new List<DriftItem>();
                 for (int i = 0; i < auto.Count && i < results.Count; i++)
@@ -116,7 +141,10 @@ public sealed class MonitorService : IDisposable
                     AutoAppliedRebootRequired?.Invoke(rebootSettings);
             }
 
-            var prompt = drifted.Where(d => !d.AutoApply).ToList();
+            // Drifts that aren't auto-applied (or are in cooldown) still surface
+            // as a notification so the user knows something's drifting and can
+            // act manually.
+            var prompt = drifted.Where(a => !auto.Any(b => b.SettingId == a.SettingId)).ToList();
             if (prompt.Count > 0)
                 await _onDriftAsync(new DriftReport(prompt));
 

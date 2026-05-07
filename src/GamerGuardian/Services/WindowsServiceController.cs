@@ -63,24 +63,29 @@ public static class WindowsServiceController
     }
 
     /// <summary>
-    /// Stop the service (if running) and set start type to Disabled. Single
-    /// UAC prompt; tolerates "already stopped" / "stop pending" exit codes
-    /// from sc.exe so the configure step still runs.
+    /// Set start type to Disabled and stop the service. Single UAC prompt.
+    ///
+    /// Config runs *before* stop on purpose: some services (DoSvc, etc.) hang
+    /// for tens of seconds in 'stop pending' state, which would prevent the
+    /// configure step from running at all under our cmd.exe timeout. With
+    /// config first, the registry write always lands; the subsequent stop is
+    /// best-effort.
     /// </summary>
     public static bool DisableElevated(string serviceName) =>
         RunChained(
-            $"sc stop \"{serviceName}\"",
-            $"sc config \"{serviceName}\" start= disabled");
+            $"sc config \"{serviceName}\" start= disabled",
+            $"sc stop \"{serviceName}\"");
 
     /// <summary>
-    /// Stop the service (if running) and set start type to Manual. Useful for
-    /// services where Disabled is risky (IP Helper, etc.) — Manual lets a
-    /// trigger or app start it on demand but it won't be loaded at boot.
+    /// Set start type to Manual and stop the service. Useful for services
+    /// where Disabled is risky (IP Helper, etc.) — Manual lets a trigger or
+    /// app start it on demand but it won't be loaded at boot. Same
+    /// config-before-stop ordering as <see cref="DisableElevated"/>.
     /// </summary>
     public static bool SetManualElevated(string serviceName) =>
         RunChained(
-            $"sc stop \"{serviceName}\"",
-            $"sc config \"{serviceName}\" start= demand");
+            $"sc config \"{serviceName}\" start= demand",
+            $"sc stop \"{serviceName}\"");
 
     /// <summary>
     /// Restore a service's start type to its default. Does not start it — the
@@ -128,8 +133,9 @@ public static class WindowsServiceController
     private static bool RunChained(params string[] scCommands)
     {
         // Combine into one cmd /c call so the user only sees a single UAC prompt.
-        // The first command (typically `sc stop`) is allowed to fail — `&` (not `&&`)
-        // means cmd executes the second command regardless.
+        // `&` (not `&&`) means cmd runs every command regardless of prior exit codes.
+        // We put the registry-write command first so a hanging stop can't prevent
+        // the config from being applied (see DisableElevated remarks).
         var joined = string.Join(" & ", scCommands);
         var psi = new ProcessStartInfo
         {
@@ -145,8 +151,15 @@ public static class WindowsServiceController
             using var p = Process.Start(psi);
             if (p is null) return false;
             p.WaitForExit(15_000);
-            // Last command's exit code wins — that's the `sc config`, which is the one we care about.
-            return p.HasExited && p.ExitCode == 0;
+            if (!p.HasExited)
+            {
+                // Some services (DoSvc, etc.) leave `sc stop` hanging in
+                // 'stop pending'. Don't leave the elevated cmd alive — kill it
+                // so the next poll's auto-apply doesn't pile a second UAC on top.
+                try { p.Kill(entireProcessTree: true); } catch { }
+                return false;
+            }
+            return p.ExitCode == 0;
         }
         catch (Win32Exception)
         {
