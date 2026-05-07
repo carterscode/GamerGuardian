@@ -27,6 +27,9 @@
          same commit produces byte-identical output across runs. -->
     <Deterministic>true</Deterministic>
     <DebugType>portable</DebugType>
+
+    <!-- Warnings break the build. Keeps regressions from sneaking in. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
