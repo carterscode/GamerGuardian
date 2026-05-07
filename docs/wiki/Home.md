@@ -5,7 +5,8 @@ A Windows 11 tray app that watches gaming-related display and system settings, a
 ## Getting started
 
 - **[Installation](Installation)** — download, install, uninstall
-- **[Verification](Verification)** — how to confirm GamerGuardian is doing what it says
+- **[Verifying your download](Verifying-your-download)** — three independent integrity checks (VirusTotal, SHA-256, SLSA provenance) anyone can run before installing
+- **[Verification](Verification)** — how to confirm GamerGuardian is doing what it says at runtime
 - **[File locations](File-locations)** — where config, logs, and the installed binary live
 - **[Logging](Logging)** — `changes.log` schema with worked examples
 
