@@ -45,12 +45,9 @@ public class ServiceCatalogTests
         // RecommendedTarget == Default would mean "the preset moves it to where it
         // already is" which is meaningless. The convention is: leave RecommendedTarget
         // null for services that aren't in the preset, otherwise specify Manual or Disabled.
-        foreach (var def in ServiceCatalog.All)
+        foreach (var def in ServiceCatalog.All.Where(d => d.RecommendedTarget.HasValue))
         {
-            if (def.RecommendedTarget.HasValue)
-            {
-                Assert.NotEqual(ServiceTargetState.Default, def.RecommendedTarget.Value);
-            }
+            Assert.NotEqual(ServiceTargetState.Default, def.RecommendedTarget!.Value);
         }
     }
 

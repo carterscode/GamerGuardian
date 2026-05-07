@@ -144,9 +144,8 @@ public partial class SettingsWindow : FluentWindow
 
     private void ApplyServicesPreset(bool useRecommended)
     {
-        foreach (var row in ServiceRows)
+        foreach (var row in ServiceRows.Where(r => r.IsInstalled))
         {
-            if (!row.IsInstalled) continue;
             if (useRecommended)
             {
                 // Only flip rows with a RecommendedTarget. Leave others alone.

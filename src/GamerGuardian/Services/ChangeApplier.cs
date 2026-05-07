@@ -34,8 +34,11 @@ public static class ChangeApplier
         {
             var stillDrifted = afterDrift.FirstOrDefault(a => a.SettingId == d.SettingId);
             var verified = stillDrifted is null;
-            var afterValue = verified ? d.DesiredValue : (stillDrifted?.CurrentValue ?? d.CurrentValue);
-            var rawAfter = verified ? d.RawDesired : (stillDrifted?.RawBefore ?? d.RawBefore);
+            // When verified is false, stillDrifted is provably non-null (that's
+            // literally the definition of `verified`), so the prior `?? d.X`
+            // null-coalesce was unreachable.
+            var afterValue = verified ? d.DesiredValue : stillDrifted!.CurrentValue;
+            var rawAfter = verified ? d.RawDesired : stillDrifted!.RawBefore;
             results.Add(new ApplyResult(
                 SettingId: d.SettingId,
                 Description: d.Description,

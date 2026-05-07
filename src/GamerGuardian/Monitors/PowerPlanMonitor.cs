@@ -24,9 +24,9 @@ public sealed class PowerPlanMonitor : IMonitoredSetting
         if (active == desiredGuid) yield break;
 
         var available = ListAvailablePlans();
-        if (!available.ContainsKey(desiredGuid)) yield break;
+        if (!available.TryGetValue(desiredGuid, out var planName)) yield break;
 
-        var desiredName = pref.DesiredName ?? available[desiredGuid];
+        var desiredName = pref.DesiredName ?? planName;
 
         yield return new DriftItem(
             SettingId: Id,
