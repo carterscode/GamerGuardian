@@ -24,22 +24,21 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$srcDir = Join-Path $PSScriptRoot ".." "docs" "wiki" | Resolve-Path
+$srcDir = (Resolve-Path "$PSScriptRoot\..\docs\wiki").Path
 Write-Host "Source: $srcDir"
 Write-Host "Target: $RepoUrl"
 
 if (Test-Path $WorkDir) { Remove-Item -Recurse -Force $WorkDir }
 
 Write-Host "Cloning wiki repo..."
-git clone $RepoUrl $WorkDir 2>&1 | ForEach-Object { Write-Host "  $_" }
+& git clone $RepoUrl $WorkDir
 if ($LASTEXITCODE -ne 0) {
-    Write-Error @"
-Failed to clone $RepoUrl.
-
-The most common cause is that the wiki hasn't been initialized yet.
-Open https://github.com/carterscode/GamerGuardian/wiki in your browser
-and click "Create the first page" (any content). Then re-run this script.
-"@
+    Write-Host ""
+    Write-Host "Failed to clone $RepoUrl." -ForegroundColor Red
+    Write-Host ""
+    Write-Host "The most common cause is that the wiki has not been initialized yet."
+    Write-Host "Open https://github.com/carterscode/GamerGuardian/wiki in your browser"
+    Write-Host "and click Create the first page (any content). Then re-run this script."
     exit 1
 }
 
@@ -47,23 +46,45 @@ Write-Host "Copying markdown files..."
 Get-ChildItem -Path $srcDir -Filter "*.md" | ForEach-Object {
     $dest = Join-Path $WorkDir $_.Name
     Copy-Item $_.FullName $dest -Force
-    Write-Host "  -> $($_.Name)"
+    Write-Host ("  -> {0}" -f $_.Name)
+}
+
+# Copy the user's git identity from the source repo to the wiki clone.
+# Git in a fresh clone doesn't inherit per-repo identity from the parent
+# directory's repo, so commits would otherwise fail with "Author identity unknown".
+$userName = & git -C $srcDir config user.name
+$userEmail = & git -C $srcDir config user.email
+if (-not $userName -or -not $userEmail) {
+    Write-Host "Warning: source repo has no user.name / user.email set." -ForegroundColor Yellow
+    Write-Host "Falling back to global git config for the wiki commit."
+}
+else {
+    & git -C $WorkDir config user.name $userName
+    & git -C $WorkDir config user.email $userEmail
+    Write-Host ("Wiki commits will use: {0} <{1}>" -f $userName, $userEmail)
 }
 
 Push-Location $WorkDir
 try {
-    $changes = git status --porcelain
+    $changes = & git status --porcelain
     if (-not $changes) {
-        Write-Host "Wiki is already up to date — nothing to push."
-        return
+        Write-Host "Wiki is already up to date - nothing to push."
+        exit 0
     }
 
-    git add -A | Out-Null
-    git commit -m "sync wiki from docs/wiki/ at $(git -C $srcDir rev-parse --short HEAD)" | Out-Null
+    & git add -A
+    if ($LASTEXITCODE -ne 0) { throw "git add failed" }
+
+    $srcSha = & git -C $srcDir rev-parse --short HEAD
+    & git commit -m "sync wiki from docs/wiki/ at $srcSha"
+    if ($LASTEXITCODE -ne 0) { throw "git commit failed (LASTEXITCODE=$LASTEXITCODE)" }
+
     Write-Host "Pushing..."
-    git push | ForEach-Object { Write-Host "  $_" }
+    & git push
+    if ($LASTEXITCODE -ne 0) { throw "git push failed (LASTEXITCODE=$LASTEXITCODE)" }
+
     Write-Host ""
-    Write-Host "Done. Browse the result at: https://github.com/carterscode/GamerGuardian/wiki"
+    Write-Host "Done. Browse the result at https://github.com/carterscode/GamerGuardian/wiki"
 }
 finally {
     Pop-Location
