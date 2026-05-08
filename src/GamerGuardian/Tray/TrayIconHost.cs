@@ -23,7 +23,10 @@ public sealed class TrayIconHost : IDisposable
         _pauseItem = new ToolStripMenuItem("Pause monitoring", null, (_, _) => PauseToggleRequested?.Invoke());
         menu.Items.Add(_pauseItem);
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add("Exit", null, (_, _) => ExitRequested?.Invoke());
+        // 'Quit' is the only path that fully terminates the process. Closing or
+        // minimizing the Settings window goes to the tray (App.xaml has
+        // ShutdownMode=OnExplicitShutdown).
+        menu.Items.Add("Quit", null, (_, _) => ExitRequested?.Invoke());
 
         _icon = new NotifyIcon
         {
