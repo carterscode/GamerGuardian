@@ -2,6 +2,17 @@
 
 A Windows 11 tray app that watches gaming-related display and system settings, alerts you (or auto-fixes) when they drift from your preferences, and stays out of the way during gameplay and benchmarks.
 
+## What it looks like
+
+Settings is split into four tabs:
+
+| Tab | Screenshot |
+|---|---|
+| **General** — theme, startup, change log, polling interval, update check | [![General](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-general.png)](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-general.png) |
+| **Global gaming** — Game Mode, HAGS, Memory Integrity, MMCSS, USB Selective Suspend, power plan, etc. | [![Global gaming](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-global-gaming.png)](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-global-gaming.png) |
+| **Windows services** — curated catalog with one-click Gaming-optimized preset, per-service Default/Manual/Disabled | [![Windows services](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-windows-services.png)](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-windows-services.png) |
+| **Display** — per-display HDR, refresh rate, resolution | [![Display](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-display.png)](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-display.png) |
+
 ## Getting started
 
 - **[Installation](Installation)** — download, install, uninstall

@@ -5,7 +5,11 @@
 1. Grab the latest **`GamerGuardian-Setup-x.y.z.exe`** from the [Releases page](https://github.com/carterscode/GamerGuardian/releases/latest).
 2. Run it. Windows SmartScreen will warn that the installer is unsigned — click **More info** → **Run anyway**. Code signing via the [SignPath Foundation](https://signpath.org/) is on the roadmap.
 3. Per-user install — no admin needed, lands at `%LOCALAPPDATA%\Programs\GamerGuardian`.
-4. The app launches and opens its settings window the first time.
+4. The app launches and opens its settings window the first time:
+
+   ![Settings window — General tab](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-general.png)
+
+   Click through the four tabs to set per-display, global gaming, and Windows services preferences. **Save & close** persists your choices; **Apply** applies them immediately and re-checks the system.
 
 A portable single-file `GamerGuardian.exe` is also attached to each release if you don't want the installer. Drop it anywhere and run it.
 
