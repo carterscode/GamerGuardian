@@ -619,6 +619,22 @@ public partial class SettingsWindow : FluentWindow
 
     private bool _suppressSaveOnClose = false;
 
+    /// <summary>
+    /// Redirects minimize (the '-' button or Win+Down) to a close: the window
+    /// destroys, taskbar entry disappears, app stays in the tray. Reopen via
+    /// double-click on the tray icon or the tray's Settings menu item.
+    /// Without this, minimize would just shrink to a taskbar entry, which is
+    /// the wrong UX for a tray app.
+    /// </summary>
+    protected override void OnStateChanged(EventArgs e)
+    {
+        base.OnStateChanged(e);
+        if (WindowState == WindowState.Minimized)
+        {
+            Close();
+        }
+    }
+
     private void OnWindowClosing(object? sender, CancelEventArgs e)
     {
         if (_suppressSaveOnClose) return;
