@@ -577,6 +577,19 @@ public partial class SettingsWindow : FluentWindow
             var win = new ApplyResultsWindow(results) { Owner = this };
             win.Show();
         }
+        else if (!closeAfter)
+        {
+            // Nothing drifted: every monitored setting already matches its preference.
+            // Surface this explicitly so Apply isn't a silent no-op when the user
+            // expected it to do something. (Skipped on Save & close — the close
+            // itself is the feedback.)
+            System.Windows.MessageBox.Show(
+                this,
+                "No changes to apply — every monitored setting already matches your preference.",
+                "GamerGuardian",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Information);
+        }
 
         if (closeAfter) Close();
     }
