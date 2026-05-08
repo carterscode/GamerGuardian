@@ -41,9 +41,9 @@ It's also paranoid about not making your gaming worse. Polling pauses entirely d
 
 <div align="center">
 
-<img src="docs/screenshots/settings-window.png" width="780" alt="GamerGuardian settings window" />
+<img src="docs/screenshots/settings-global-gaming.png" width="780" alt="GamerGuardian Settings — Global gaming tab" />
 
-*Settings window — General, Global gaming, Windows services, and Display tabs. Each card shows a description, current state, Windows default, and per-setting Monitor / Want / Auto-apply controls.*
+*Settings → Global gaming tab. Each card shows the setting name, a short description, current value, Windows default, and per-setting Monitor / Want / Auto-apply controls. Reboot-required settings get a yellow badge. The other three tabs cover General preferences, Windows services, and per-display HDR/refresh/resolution.*
 
 </div>
 
