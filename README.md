@@ -11,7 +11,7 @@ A lightweight Windows 11 tray app that watches gaming-related display and system
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/carterscode/GamerGuardian/codeql.yml?branch=main&label=CodeQL)](https://github.com/carterscode/GamerGuardian/actions/workflows/codeql.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/carterscode/GamerGuardian/badge)](https://scorecard.dev/viewer/?uri=github.com/carterscode/GamerGuardian)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12779/badge)](https://www.bestpractices.dev/projects/12779)
-[![VirusTotal](https://img.shields.io/badge/VirusTotal-scanned_per_release-brightgreen?logo=virustotal&logoColor=white)](https://github.com/carterscode/GamerGuardian/releases/latest)
+[![VirusTotal](https://img.shields.io/badge/VirusTotal-scanned_per_release-brightgreen?logo=virustotal&logoColor=white)](https://github.com/carterscode/GamerGuardian/releases/latest#virustotal-scans)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2011-0078d4)](#compatibility)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512bd4)](https://dotnet.microsoft.com/)
