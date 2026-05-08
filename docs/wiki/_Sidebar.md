@@ -13,3 +13,4 @@
 
 **Trust**
 - [Security](Security)
+- [OpenSSF Scorecard](OpenSSF-Scorecard)

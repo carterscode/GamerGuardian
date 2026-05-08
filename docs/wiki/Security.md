@@ -27,7 +27,7 @@ Every push triggers a stack of checks. Click any badge in the [README](https://g
 |---|---|---|
 | **CodeQL** | GitHub's SAST analyzer — scans every PR + the main branch for code-injection, deserialization, path-traversal, and other classic vuln patterns. Findings are gated on the Security tab. | [Security → Code scanning](https://github.com/carterscode/GamerGuardian/security/code-scanning) |
 | **Dependabot** | Watches NuGet + Actions for vulnerable / outdated dependencies. Auto-opens PRs with the upgrade. | [Security → Dependabot](https://github.com/carterscode/GamerGuardian/security/dependabot) |
-| **OpenSSF Scorecard** | Automated scoring against [OpenSSF best practices](https://github.com/ossf/scorecard) — branch protection, signed commits, pinned actions, vulnerable deps, etc. Score visible publicly. | [scorecard.yml](https://github.com/carterscode/GamerGuardian/blob/main/.github/workflows/scorecard.yml) |
+| **OpenSSF Scorecard** | Automated scoring against [OpenSSF best practices](https://github.com/ossf/scorecard) — branch protection, signed commits, pinned actions, vulnerable deps, etc. Score visible publicly. Per-check breakdown in [OpenSSF Scorecard](OpenSSF-Scorecard). | [scorecard.yml](https://github.com/carterscode/GamerGuardian/blob/main/.github/workflows/scorecard.yml) |
 | **Secret scanning** | GitHub's built-in scan for accidentally-committed secrets. Always-on for public repos. | [Security → Secret scanning](https://github.com/carterscode/GamerGuardian/security/secret-scanning) |
 | **`dotnet list package --vulnerable`** | Run as part of `release.yml` — fails the build if any transitive dependency has a known CVE. | [release.yml](https://github.com/carterscode/GamerGuardian/blob/main/.github/workflows/release.yml) |
 
