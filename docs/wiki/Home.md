@@ -19,5 +19,6 @@ A Windows 11 tray app that watches gaming-related display and system settings, a
 ## Trust & security
 
 - **[Security](Security)** — how the build pipeline keeps the app trustworthy, and how you can verify it yourself
+- **[OpenSSF Scorecard](OpenSSF-Scorecard)** — what each Scorecard check measures, what the project scores, and why
 
 > **Source of truth note:** these pages are mirrored from [`docs/wiki/`](https://github.com/carterscode/GamerGuardian/tree/main/docs/wiki) in the main repo. PRs that touch wiki content go to that directory; a sync workflow pushes them here.
