@@ -404,12 +404,14 @@ public partial class SettingsWindow : FluentWindow
 
     private static string GetVersionDisplay()
     {
-        var v = GetSemverString();
-#if DEBUG
-        return $"v{v} (dev)";
-#else
-        return $"v{v}";
-#endif
+        var raw = GetSemverString();
+        return App.IsDevBuild() ? $"v{StripPrerelease(raw)} (dev)" : $"v{raw}";
+    }
+
+    private static string StripPrerelease(string semver)
+    {
+        var dash = semver.IndexOf('-');
+        return dash > 0 ? semver[..dash] : semver;
     }
 
     private static string GetSemverString()
@@ -434,7 +436,7 @@ public partial class SettingsWindow : FluentWindow
 #if DEBUG
         var build = "Debug";
 #else
-        var build = "Release";
+        var build = App.IsDevBuild() ? "Release (dev)" : "Release";
 #endif
         return $"Informational: {info}\nFile: {fileV}\n.NET: {rt}\nBuild: {build}\n\nClick to open releases page";
     }

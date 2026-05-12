@@ -47,7 +47,13 @@ public partial class App : WpfApplication
 
         _store = new ConfigStore();
         var cfg = _store.Load();
-        StartupRegistration.Sync(cfg.LaunchAtStartup);
+        // Dev builds (local Debug + the dev-build.yml CI artifacts with "-dev" in
+        // InformationalVersion) keep their hands off the installed app's Windows-
+        // startup entry and never offer to "upgrade" themselves to production.
+        if (!IsDevBuild())
+        {
+            StartupRegistration.Sync(cfg.LaunchAtStartup);
+        }
         ThemeService.Apply(cfg.Theme);
         TempCleanup.Run();
 
@@ -101,7 +107,7 @@ public partial class App : WpfApplication
         bool isFirstRun = !System.IO.File.Exists(_store.ConfigPath);
         if (isFirstRun || e.Args.Any(a => a == "--show-settings")) ShowSettings();
 
-        if (cfg.CheckForUpdatesOnStartup)
+        if (cfg.CheckForUpdatesOnStartup && !IsDevBuild())
             _ = Task.Run(async () => await CheckForUpdatesAsync());
 
         _ = Dispatcher.BeginInvoke(() =>
@@ -180,6 +186,26 @@ public partial class App : WpfApplication
         _tray?.Dispose();
         _monitor?.Dispose();
         Shutdown();
+    }
+
+    /// <summary>
+    /// True for any "this isn't a production build" flavor:
+    ///  - Compile-time Debug builds (#if DEBUG)
+    ///  - CI dev-builds whose InformationalVersion is stamped "{base}-dev.{sha}"
+    ///    by .github/workflows/dev-build.yml
+    /// Dev builds skip auto-update and skip Windows-startup registration so they
+    /// don't interfere with the installed production app.
+    /// </summary>
+    public static bool IsDevBuild()
+    {
+#if DEBUG
+        return true;
+#else
+        var info = typeof(App).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
+        return info.Contains("-dev", StringComparison.OrdinalIgnoreCase)
+            || info.Contains("-beta", StringComparison.OrdinalIgnoreCase);
+#endif
     }
 
     /// <summary>
