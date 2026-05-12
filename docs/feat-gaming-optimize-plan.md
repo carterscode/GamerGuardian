@@ -85,6 +85,25 @@ Pull what's in `GamingOptimize.ps1` into the app so the "ensure these stay corre
 
 Iterating: every commit triggers a new dev-build with a unique `-dev.<sha>` version. Test the artifact, then push the next fix.
 
+## First-test checklist (before writing any new monitor)
+
+After the `dev-build.yml` artifact for this branch lands (Actions tab → latest run → Artifacts), install it and verify these four invariants. If any fail, fix `App.IsDevBuild()` before anything else — the rest of the branch builds on it being reliable.
+
+1. **Version label** in Settings reads `v0.1.30-dev.<sha7> (dev)` (or the next-stable-patch the auto-bump computed, with this commit's short SHA).
+2. **`HKCU\Run\GamerGuardian`** still points to the installed production app, not the dev install. Confirm:
+   ```powershell
+   (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run').GamerGuardian
+   ```
+3. **No "Update available" popup** at startup.
+4. **`%APPDATA%\GamerGuardian\changes.log`** still records normal `[manual]`, `[auto ]`, `[ui ]`, `[pause ]` entries when you exercise the existing settings via the dev build.
+
+## Local conventions to honor when adding monitors here
+
+- **Action SHA-pin** any new step. The repo's existing actions all look like `uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2` for OpenSSF Scorecard. Don't introduce floating `@v4` refs.
+- **Add tests** when the change touches `ServiceCatalog`, `SettingDocs`, or service-controller logic — those have existing coverage in `tests/GamerGuardian.Tests/` and `build.yml` runs `dotnet test` on every PR.
+- **Follow the auto-save pattern** introduced in earlier sessions: row models invoke `onPrefChanged` from each setter, which both persists config and writes a `[ui ] PREF` line to `changes.log`. New monitors get this for free if they extend `GlobalToggleRow`.
+- **Use `ElevatedRegistry.SetHklmDword` / `SetHklmString` / `SetHklmMulti`** for any HKLM write — they spawn `reg.exe` with `Verb=runas` (UAC). HKCU writes go through `Microsoft.Win32.Registry` directly.
+
 ## Open questions before implementation
 
 1. **Tier 1 only first, or A+B+C bundled?** My recommendation: ship A then B as separate commits so each gets its own dev artifact for isolated testing.
