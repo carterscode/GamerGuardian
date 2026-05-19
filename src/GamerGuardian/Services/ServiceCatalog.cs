@@ -137,5 +137,12 @@ public static class ServiceCatalog
             DisplayName: "Xbox Live Networking Service",
             Description: "Multiplayer / networking glue for Microsoft Store games. Disable only if you don't use Game Pass / Store games online.",
             DefaultStartType: ServiceStartType.Manual),
+
+        // ---------------- Windows AI ----------------
+        new(
+            Name: "WSAIFabricSvc",
+            DisplayName: "Windows AI Fabric Service",
+            Description: "Backs the on-device AI runtime (Copilot+ / Recall / Click-to-Do). Disable only if you've decided you don't want Windows AI features at all -- otherwise those features will fail to launch. Pairs naturally with the Windows AI tab toggles.",
+            DefaultStartType: ServiceStartType.Manual),
     };
 }

@@ -80,6 +80,10 @@ For each setting you choose: **monitor or not**, **desired value**, and whether 
 
 A curated catalog of services GamerGuardian can stop + disable (or set to Manual). One-click "Gaming optimized" preset, plus per-service Default/Manual/Disabled. Includes `DiagTrack` (telemetry), `MapsBroker`, `Fax`, `lfsvc` (Geolocation), Xbox services, `DoSvc` (Delivery Optimization), `iphlpsvc` (IP Helper), and more. See [`ServiceCatalog.cs`](src/GamerGuardian/Services/ServiceCatalog.cs) for the full list.
 
+### Windows AI
+
+Policy-toggle disables for Copilot, Recall, Click-to-Do, Edge Copilot/Hubs/GenAI, and Notepad Rewrite / Paint AI. Optional one-way removal of Windows AI UWP packages (`Microsoft.Copilot`, `Microsoft.Windows.Ai.Copilot.Provider`, `MicrosoftWindows.Client.AIX`). Inspired by [zoicware/RemoveWindowsAI](https://github.com/zoicware/RemoveWindowsAI) but stays in the safe "policy toggle + service disable" lane -- every change is reversed by deleting the same registry value. Walk-through in the [Windows AI section of SETTINGS-REFERENCE.md](docs/SETTINGS-REFERENCE.md#windows-ai-policies).
+
 ## Performance & gaming impact
 
 Designed to be invisible during gameplay.
@@ -109,14 +113,21 @@ Pure user-mode P/Invoke. Each monitored setting is an `IMonitoredSetting` implem
 
 ## Verification
 
-GamerGuardian doesn't ask you to take its word for it. Six independent ways to confirm what it's doing — see [Verification](https://github.com/carterscode/GamerGuardian/wiki/Verification) for the full rundown:
+GamerGuardian doesn't ask you to take its word for it. Independent ways to confirm what it's doing — see [Verification](https://github.com/carterscode/GamerGuardian/wiki/Verification) for the full rundown:
 
 1. The Settings UI re-reads from the OS after every Apply
 2. The Apply Results window shows before / target / after for each setting
-3. Every change writes a copy-pasteable PowerShell verify command to [`changes.log`](https://github.com/carterscode/GamerGuardian/wiki/Logging)
-4. `GamerGuardian.exe --test` dumps every monitor's current readout to `%TEMP%`
-5. Every Release ships with a [`SHA256SUMS.txt`](https://github.com/carterscode/GamerGuardian/wiki/Security#reproducibility) you can verify against your local download
-6. Every monitor is one ~30-line file in [`src/GamerGuardian/Monitors/`](src/GamerGuardian/Monitors/)
+3. The footer **Verify all** button re-reads every monitored setting and writes a `[SNAPSHOT]` to `changes.log` -- nothing is applied
+4. Every change writes a copy-pasteable PowerShell **apply** and **verify** command to [`changes.log`](https://github.com/carterscode/GamerGuardian/wiki/Logging)
+5. Verbose log lines include `[SESSION]` (version + OS + elevation), `[APPLY-START]` / per-change record / `[APPLY-END]`, `[EXTRESET]` (Windows reverted a value we'd applied), and `[PREF-STAGE]` (a draft toggle, not yet applied)
+6. `GamerGuardian.exe --test` dumps every monitor's current readout to `%TEMP%`
+7. Every Release ships with a [`SHA256SUMS.txt`](https://github.com/carterscode/GamerGuardian/wiki/Security#reproducibility) you can verify against your local download
+8. Every monitor is one ~30-line file in [`src/GamerGuardian/Monitors/`](src/GamerGuardian/Monitors/)
+
+## Documentation
+
+- [**Settings reference**](docs/SETTINGS-REFERENCE.md) -- per-setting What / Why / How-it-helps / Per-scenario recommendation / Risks / Reversal. Generated from [`SettingDocsCatalog.cs`](src/GamerGuardian/Services/SettingDocsCatalog.cs); a unit test asserts they can't drift.
+- [**Staged-apply + verbose logging architecture**](docs/STAGED-APPLY-ARCHITECTURE.md) -- how the draft config, MonitorService, ChangeLogger, and EXTRESET detection fit together.
 
 ## Security
 

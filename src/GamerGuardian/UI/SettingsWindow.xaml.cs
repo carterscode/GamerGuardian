@@ -16,31 +16,58 @@ namespace GamerGuardian.UI;
 public partial class SettingsWindow : FluentWindow
 {
     private readonly ConfigStore _store;
+    /// <summary>The committed config that the background <see cref="MonitorService"/> reads
+    /// from disk on each tick. The UI never writes to this directly — only
+    /// <see cref="ApplyChangesAsync"/> does, after copying the draft over.</summary>
     private readonly AppConfig _config;
+    /// <summary>A deep clone of <see cref="_config"/> that the UI freely mutates as
+    /// the user toggles radios / checkboxes / combos. Discarded on Cancel /
+    /// window close; copied back into <see cref="_config"/> on Apply / Save &amp; close.
+    /// This is what makes "click a radio, click Cancel, nothing happens" work.</summary>
+    private AppConfig _draft;
     private readonly IReadOnlyList<IMonitoredSetting> _monitors;
+    private readonly MonitorService? _monitorService;
     private readonly Action _exitApp;
     public ObservableCollection<DisplayRow> DisplayRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> GlobalToggleRows { get; } = new();
+    public ObservableCollection<GlobalToggleRow> WindowsAiRowsCollection { get; } = new();
+    public ObservableCollection<WindowsAiAppRow> WindowsAiAppRowsCollection { get; } = new();
     public ObservableCollection<ServiceRow> ServiceRows { get; } = new();
     private bool _suppressPresetEvents;
+    /// <summary>
+    /// Number of staged preference toggles since the window opened (or since
+    /// the last successful Apply). Drives the "N pending changes" status text
+    /// next to the Apply button. Counts every toggle, not net diff — clicking
+    /// Disabled then back to Default reads as 2 pending. Simple but honest.
+    /// </summary>
+    private int _pendingCount;
 
     public event Action? Saved;
 
     public SettingsWindow(ConfigStore store, IReadOnlyList<IMonitoredSetting> monitors, Action exitApp)
+        : this(store, monitors, exitApp, monitorService: null) { }
+
+    public SettingsWindow(
+        ConfigStore store,
+        IReadOnlyList<IMonitoredSetting> monitors,
+        Action exitApp,
+        MonitorService? monitorService)
     {
         InitializeComponent();
         _store = store;
         _monitors = monitors;
         _exitApp = exitApp;
+        _monitorService = monitorService;
         _config = store.Load();
+        _draft = AppConfigCloner.Clone(_config);
 
-        LaunchAtStartupCheck.IsChecked = _config.LaunchAtStartup;
-        ConsolidateCheck.IsChecked = _config.ConsolidateNotifications;
-        CheckForUpdatesCheck.IsChecked = _config.CheckForUpdatesOnStartup;
-        PollSecondsBox.Value = _config.PollIntervalSeconds;
+        LaunchAtStartupCheck.IsChecked = _draft.LaunchAtStartup;
+        ConsolidateCheck.IsChecked = _draft.ConsolidateNotifications;
+        CheckForUpdatesCheck.IsChecked = _draft.CheckForUpdatesOnStartup;
+        PollSecondsBox.Value = _draft.PollIntervalSeconds;
 
         ThemeCombo.ItemsSource = Enum.GetValues<AppThemeChoice>();
-        ThemeCombo.SelectedItem = _config.Theme;
+        ThemeCombo.SelectedItem = _draft.Theme;
 
         VersionLink.Content = GetVersionDisplay();
         VersionLink.ToolTip = GetVersionTooltip();
@@ -48,10 +75,40 @@ public partial class SettingsWindow : FluentWindow
         DisplaysList.ItemsSource = DisplayRows;
         GlobalTogglesList.ItemsSource = GlobalToggleRows;
         ServicesList.ItemsSource = ServiceRows;
+        WindowsAiRows.ItemsSource = WindowsAiRowsCollection;
+        WindowsAiAppRows.ItemsSource = WindowsAiAppRowsCollection;
 
         LoadGlobals();
         LoadDisplays();
         LoadServices();
+        LoadWindowsAi();
+        UpdatePendingStatus();
+    }
+
+    /// <summary>
+    /// Re-clones the committed config into a fresh draft. Called after a
+    /// successful Apply so the rows we re-bind to reflect the now-applied state.
+    /// </summary>
+    private void RebaseDraftFromConfig()
+    {
+        _draft = AppConfigCloner.Clone(_config);
+        _pendingCount = 0;
+    }
+
+    /// <summary>Updates the "N pending changes" status text in the button bar.</summary>
+    private void UpdatePendingStatus()
+    {
+        try
+        {
+            if (PendingStatusText is null) return;
+            PendingStatusText.Text = _pendingCount switch
+            {
+                0 => "No pending changes",
+                1 => "1 pending change",
+                _ => $"{_pendingCount} pending changes",
+            };
+        }
+        catch { /* binding may not be ready during early init */ }
     }
 
     private void LoadServices()
@@ -59,10 +116,10 @@ public partial class SettingsWindow : FluentWindow
         ServiceRows.Clear();
         foreach (var def in ServiceCatalog.All)
         {
-            if (!_config.Services.TryGetValue(def.Name, out var pref) || pref is null)
+            if (!_draft.Services.TryGetValue(def.Name, out var pref) || pref is null)
             {
                 pref = new ServicePref();
-                _config.Services[def.Name] = pref;
+                _draft.Services[def.Name] = pref;
             }
 
             var installed = WindowsServiceController.Exists(def.Name);
@@ -133,8 +190,88 @@ public partial class SettingsWindow : FluentWindow
     }
 
     /// <summary>
+    /// Populates the Windows AI tab: 5 policy toggles (same template as
+    /// Global gaming) + the UWP-removal section. Reads current state via
+    /// each monitor's static ReadCurrent / IsInstalled probe.
+    /// </summary>
+    private void LoadWindowsAi()
+    {
+        WindowsAiRowsCollection.Clear();
+        var g = _draft.Global;
+
+        WindowsAiRowsCollection.Add(new GlobalToggleRow(
+            name: "Windows Copilot",
+            description: "System-wide Copilot disable policy. Off hides the taskbar button and blocks the Copilot panel from opening.",
+            currentText: $"Current: {OnOffText(SafeRead(CopilotMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
+            pref: g.Copilot, groupName: "ai_copilot",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "ai.copilot"));
+
+        WindowsAiRowsCollection.Add(new GlobalToggleRow(
+            name: "Windows Recall + AI data analysis",
+            description: "Group-policy block for Recall snapshotting and on-device AI screen analysis.",
+            currentText: $"Current: {OnOffText(SafeRead(RecallMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
+            pref: g.Recall, groupName: "ai_recall",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "ai.recall"));
+
+        WindowsAiRowsCollection.Add(new GlobalToggleRow(
+            name: "Click-to-Do (Snipping Tool AI)",
+            description: "Disable the AI 'do something with this' action layer over screenshots.",
+            currentText: $"Current: {OnOffText(SafeRead(ClickToDoMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
+            pref: g.ClickToDo, groupName: "ai_ctd",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "ai.clicktodo"));
+
+        WindowsAiRowsCollection.Add(new GlobalToggleRow(
+            name: "Microsoft Edge Copilot / Hubs sidebar / GenAI",
+            description: "Three Edge enterprise policies: hide the right-edge Copilot icon, block page-context sharing, and disable local generative AI.",
+            currentText: $"Current: {OnOffText(SafeRead(EdgeAiMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
+            pref: g.EdgeAi, groupName: "ai_edge",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "ai.edge"));
+
+        WindowsAiRowsCollection.Add(new GlobalToggleRow(
+            name: "Notepad Rewrite + Paint AI",
+            description: "Per-user disable of Notepad Rewrite and Paint Cocreator / Image Creator / Generative Erase.",
+            currentText: $"Current: {OnOffText(SafeRead(NotepadPaintAiMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
+            pref: g.NotepadPaintAi, groupName: "ai_notepadpaint",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "ai.notepadpaint"));
+
+        // UWP packages
+        WindowsAiAppRowsCollection.Clear();
+        foreach (var def in WindowsAiAppCatalog.All)
+        {
+            if (!_draft.WindowsAiApps.TryGetValue(def.PackageName, out var pref) || pref is null)
+            {
+                pref = new WindowsAiAppPref();
+                _draft.WindowsAiApps[def.PackageName] = pref;
+            }
+            bool? installed = WindowsAiAppMonitor.IsInstalled(def.PackageName);
+            string currentText = installed switch
+            {
+                true => "Current: Installed for current user",
+                false => "Current: Not installed",
+                _ => "Current: probe failed (PowerShell missing?)"
+            };
+            WindowsAiAppRowsCollection.Add(new WindowsAiAppRow(def, pref, currentText, OnRowPrefChanged));
+        }
+    }
+
+    /// <summary>
     /// Reads a DWORD policy value without elevation. Reading HKLM Policies
-    /// keys doesn't require admin — only writing does. Returns null if the
+    /// keys doesn't require admin -- only writing does. Returns null if the
     /// key/value doesn't exist or isn't a DWORD.
     /// </summary>
     private static int? ReadPolicyDword(GamerGuardian.Models.PolicyOverride po)
@@ -200,7 +337,8 @@ public partial class SettingsWindow : FluentWindow
                 row.SetDesiredFromPreset(ServiceTargetState.Default);
             }
         }
-        try { _store.Save(_config); } catch { }
+        // Preset is staged like any other preference toggle -- the actual write
+        // to disk and re-apply happens on the user's next Apply / Save & close.
         ChangeLogger.LogPreferenceChange(
             "Windows services preset",
             "Want",
@@ -225,7 +363,7 @@ public partial class SettingsWindow : FluentWindow
     private void LoadGlobals()
     {
         GlobalToggleRows.Clear();
-        var g = _config.Global;
+        var g = _draft.Global;
 
         // For settings the user hasn't opted into monitoring, default Want to Current
         // so the radios reflect the actual system state instead of a "ghost" recommendation.
@@ -248,7 +386,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: Enabled",
             onLabel: "Enabled", offLabel: "Disabled",
             pref: g.GameMode, groupName: "gm",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "gamemode"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Game DVR background recording",
@@ -257,7 +396,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: Enabled",
             onLabel: "Enabled", offLabel: "Disabled",
             pref: g.GameDvr, groupName: "dvr",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "gamedvr"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Hardware-accelerated GPU Scheduling (HAGS)",
@@ -267,7 +407,8 @@ public partial class SettingsWindow : FluentWindow
             onLabel: "Enabled", offLabel: "Disabled",
             requiresReboot: true,
             pref: g.Hags, groupName: "hags",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "hags"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Memory Integrity / VBS (Core Isolation)",
@@ -277,7 +418,8 @@ public partial class SettingsWindow : FluentWindow
             onLabel: "Enabled", offLabel: "Disabled",
             requiresReboot: true,
             pref: g.MemoryIntegrity, groupName: "memint",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "memintegrity"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "System Responsiveness",
@@ -287,7 +429,8 @@ public partial class SettingsWindow : FluentWindow
             onLabel: "Gaming", offLabel: "Default",
             requiresReboot: true,
             pref: g.SystemResponsiveness, groupName: "sysresp",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "sysresponse"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Network Throttling",
@@ -296,7 +439,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: 10    Gaming: Disabled",
             onLabel: "Gaming", offLabel: "Default",
             pref: g.NetworkThrottling, groupName: "netthr",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "netthrottle"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "USB Selective Suspend (global)",
@@ -306,7 +450,8 @@ public partial class SettingsWindow : FluentWindow
             onLabel: "Gaming", offLabel: "Default",
             requiresReboot: true,
             pref: g.UsbSelectiveSuspend, groupName: "usbsus",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "usbsuspend"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Games multimedia task profile",
@@ -315,7 +460,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: standard    Gaming: boosted",
             onLabel: "Gaming", offLabel: "Default",
             pref: g.GamesTaskProfile, groupName: "gtask",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "gamestask"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Mouse \"Enhance pointer precision\"",
@@ -324,7 +470,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: Enabled",
             onLabel: "Enabled", offLabel: "Disabled",
             pref: g.MousePrecision, groupName: "mp",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "mouseaccel"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Fullscreen optimizations (global)",
@@ -333,7 +480,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: Enabled",
             onLabel: "Enabled", offLabel: "Disabled",
             pref: g.FullscreenOptimizations, groupName: "fso",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "fso"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Variable Refresh Rate (DirectX)",
@@ -342,7 +490,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: not set",
             onLabel: "Enabled", offLabel: "Disabled",
             pref: g.Vrr, groupName: "vrr",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "vrr"));
 
         var planNames = PowerPlanMonitor.ListAvailablePlans();
         var active = SafeRunGuid(PowerPlanMonitor.GetActivePlan);
@@ -379,10 +528,10 @@ public partial class SettingsWindow : FluentWindow
         DisplayRows.Clear();
         foreach (var d in DisplayHelper.EnumerateActiveDisplays())
         {
-            if (!_config.Displays.TryGetValue(d.StableKey, out var pref))
+            if (!_draft.Displays.TryGetValue(d.StableKey, out var pref))
             {
                 pref = new DisplayPreference { DisplayLabel = d.DisplayLabel };
-                _config.Displays[d.StableKey] = pref;
+                _draft.Displays[d.StableKey] = pref;
             }
             var hdr = SafeRead(() => HdrMonitor.ReadHdrState(d) is { } s ? (bool?)(s.Supported && s.Enabled) : null);
             var refresh = string.IsNullOrEmpty(d.GdiDeviceName) ? null : RefreshRateMonitor.GetCurrentRefresh(d.GdiDeviceName);
@@ -404,12 +553,14 @@ public partial class SettingsWindow : FluentWindow
 
     private static string GetVersionDisplay()
     {
-        var v = GetSemverString();
-#if DEBUG
-        return $"v{v} (dev)";
-#else
-        return $"v{v}";
-#endif
+        var raw = GetSemverString();
+        return App.IsDevBuild() ? $"v{StripPrerelease(raw)} (dev)" : $"v{raw}";
+    }
+
+    private static string StripPrerelease(string semver)
+    {
+        var dash = semver.IndexOf('-');
+        return dash > 0 ? semver[..dash] : semver;
     }
 
     private static string GetSemverString()
@@ -434,7 +585,7 @@ public partial class SettingsWindow : FluentWindow
 #if DEBUG
         var build = "Debug";
 #else
-        var build = "Release";
+        var build = App.IsDevBuild() ? "Release (dev)" : "Release";
 #endif
         return $"Informational: {info}\nFile: {fileV}\n.NET: {rt}\nBuild: {build}\n\nClick to open releases page";
     }
@@ -448,34 +599,37 @@ public partial class SettingsWindow : FluentWindow
     private void PowerPlanCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (PowerPlanCombo.SelectedItem is not PowerPlanItem pi) return;
-        var oldGuid = _config.Global.PowerPlan.DesiredGuid;
-        var oldName = _config.Global.PowerPlan.DesiredName;
-        _config.Global.PowerPlan.DesiredGuid = pi.Guid.ToString();
-        _config.Global.PowerPlan.DesiredName = pi.Name;
-        try { _store.Save(_config); } catch { }
-        if (oldGuid != pi.Guid.ToString())
-            ChangeLogger.LogPreferenceChange("Power plan", "Want",
-                oldName ?? oldGuid ?? "(unset)", pi.Name);
+        var oldGuid = _draft.Global.PowerPlan.DesiredGuid;
+        var oldName = _draft.Global.PowerPlan.DesiredName;
+        if (oldGuid == pi.Guid.ToString()) return;
+        _draft.Global.PowerPlan.DesiredGuid = pi.Guid.ToString();
+        _draft.Global.PowerPlan.DesiredName = pi.Name;
+        ChangeLogger.LogPreferenceChange("Power plan", "Want",
+            oldName ?? oldGuid ?? "(unset)", pi.Name);
+        _pendingCount++;
+        UpdatePendingStatus();
     }
 
     private void PowerPlanMonitorCheck_Changed(object sender, RoutedEventArgs e)
     {
         var v = PowerPlanMonitorCheck.IsChecked == true;
-        if (_config.Global.PowerPlan.Monitor == v) return;
-        var before = _config.Global.PowerPlan.Monitor;
-        _config.Global.PowerPlan.Monitor = v;
-        try { _store.Save(_config); } catch { }
+        if (_draft.Global.PowerPlan.Monitor == v) return;
+        var before = _draft.Global.PowerPlan.Monitor;
+        _draft.Global.PowerPlan.Monitor = v;
         ChangeLogger.LogPreferenceChange("Power plan", "Monitor", before.ToString(), v.ToString());
+        _pendingCount++;
+        UpdatePendingStatus();
     }
 
     private void PowerPlanAutoApplyCheck_Changed(object sender, RoutedEventArgs e)
     {
         var v = PowerPlanAutoApplyCheck.IsChecked == true;
-        if (_config.Global.PowerPlan.AutoApply == v) return;
-        var before = _config.Global.PowerPlan.AutoApply;
-        _config.Global.PowerPlan.AutoApply = v;
-        try { _store.Save(_config); } catch { }
+        if (_draft.Global.PowerPlan.AutoApply == v) return;
+        var before = _draft.Global.PowerPlan.AutoApply;
+        _draft.Global.PowerPlan.AutoApply = v;
         ChangeLogger.LogPreferenceChange("Power plan", "AutoApply", before.ToString(), v.ToString());
+        _pendingCount++;
+        UpdatePendingStatus();
     }
 
     private void OpenChangeLogButton_Click(object sender, RoutedEventArgs e)
@@ -536,6 +690,11 @@ public partial class SettingsWindow : FluentWindow
         }
     }
 
+    /// <summary>Guards against re-entrant Apply / Save&amp;close while one is in flight.
+    /// Without this, async void handlers let a second click race with the first --
+    /// each fires its own UAC stream and they can interleave.</summary>
+    private bool _applyInFlight;
+
     private async void ApplyButton_Click(object sender, RoutedEventArgs e)
     {
         await ApplyChangesAsync(closeAfter: false);
@@ -543,15 +702,62 @@ public partial class SettingsWindow : FluentWindow
 
     private async void SaveButton_Click(object sender, RoutedEventArgs e)
     {
+        // Pure-close path: no draft edits since the window opened (or since the
+        // last Apply), so there's nothing to apply. Just close. Without this,
+        // Save&close re-runs the drift+apply pass and re-prompts UAC for any
+        // setting Windows reverted between the two clicks -- which surprises
+        // users who already approved everything via Apply.
+        if (_pendingCount == 0)
+        {
+            Close();
+            return;
+        }
         await ApplyChangesAsync(closeAfter: true);
+    }
+
+    private void SetButtonsEnabled(bool enabled)
+    {
+        try
+        {
+            // Found via the named template parts in SettingsWindow.xaml.
+            // Cancel stays enabled so the user can always escape a hang.
+            ApplyButton.IsEnabled = enabled;
+            SaveButton.IsEnabled = enabled;
+        }
+        catch { /* XAML controls may not be ready during very early calls */ }
     }
 
     private async Task ApplyChangesAsync(bool closeAfter)
     {
-        PersistFormToConfig();
+        if (_applyInFlight) return;
+        _applyInFlight = true;
+        SetButtonsEnabled(false);
+        try
+        {
+            await ApplyChangesCoreAsync(closeAfter);
+        }
+        finally
+        {
+            _applyInFlight = false;
+            SetButtonsEnabled(true);
+        }
+    }
+
+    private async Task ApplyChangesCoreAsync(bool closeAfter)
+    {
+        // 1. Flush every form field into the draft (the rows already wrote to
+        //    draft on each toggle; this picks up the controls that don't have
+        //    explicit handlers, like LaunchAtStartup checkbox + PollSeconds).
+        PersistFormToDraft();
+
+        // 2. Commit draft -> live config and persist. From this point on the
+        //    background MonitorService will see the new preferences on its
+        //    next tick (or this Apply pass, whichever is first).
+        AppConfigCloner.CopyInto(_draft, _config);
         _store.Save(_config);
         StartupRegistration.Sync(_config.LaunchAtStartup);
 
+        // 3. Compute drift against the now-committed config and apply.
         var drifted = new List<DriftItem>();
         foreach (var m in _monitors)
         {
@@ -559,18 +765,28 @@ public partial class SettingsWindow : FluentWindow
             catch { /* per-monitor failures shouldn't break Apply */ }
         }
 
-        var results = await ChangeApplier.ApplyAndVerifyAsync(drifted, _monitors, _config);
+        var sessionId = ChangeApplier.NewSessionId();
+        var results = await ChangeApplier.ApplyAndVerifyAsync(
+            drifted, _monitors, _config, source: "manual", sessionId: sessionId);
 
         if (results.Count > 0)
         {
             ChangeLogger.LogApplyResults(results, "manual");
+            // Seed MonitorService's last-verified table so the very next
+            // background tick can detect external resets without a one-cycle blind spot.
+            _monitorService?.RecordVerifiedApplies(results);
         }
 
         Saved?.Invoke();
 
+        // 4. Re-base the draft from the now-committed config and rebuild rows
+        //    so the UI reflects the freshly-applied state. Resets pending count.
+        RebaseDraftFromConfig();
         LoadGlobals();
         LoadDisplays();
         LoadServices();
+        LoadWindowsAi();
+        UpdatePendingStatus();
 
         if (results.Count > 0)
         {
@@ -585,7 +801,7 @@ public partial class SettingsWindow : FluentWindow
             // itself is the feedback.)
             System.Windows.MessageBox.Show(
                 this,
-                "No changes to apply — every monitored setting already matches your preference.",
+                "No changes to apply -- every monitored setting already matches your preference.",
                 "GamerGuardian",
                 System.Windows.MessageBoxButton.OK,
                 System.Windows.MessageBoxImage.Information);
@@ -594,26 +810,32 @@ public partial class SettingsWindow : FluentWindow
         if (closeAfter) Close();
     }
 
-    private void PersistFormToConfig()
+    /// <summary>
+    /// Flushes every form control (and any row WriteTo/WriteBack hooks) into
+    /// the draft. Row property setters already mutate the draft directly, so
+    /// this is just for the form-level controls that don't have per-change
+    /// handlers (LaunchAtStartup, PollSeconds, etc.).
+    /// </summary>
+    private void PersistFormToDraft()
     {
-        _config.LaunchAtStartup = LaunchAtStartupCheck.IsChecked == true;
-        _config.ConsolidateNotifications = ConsolidateCheck.IsChecked == true;
-        _config.CheckForUpdatesOnStartup = CheckForUpdatesCheck.IsChecked == true;
+        _draft.LaunchAtStartup = LaunchAtStartupCheck.IsChecked == true;
+        _draft.ConsolidateNotifications = ConsolidateCheck.IsChecked == true;
+        _draft.CheckForUpdatesOnStartup = CheckForUpdatesCheck.IsChecked == true;
         if (PollSecondsBox.Value is double pv && pv >= 5)
-            _config.PollIntervalSeconds = (int)pv;
+            _draft.PollIntervalSeconds = (int)pv;
         if (ThemeCombo.SelectedItem is AppThemeChoice tc)
-            _config.Theme = tc;
+            _draft.Theme = tc;
 
-        _config.Global.PowerPlan.Monitor = PowerPlanMonitorCheck.IsChecked == true;
-        _config.Global.PowerPlan.AutoApply = PowerPlanAutoApplyCheck.IsChecked == true;
+        _draft.Global.PowerPlan.Monitor = PowerPlanMonitorCheck.IsChecked == true;
+        _draft.Global.PowerPlan.AutoApply = PowerPlanAutoApplyCheck.IsChecked == true;
         if (PowerPlanCombo.SelectedItem is PowerPlanItem pi)
         {
-            _config.Global.PowerPlan.DesiredGuid = pi.Guid.ToString();
-            _config.Global.PowerPlan.DesiredName = pi.Name;
+            _draft.Global.PowerPlan.DesiredGuid = pi.Guid.ToString();
+            _draft.Global.PowerPlan.DesiredName = pi.Name;
         }
 
         foreach (var row in GlobalToggleRows) row.WriteBack();
-        foreach (var row in DisplayRows) row.WriteTo(_config);
+        foreach (var row in DisplayRows) row.WriteTo(_draft);
         foreach (var row in ServiceRows) row.WriteBack();
     }
 
@@ -637,13 +859,19 @@ public partial class SettingsWindow : FluentWindow
 
     private void OnWindowClosing(object? sender, CancelEventArgs e)
     {
-        if (_suppressSaveOnClose) return;
-        try
+        // Closing the window without explicitly clicking Apply / Save & close
+        // discards the draft. Previously this path silently persisted form state
+        // to disk -- that's exactly the "I clicked a thing, it applied without
+        // asking" behavior we're fixing in v0.1.38. If the user wanted these
+        // changes kept they would have clicked Apply or Save & close.
+        if (_pendingCount > 0 && !_suppressSaveOnClose)
         {
-            PersistFormToConfig();
-            _store.Save(_config);
+            ChangeLogger.LogPreferenceChange(
+                "Settings window",
+                "Closed",
+                $"{_pendingCount} pending change(s)",
+                "discarded (closed without Apply)");
         }
-        catch { }
     }
 
     protected override void OnClosed(EventArgs e)
@@ -663,15 +891,142 @@ public partial class SettingsWindow : FluentWindow
 
     private void OnRowPrefChanged(string settingName, string field, string before, string after)
     {
-        try { _store.Save(_config); } catch { }
+        // Row setters mutate the draft (their _pref reference points at a
+        // draft.Services / draft.Global / draft.Displays entry). We never write
+        // to _store here -- that happens only in ApplyChangesAsync.
         ChangeLogger.LogPreferenceChange(settingName, field, before, after);
+        _pendingCount++;
+        UpdatePendingStatus();
+    }
+
+    /// <summary>
+    /// Re-reads every monitored setting against the committed config and
+    /// writes a [SNAPSHOT] entry to changes.log. Nothing is applied. A status
+    /// popup tells the user where to look.
+    /// </summary>
+    private void VerifyAllButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var rows = new List<(string, string, string, string, bool)>();
+            int drifting = 0;
+            foreach (var m in _monitors)
+            {
+                IEnumerable<DriftItem> items;
+                try { items = m.CheckDrift(_config).ToList(); }
+                catch { continue; }
+                foreach (var d in items)
+                {
+                    rows.Add((d.SettingId, d.DisplayLabel, d.CurrentValue, d.DesiredValue, false));
+                    drifting++;
+                }
+            }
+            ChangeLogger.LogStateSnapshot(rows);
+            var msg = drifting == 0
+                ? "All monitored settings match your preferences. Snapshot written to changes.log."
+                : $"{drifting} setting(s) currently drifting from your preferences. Snapshot written to changes.log -- nothing was applied.";
+            System.Windows.MessageBox.Show(this, msg, "GamerGuardian -- Verify all",
+                System.Windows.MessageBoxButton.OK,
+                drifting == 0 ? System.Windows.MessageBoxImage.Information : System.Windows.MessageBoxImage.Warning);
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(this, "Verify all failed: " + ex.Message, "GamerGuardian",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+        }
     }
 
     private void CancelButton_Click(object sender, RoutedEventArgs e)
     {
+        // Discards the draft entirely. _config (and on-disk config.json) are
+        // unchanged; the MonitorService keeps using whatever was committed
+        // before this window opened.
+        if (_pendingCount > 0)
+        {
+            ChangeLogger.LogPreferenceChange(
+                "Settings window",
+                "Cancel",
+                $"{_pendingCount} pending change(s)",
+                "discarded");
+        }
         _suppressSaveOnClose = true;
         Close();
     }
+}
+
+/// <summary>
+/// Row for a single Windows AI UWP package in the Windows AI tab. Mutates a
+/// <see cref="WindowsAiAppPref"/> reference from the draft config; pending
+/// changes only land in <see cref="ConfigStore"/> when the user clicks Apply.
+/// </summary>
+public sealed class WindowsAiAppRow : INotifyPropertyChanged
+{
+    private readonly WindowsAiAppPref _pref;
+    private readonly Action<string, string, string, string>? _onPrefChanged;
+
+    public WindowsAiAppDefinition Definition { get; }
+    public string Name => Definition.DisplayName;
+    public string PackageName => Definition.PackageName;
+    public string Description => Definition.Description;
+    public string CurrentText { get; }
+
+    public string SettingId => $"ai.app:{Definition.PackageName}";
+    public string LearnMoreContent => SettingDocsCatalog.FormatForExpander(SettingId);
+    public Visibility LearnMoreVisibility =>
+        string.IsNullOrEmpty(LearnMoreContent) ? Visibility.Collapsed : Visibility.Visible;
+
+    public bool Monitor
+    {
+        get => _pref.Monitor;
+        set
+        {
+            if (_pref.Monitor == value) return;
+            var before = _pref.Monitor;
+            _pref.Monitor = value;
+            OnPropertyChanged();
+            _onPrefChanged?.Invoke($"AI app: {Definition.DisplayName}", "Monitor", before.ToString(), value.ToString());
+        }
+    }
+    public bool DesiredRemoved
+    {
+        get => _pref.DesiredRemoved;
+        set
+        {
+            if (_pref.DesiredRemoved == value) return;
+            var before = _pref.DesiredRemoved;
+            _pref.DesiredRemoved = value;
+            OnPropertyChanged();
+            _onPrefChanged?.Invoke($"AI app: {Definition.DisplayName}", "Remove", before.ToString(), value.ToString());
+        }
+    }
+    public bool AutoApply
+    {
+        get => _pref.AutoApply;
+        set
+        {
+            if (_pref.AutoApply == value) return;
+            var before = _pref.AutoApply;
+            _pref.AutoApply = value;
+            OnPropertyChanged();
+            _onPrefChanged?.Invoke($"AI app: {Definition.DisplayName}", "AutoApply", before.ToString(), value.ToString());
+        }
+    }
+
+    public WindowsAiAppRow(
+        WindowsAiAppDefinition def,
+        WindowsAiAppPref pref,
+        string currentText,
+        Action<string, string, string, string>? onPrefChanged)
+    {
+        Definition = def;
+        _pref = pref;
+        CurrentText = currentText;
+        _onPrefChanged = onPrefChanged;
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+    private void OnPropertyChanged([CallerMemberName] string? name = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }
 
 public sealed class PowerPlanItem
@@ -695,6 +1050,11 @@ public sealed class GlobalToggleRow : INotifyPropertyChanged
     public string GroupName { get; }
     public bool RequiresReboot { get; }
     public Visibility RebootBadgeVisibility => RequiresReboot ? Visibility.Visible : Visibility.Collapsed;
+
+    public string SettingId { get; }
+    public string LearnMoreContent => SettingDocsCatalog.FormatForExpander(SettingId);
+    public Visibility LearnMoreVisibility =>
+        string.IsNullOrEmpty(LearnMoreContent) ? Visibility.Collapsed : Visibility.Visible;
 
     public bool Monitor
     {
@@ -743,7 +1103,8 @@ public sealed class GlobalToggleRow : INotifyPropertyChanged
                            string onLabel, string offLabel,
                            ToggleSettingPref pref, string groupName,
                            bool requiresReboot = false,
-                           Action<string, string, string, string>? onPrefChanged = null)
+                           Action<string, string, string, string>? onPrefChanged = null,
+                           string settingId = "")
     {
         Name = name;
         Description = description;
@@ -755,6 +1116,7 @@ public sealed class GlobalToggleRow : INotifyPropertyChanged
         GroupName = groupName;
         RequiresReboot = requiresReboot;
         _onPrefChanged = onPrefChanged;
+        SettingId = settingId;
     }
 
     public void WriteBack() { /* mutations are direct; nothing to do */ }
@@ -785,6 +1147,11 @@ public sealed class ServiceRow : INotifyPropertyChanged
         Definition.RecommendedTarget.HasValue ? Visibility.Visible : Visibility.Collapsed;
     public Visibility NotInstalledBadgeVisibility =>
         IsInstalled ? Visibility.Collapsed : Visibility.Visible;
+
+    public string SettingId => $"service:{Definition.Name}";
+    public string LearnMoreContent => SettingDocsCatalog.FormatForExpander(SettingId);
+    public Visibility LearnMoreVisibility =>
+        string.IsNullOrEmpty(LearnMoreContent) ? Visibility.Collapsed : Visibility.Visible;
 
     public bool Monitor
     {

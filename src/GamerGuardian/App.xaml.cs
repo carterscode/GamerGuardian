@@ -38,6 +38,32 @@ public partial class App : WpfApplication
             return;
         }
 
+        // --gen-docs DEST -- render the settings catalog as markdown and exit.
+        // Used to regenerate docs/SETTINGS-REFERENCE.md from CI / pre-commit so
+        // the doc and the catalog can't drift apart.
+        for (int i = 0; i < e.Args.Length; i++)
+        {
+            if (e.Args[i] == "--gen-docs")
+            {
+                var dest = (i + 1 < e.Args.Length) ? e.Args[i + 1] : "docs\\SETTINGS-REFERENCE.md";
+                try
+                {
+                    var md = Services.SettingsReferenceGen.Render();
+                    var dir = System.IO.Path.GetDirectoryName(dest);
+                    if (!string.IsNullOrEmpty(dir)) System.IO.Directory.CreateDirectory(dir);
+                    System.IO.File.WriteAllText(dest, md);
+                    Environment.ExitCode = 0;
+                }
+                catch (Exception ex)
+                {
+                    LogException("gen-docs", ex);
+                    Environment.ExitCode = 1;
+                }
+                Shutdown();
+                return;
+            }
+        }
+
         _singleInstanceMutex = new Mutex(initiallyOwned: true, "GamerGuardian.SingleInstance", out bool created);
         if (!created)
         {
@@ -46,8 +72,15 @@ public partial class App : WpfApplication
         }
 
         _store = new ConfigStore();
+        ChangeLogger.LogSessionStart();
         var cfg = _store.Load();
-        StartupRegistration.Sync(cfg.LaunchAtStartup);
+        // Dev builds (local Debug + the dev-build.yml CI artifacts with "-dev" in
+        // InformationalVersion) keep their hands off the installed app's Windows-
+        // startup entry and never offer to "upgrade" themselves to production.
+        if (!IsDevBuild())
+        {
+            StartupRegistration.Sync(cfg.LaunchAtStartup);
+        }
         ThemeService.Apply(cfg.Theme);
         TempCleanup.Run();
 
@@ -69,10 +102,20 @@ public partial class App : WpfApplication
             new MousePrecisionMonitor(),
             new FullscreenOptimizationsMonitor(),
             new PowerPlanMonitor(),
+            // Windows AI lockdown -- registry-policy monitors. UWP-removal
+            // (Microsoft.Copilot etc.) is registered separately below as
+            // per-package monitors via WindowsAiAppCatalog.
+            new CopilotMonitor(),
+            new RecallMonitor(),
+            new ClickToDoMonitor(),
+            new EdgeAiMonitor(),
+            new NotepadPaintAiMonitor(),
         };
         var serviceMonitors = GamerGuardian.Services.ServiceCatalog.All
             .Select(d => (IMonitoredSetting)new WindowsServiceMonitor(d));
-        _allMonitors = fixedMonitors.Concat(serviceMonitors).ToArray();
+        var aiAppMonitors = GamerGuardian.Services.WindowsAiAppCatalog.All
+            .Select(d => (IMonitoredSetting)new WindowsAiAppMonitor(d));
+        _allMonitors = fixedMonitors.Concat(serviceMonitors).Concat(aiAppMonitors).ToArray();
         _monitor = new MonitorService(_store, _allMonitors, report => _notifier.ShowAsync(report));
         _monitor.AutoAppliedRebootRequired += items =>
         {
@@ -98,10 +141,31 @@ public partial class App : WpfApplication
 
         _monitor.Start();
 
+        // Verbose baseline: log the current state of every monitored setting
+        // at session start. Gives users a known baseline to grep against later
+        // when they see drift; also surfaces "Oh, that one's drifting" without
+        // requiring the user to open Settings.
+        try
+        {
+            var rows = _allMonitors
+                .SelectMany(m =>
+                {
+                    try
+                    {
+                        return m.CheckDrift(cfg).Select(d =>
+                            (d.SettingId, d.DisplayLabel, current: d.CurrentValue, desired: d.DesiredValue, inSync: false));
+                    }
+                    catch { return Enumerable.Empty<(string, string, string, string, bool)>(); }
+                })
+                .ToList();
+            if (rows.Count > 0) ChangeLogger.LogStateSnapshot(rows);
+        }
+        catch { }
+
         bool isFirstRun = !System.IO.File.Exists(_store.ConfigPath);
         if (isFirstRun || e.Args.Any(a => a == "--show-settings")) ShowSettings();
 
-        if (cfg.CheckForUpdatesOnStartup)
+        if (cfg.CheckForUpdatesOnStartup && !IsDevBuild())
             _ = Task.Run(async () => await CheckForUpdatesAsync());
 
         _ = Dispatcher.BeginInvoke(() =>
@@ -152,7 +216,7 @@ public partial class App : WpfApplication
                 _settingsWindow.Activate();
                 return;
             }
-            _settingsWindow = new SettingsWindow(_store!, _allMonitors!, exitApp: ExitApp);
+            _settingsWindow = new SettingsWindow(_store!, _allMonitors!, exitApp: ExitApp, monitorService: _monitor);
             _settingsWindow.Saved += () => _monitor?.TriggerNow();
             _settingsWindow.Closed += (_, _) =>
             {
@@ -180,6 +244,26 @@ public partial class App : WpfApplication
         _tray?.Dispose();
         _monitor?.Dispose();
         Shutdown();
+    }
+
+    /// <summary>
+    /// True for any "this isn't a production build" flavor:
+    ///  - Compile-time Debug builds (#if DEBUG)
+    ///  - CI dev-builds whose InformationalVersion is stamped "{base}-dev.{sha}"
+    ///    by .github/workflows/dev-build.yml
+    /// Dev builds skip auto-update and skip Windows-startup registration so they
+    /// don't interfere with the installed production app.
+    /// </summary>
+    public static bool IsDevBuild()
+    {
+#if DEBUG
+        return true;
+#else
+        var info = typeof(App).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
+        return info.Contains("-dev", StringComparison.OrdinalIgnoreCase)
+            || info.Contains("-beta", StringComparison.OrdinalIgnoreCase);
+#endif
     }
 
     /// <summary>
