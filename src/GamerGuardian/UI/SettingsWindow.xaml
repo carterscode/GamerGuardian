@@ -38,9 +38,18 @@
                                     FontSize="11"
                                     ToolTip="Open releases page"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <ui:Button Content="Cancel" MinWidth="96" Margin="0,0,8,0" Click="CancelButton_Click"/>
-                    <ui:Button Content="Apply" MinWidth="96" Margin="0,0,8,0" Click="ApplyButton_Click"/>
-                    <ui:Button Content="Save &amp; close" Appearance="Primary" MinWidth="120" Click="SaveButton_Click"/>
+                    <TextBlock x:Name="PendingStatusText"
+                               Text="No pending changes"
+                               VerticalAlignment="Center"
+                               Margin="0,0,16,0"
+                               FontSize="12"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                    <ui:Button Content="Cancel" MinWidth="96" Margin="0,0,8,0" Click="CancelButton_Click"
+                               ToolTip="Discard every pending change. The committed configuration on disk is not modified."/>
+                    <ui:Button Content="Apply" MinWidth="96" Margin="0,0,8,0" Click="ApplyButton_Click"
+                               ToolTip="Commit pending changes to disk and run the apply pass. Window stays open."/>
+                    <ui:Button Content="Save &amp; close" Appearance="Primary" MinWidth="120" Click="SaveButton_Click"
+                               ToolTip="Commit pending changes, run the apply pass, then close."/>
                 </StackPanel>
             </Grid>
 

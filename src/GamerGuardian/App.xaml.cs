@@ -46,6 +46,7 @@ public partial class App : WpfApplication
         }
 
         _store = new ConfigStore();
+        ChangeLogger.LogSessionStart();
         var cfg = _store.Load();
         // Dev builds (local Debug + the dev-build.yml CI artifacts with "-dev" in
         // InformationalVersion) keep their hands off the installed app's Windows-
@@ -158,7 +159,7 @@ public partial class App : WpfApplication
                 _settingsWindow.Activate();
                 return;
             }
-            _settingsWindow = new SettingsWindow(_store!, _allMonitors!, exitApp: ExitApp);
+            _settingsWindow = new SettingsWindow(_store!, _allMonitors!, exitApp: ExitApp, monitorService: _monitor);
             _settingsWindow.Saved += () => _monitor?.TriggerNow();
             _settingsWindow.Closed += (_, _) =>
             {

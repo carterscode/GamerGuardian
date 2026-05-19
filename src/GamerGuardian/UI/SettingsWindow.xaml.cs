@@ -16,31 +16,56 @@ namespace GamerGuardian.UI;
 public partial class SettingsWindow : FluentWindow
 {
     private readonly ConfigStore _store;
+    /// <summary>The committed config that the background <see cref="MonitorService"/> reads
+    /// from disk on each tick. The UI never writes to this directly — only
+    /// <see cref="ApplyChangesAsync"/> does, after copying the draft over.</summary>
     private readonly AppConfig _config;
+    /// <summary>A deep clone of <see cref="_config"/> that the UI freely mutates as
+    /// the user toggles radios / checkboxes / combos. Discarded on Cancel /
+    /// window close; copied back into <see cref="_config"/> on Apply / Save &amp; close.
+    /// This is what makes "click a radio, click Cancel, nothing happens" work.</summary>
+    private AppConfig _draft;
     private readonly IReadOnlyList<IMonitoredSetting> _monitors;
+    private readonly MonitorService? _monitorService;
     private readonly Action _exitApp;
     public ObservableCollection<DisplayRow> DisplayRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> GlobalToggleRows { get; } = new();
     public ObservableCollection<ServiceRow> ServiceRows { get; } = new();
     private bool _suppressPresetEvents;
+    /// <summary>
+    /// Number of staged preference toggles since the window opened (or since
+    /// the last successful Apply). Drives the "N pending changes" status text
+    /// next to the Apply button. Counts every toggle, not net diff — clicking
+    /// Disabled then back to Default reads as 2 pending. Simple but honest.
+    /// </summary>
+    private int _pendingCount;
 
     public event Action? Saved;
 
     public SettingsWindow(ConfigStore store, IReadOnlyList<IMonitoredSetting> monitors, Action exitApp)
+        : this(store, monitors, exitApp, monitorService: null) { }
+
+    public SettingsWindow(
+        ConfigStore store,
+        IReadOnlyList<IMonitoredSetting> monitors,
+        Action exitApp,
+        MonitorService? monitorService)
     {
         InitializeComponent();
         _store = store;
         _monitors = monitors;
         _exitApp = exitApp;
+        _monitorService = monitorService;
         _config = store.Load();
+        _draft = AppConfigCloner.Clone(_config);
 
-        LaunchAtStartupCheck.IsChecked = _config.LaunchAtStartup;
-        ConsolidateCheck.IsChecked = _config.ConsolidateNotifications;
-        CheckForUpdatesCheck.IsChecked = _config.CheckForUpdatesOnStartup;
-        PollSecondsBox.Value = _config.PollIntervalSeconds;
+        LaunchAtStartupCheck.IsChecked = _draft.LaunchAtStartup;
+        ConsolidateCheck.IsChecked = _draft.ConsolidateNotifications;
+        CheckForUpdatesCheck.IsChecked = _draft.CheckForUpdatesOnStartup;
+        PollSecondsBox.Value = _draft.PollIntervalSeconds;
 
         ThemeCombo.ItemsSource = Enum.GetValues<AppThemeChoice>();
-        ThemeCombo.SelectedItem = _config.Theme;
+        ThemeCombo.SelectedItem = _draft.Theme;
 
         VersionLink.Content = GetVersionDisplay();
         VersionLink.ToolTip = GetVersionTooltip();
@@ -52,6 +77,33 @@ public partial class SettingsWindow : FluentWindow
         LoadGlobals();
         LoadDisplays();
         LoadServices();
+        UpdatePendingStatus();
+    }
+
+    /// <summary>
+    /// Re-clones the committed config into a fresh draft. Called after a
+    /// successful Apply so the rows we re-bind to reflect the now-applied state.
+    /// </summary>
+    private void RebaseDraftFromConfig()
+    {
+        _draft = AppConfigCloner.Clone(_config);
+        _pendingCount = 0;
+    }
+
+    /// <summary>Updates the "N pending changes" status text in the button bar.</summary>
+    private void UpdatePendingStatus()
+    {
+        try
+        {
+            if (PendingStatusText is null) return;
+            PendingStatusText.Text = _pendingCount switch
+            {
+                0 => "No pending changes",
+                1 => "1 pending change",
+                _ => $"{_pendingCount} pending changes",
+            };
+        }
+        catch { /* binding may not be ready during early init */ }
     }
 
     private void LoadServices()
@@ -59,10 +111,10 @@ public partial class SettingsWindow : FluentWindow
         ServiceRows.Clear();
         foreach (var def in ServiceCatalog.All)
         {
-            if (!_config.Services.TryGetValue(def.Name, out var pref) || pref is null)
+            if (!_draft.Services.TryGetValue(def.Name, out var pref) || pref is null)
             {
                 pref = new ServicePref();
-                _config.Services[def.Name] = pref;
+                _draft.Services[def.Name] = pref;
             }
 
             var installed = WindowsServiceController.Exists(def.Name);
@@ -200,7 +252,8 @@ public partial class SettingsWindow : FluentWindow
                 row.SetDesiredFromPreset(ServiceTargetState.Default);
             }
         }
-        try { _store.Save(_config); } catch { }
+        // Preset is staged like any other preference toggle -- the actual write
+        // to disk and re-apply happens on the user's next Apply / Save & close.
         ChangeLogger.LogPreferenceChange(
             "Windows services preset",
             "Want",
@@ -225,7 +278,7 @@ public partial class SettingsWindow : FluentWindow
     private void LoadGlobals()
     {
         GlobalToggleRows.Clear();
-        var g = _config.Global;
+        var g = _draft.Global;
 
         // For settings the user hasn't opted into monitoring, default Want to Current
         // so the radios reflect the actual system state instead of a "ghost" recommendation.
@@ -379,10 +432,10 @@ public partial class SettingsWindow : FluentWindow
         DisplayRows.Clear();
         foreach (var d in DisplayHelper.EnumerateActiveDisplays())
         {
-            if (!_config.Displays.TryGetValue(d.StableKey, out var pref))
+            if (!_draft.Displays.TryGetValue(d.StableKey, out var pref))
             {
                 pref = new DisplayPreference { DisplayLabel = d.DisplayLabel };
-                _config.Displays[d.StableKey] = pref;
+                _draft.Displays[d.StableKey] = pref;
             }
             var hdr = SafeRead(() => HdrMonitor.ReadHdrState(d) is { } s ? (bool?)(s.Supported && s.Enabled) : null);
             var refresh = string.IsNullOrEmpty(d.GdiDeviceName) ? null : RefreshRateMonitor.GetCurrentRefresh(d.GdiDeviceName);
@@ -450,34 +503,37 @@ public partial class SettingsWindow : FluentWindow
     private void PowerPlanCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (PowerPlanCombo.SelectedItem is not PowerPlanItem pi) return;
-        var oldGuid = _config.Global.PowerPlan.DesiredGuid;
-        var oldName = _config.Global.PowerPlan.DesiredName;
-        _config.Global.PowerPlan.DesiredGuid = pi.Guid.ToString();
-        _config.Global.PowerPlan.DesiredName = pi.Name;
-        try { _store.Save(_config); } catch { }
-        if (oldGuid != pi.Guid.ToString())
-            ChangeLogger.LogPreferenceChange("Power plan", "Want",
-                oldName ?? oldGuid ?? "(unset)", pi.Name);
+        var oldGuid = _draft.Global.PowerPlan.DesiredGuid;
+        var oldName = _draft.Global.PowerPlan.DesiredName;
+        if (oldGuid == pi.Guid.ToString()) return;
+        _draft.Global.PowerPlan.DesiredGuid = pi.Guid.ToString();
+        _draft.Global.PowerPlan.DesiredName = pi.Name;
+        ChangeLogger.LogPreferenceChange("Power plan", "Want",
+            oldName ?? oldGuid ?? "(unset)", pi.Name);
+        _pendingCount++;
+        UpdatePendingStatus();
     }
 
     private void PowerPlanMonitorCheck_Changed(object sender, RoutedEventArgs e)
     {
         var v = PowerPlanMonitorCheck.IsChecked == true;
-        if (_config.Global.PowerPlan.Monitor == v) return;
-        var before = _config.Global.PowerPlan.Monitor;
-        _config.Global.PowerPlan.Monitor = v;
-        try { _store.Save(_config); } catch { }
+        if (_draft.Global.PowerPlan.Monitor == v) return;
+        var before = _draft.Global.PowerPlan.Monitor;
+        _draft.Global.PowerPlan.Monitor = v;
         ChangeLogger.LogPreferenceChange("Power plan", "Monitor", before.ToString(), v.ToString());
+        _pendingCount++;
+        UpdatePendingStatus();
     }
 
     private void PowerPlanAutoApplyCheck_Changed(object sender, RoutedEventArgs e)
     {
         var v = PowerPlanAutoApplyCheck.IsChecked == true;
-        if (_config.Global.PowerPlan.AutoApply == v) return;
-        var before = _config.Global.PowerPlan.AutoApply;
-        _config.Global.PowerPlan.AutoApply = v;
-        try { _store.Save(_config); } catch { }
+        if (_draft.Global.PowerPlan.AutoApply == v) return;
+        var before = _draft.Global.PowerPlan.AutoApply;
+        _draft.Global.PowerPlan.AutoApply = v;
         ChangeLogger.LogPreferenceChange("Power plan", "AutoApply", before.ToString(), v.ToString());
+        _pendingCount++;
+        UpdatePendingStatus();
     }
 
     private void OpenChangeLogButton_Click(object sender, RoutedEventArgs e)
@@ -550,10 +606,19 @@ public partial class SettingsWindow : FluentWindow
 
     private async Task ApplyChangesAsync(bool closeAfter)
     {
-        PersistFormToConfig();
+        // 1. Flush every form field into the draft (the rows already wrote to
+        //    draft on each toggle; this picks up the controls that don't have
+        //    explicit handlers, like LaunchAtStartup checkbox + PollSeconds).
+        PersistFormToDraft();
+
+        // 2. Commit draft -> live config and persist. From this point on the
+        //    background MonitorService will see the new preferences on its
+        //    next tick (or this Apply pass, whichever is first).
+        AppConfigCloner.CopyInto(_draft, _config);
         _store.Save(_config);
         StartupRegistration.Sync(_config.LaunchAtStartup);
 
+        // 3. Compute drift against the now-committed config and apply.
         var drifted = new List<DriftItem>();
         foreach (var m in _monitors)
         {
@@ -561,18 +626,27 @@ public partial class SettingsWindow : FluentWindow
             catch { /* per-monitor failures shouldn't break Apply */ }
         }
 
-        var results = await ChangeApplier.ApplyAndVerifyAsync(drifted, _monitors, _config);
+        var sessionId = ChangeApplier.NewSessionId();
+        var results = await ChangeApplier.ApplyAndVerifyAsync(
+            drifted, _monitors, _config, source: "manual", sessionId: sessionId);
 
         if (results.Count > 0)
         {
             ChangeLogger.LogApplyResults(results, "manual");
+            // Seed MonitorService's last-verified table so the very next
+            // background tick can detect external resets without a one-cycle blind spot.
+            _monitorService?.RecordVerifiedApplies(results);
         }
 
         Saved?.Invoke();
 
+        // 4. Re-base the draft from the now-committed config and rebuild rows
+        //    so the UI reflects the freshly-applied state. Resets pending count.
+        RebaseDraftFromConfig();
         LoadGlobals();
         LoadDisplays();
         LoadServices();
+        UpdatePendingStatus();
 
         if (results.Count > 0)
         {
@@ -587,7 +661,7 @@ public partial class SettingsWindow : FluentWindow
             // itself is the feedback.)
             System.Windows.MessageBox.Show(
                 this,
-                "No changes to apply — every monitored setting already matches your preference.",
+                "No changes to apply -- every monitored setting already matches your preference.",
                 "GamerGuardian",
                 System.Windows.MessageBoxButton.OK,
                 System.Windows.MessageBoxImage.Information);
@@ -596,26 +670,32 @@ public partial class SettingsWindow : FluentWindow
         if (closeAfter) Close();
     }
 
-    private void PersistFormToConfig()
+    /// <summary>
+    /// Flushes every form control (and any row WriteTo/WriteBack hooks) into
+    /// the draft. Row property setters already mutate the draft directly, so
+    /// this is just for the form-level controls that don't have per-change
+    /// handlers (LaunchAtStartup, PollSeconds, etc.).
+    /// </summary>
+    private void PersistFormToDraft()
     {
-        _config.LaunchAtStartup = LaunchAtStartupCheck.IsChecked == true;
-        _config.ConsolidateNotifications = ConsolidateCheck.IsChecked == true;
-        _config.CheckForUpdatesOnStartup = CheckForUpdatesCheck.IsChecked == true;
+        _draft.LaunchAtStartup = LaunchAtStartupCheck.IsChecked == true;
+        _draft.ConsolidateNotifications = ConsolidateCheck.IsChecked == true;
+        _draft.CheckForUpdatesOnStartup = CheckForUpdatesCheck.IsChecked == true;
         if (PollSecondsBox.Value is double pv && pv >= 5)
-            _config.PollIntervalSeconds = (int)pv;
+            _draft.PollIntervalSeconds = (int)pv;
         if (ThemeCombo.SelectedItem is AppThemeChoice tc)
-            _config.Theme = tc;
+            _draft.Theme = tc;
 
-        _config.Global.PowerPlan.Monitor = PowerPlanMonitorCheck.IsChecked == true;
-        _config.Global.PowerPlan.AutoApply = PowerPlanAutoApplyCheck.IsChecked == true;
+        _draft.Global.PowerPlan.Monitor = PowerPlanMonitorCheck.IsChecked == true;
+        _draft.Global.PowerPlan.AutoApply = PowerPlanAutoApplyCheck.IsChecked == true;
         if (PowerPlanCombo.SelectedItem is PowerPlanItem pi)
         {
-            _config.Global.PowerPlan.DesiredGuid = pi.Guid.ToString();
-            _config.Global.PowerPlan.DesiredName = pi.Name;
+            _draft.Global.PowerPlan.DesiredGuid = pi.Guid.ToString();
+            _draft.Global.PowerPlan.DesiredName = pi.Name;
         }
 
         foreach (var row in GlobalToggleRows) row.WriteBack();
-        foreach (var row in DisplayRows) row.WriteTo(_config);
+        foreach (var row in DisplayRows) row.WriteTo(_draft);
         foreach (var row in ServiceRows) row.WriteBack();
     }
 
@@ -639,13 +719,19 @@ public partial class SettingsWindow : FluentWindow
 
     private void OnWindowClosing(object? sender, CancelEventArgs e)
     {
-        if (_suppressSaveOnClose) return;
-        try
+        // Closing the window without explicitly clicking Apply / Save & close
+        // discards the draft. Previously this path silently persisted form state
+        // to disk -- that's exactly the "I clicked a thing, it applied without
+        // asking" behavior we're fixing in v0.1.38. If the user wanted these
+        // changes kept they would have clicked Apply or Save & close.
+        if (_pendingCount > 0 && !_suppressSaveOnClose)
         {
-            PersistFormToConfig();
-            _store.Save(_config);
+            ChangeLogger.LogPreferenceChange(
+                "Settings window",
+                "Closed",
+                $"{_pendingCount} pending change(s)",
+                "discarded (closed without Apply)");
         }
-        catch { }
     }
 
     protected override void OnClosed(EventArgs e)
@@ -665,12 +751,27 @@ public partial class SettingsWindow : FluentWindow
 
     private void OnRowPrefChanged(string settingName, string field, string before, string after)
     {
-        try { _store.Save(_config); } catch { }
+        // Row setters mutate the draft (their _pref reference points at a
+        // draft.Services / draft.Global / draft.Displays entry). We never write
+        // to _store here -- that happens only in ApplyChangesAsync.
         ChangeLogger.LogPreferenceChange(settingName, field, before, after);
+        _pendingCount++;
+        UpdatePendingStatus();
     }
 
     private void CancelButton_Click(object sender, RoutedEventArgs e)
     {
+        // Discards the draft entirely. _config (and on-disk config.json) are
+        // unchanged; the MonitorService keeps using whatever was committed
+        // before this window opened.
+        if (_pendingCount > 0)
+        {
+            ChangeLogger.LogPreferenceChange(
+                "Settings window",
+                "Cancel",
+                $"{_pendingCount} pending change(s)",
+                "discarded");
+        }
         _suppressSaveOnClose = true;
         Close();
     }

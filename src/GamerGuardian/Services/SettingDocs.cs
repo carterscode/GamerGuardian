@@ -39,6 +39,70 @@ public static class SettingDocs
         };
     }
 
+    /// <summary>
+    /// A copy-pasteable PowerShell command that reproduces what the app does to
+    /// apply this setting. Surfaced in <c>changes.log</c> so a user reading the
+    /// log can manually re-apply, automate via a script, or build a rollback by
+    /// reading the Before value and flipping the apply command.
+    ///
+    /// <para>For settings that take a parameter (service start type, refresh rate, etc.)
+    /// the command embeds the <paramref name="rawDesired"/> value the app actually
+    /// wrote. Pass an empty string for settings where the value is binary/toggle.</para>
+    /// </summary>
+    public static string ApplyCommandFor(string settingId, string rawDesired = "")
+    {
+        if (settingId.StartsWith("service:"))
+        {
+            var name = settingId["service:".Length..];
+            var def = ServiceCatalog.All.FirstOrDefault(d =>
+                d.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (def?.PolicyOverride is { } po)
+            {
+                if (rawDesired == "(deleted)")
+                    return $"Remove-ItemProperty -Path 'HKLM:\\{po.PolicyKey}' -Name {po.PolicyValue} -Force";
+                return $"New-Item -Path 'HKLM:\\{po.PolicyKey}' -Force | Out-Null; " +
+                       $"Set-ItemProperty -Path 'HKLM:\\{po.PolicyKey}' -Name {po.PolicyValue} -Value {(string.IsNullOrEmpty(rawDesired) ? po.DisabledValue.ToString() : rawDesired)} -Type DWord";
+            }
+            // sc.exe maps start= words back from registry Start= dword.
+            string startWord = rawDesired switch
+            {
+                "0" => "boot",
+                "1" => "system",
+                "2" => "auto",
+                "3" => "demand",
+                "4" => "disabled",
+                _ => "demand",
+            };
+            return $"sc.exe stop \"{name}\"; sc.exe config \"{name}\" start= {startWord}";
+        }
+        if (settingId.StartsWith("hdr:"))
+            return "(no direct PowerShell equivalent; uses DisplayConfigSetDeviceInfo via the CCD API)";
+        if (settingId.StartsWith("refresh:"))
+            return "(no direct PowerShell equivalent; uses ChangeDisplaySettingsEx -- consider DisplaySettings.dll on a custom build)";
+        if (settingId.StartsWith("resolution:"))
+            return "(no direct PowerShell equivalent; uses ChangeDisplaySettingsEx)";
+
+        return settingId switch
+        {
+            "hags" => $@"Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers' -Name HwSchMode -Value {OrDefault(rawDesired, "2")} -Type DWord",
+            "memintegrity" => $@"Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity' -Name Enabled -Value {OrDefault(rawDesired, "1")} -Type DWord",
+            "gamemode" => $@"Set-ItemProperty 'HKCU:\Software\Microsoft\GameBar' -Name AutoGameModeEnabled -Value {OrDefault(rawDesired, "1")} -Type DWord",
+            "gamedvr" => $@"Set-ItemProperty 'HKCU:\System\GameConfigStore' -Name GameDVR_Enabled -Value {OrDefault(rawDesired, "0")} -Type DWord; Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\GameDVR' -Name AppCaptureEnabled -Value {OrDefault(rawDesired, "0")} -Type DWord",
+            "mouseaccel" => @"# Enhance pointer precision OFF (per-user). Use SystemParametersInfo SPI_SETMOUSE in a small EXE; PowerShell can't call it cleanly.",
+            "fso" => @"Set-ItemProperty 'HKCU:\System\GameConfigStore' -Name GameDVR_FSEBehaviorMode -Value 2 -Type DWord",
+            "vrr" => $@"Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers' -Name VRROptimizeEnable -Value {OrDefault(rawDesired, "1")} -Type DWord",
+            "sysresponse" => $@"Set-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile' -Name SystemResponsiveness -Value {OrDefault(rawDesired, "10")} -Type DWord",
+            "netthrottle" => $@"Set-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile' -Name NetworkThrottlingIndex -Value {OrDefault(rawDesired, "4294967295")} -Type DWord",
+            "usbsuspend" => $@"Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\USB' -Name DisableSelectiveSuspend -Value {OrDefault(rawDesired, "1")} -Type DWord",
+            "gamestask" => @"# Apply the Games multimedia task profile (Priority/Scheduling Category/SFIO Priority). The app writes 4 DWORDs under HKLM\...\Tasks\Games -- see SettingDocs.MechanismFor for the path.",
+            "powerplan" => $"powercfg /setactive {OrDefault(rawDesired, "(plan-guid)")}",
+            _ => "",
+        };
+    }
+
+    private static string OrDefault(string raw, string fallback) =>
+        string.IsNullOrEmpty(raw) ? fallback : raw;
+
     public static string VerifyCommandFor(string settingId)
     {
         if (settingId.StartsWith("hdr:") || settingId.StartsWith("refresh:") || settingId.StartsWith("resolution:"))

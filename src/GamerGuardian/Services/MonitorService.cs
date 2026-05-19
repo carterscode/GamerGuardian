@@ -27,6 +27,19 @@ public sealed class MonitorService : IDisposable
     private readonly Dictionary<string, DateTimeOffset> _autoApplyBackoff = new();
     private static readonly TimeSpan AutoApplyBackoffWindow = TimeSpan.FromMinutes(15);
 
+    /// <summary>
+    /// Per-setting record of the last value we successfully applied + verified.
+    /// When a later tick reports drift on a key in this dict, that drift is by
+    /// definition externally caused — we put the value in the desired state and
+    /// something else moved it. Drives the EXTRESET log lines and the "this
+    /// apply is corrective" tag on the next ApplyResult.
+    /// </summary>
+    private readonly Dictionary<string, LastVerified> _lastVerified = new();
+    /// <summary>How many times Windows has reverted each setting since app start. Logged with each EXTRESET.</summary>
+    private readonly Dictionary<string, int> _stickiness = new();
+
+    private readonly record struct LastVerified(string RawValue, string DisplayValue, DateTimeOffset At);
+
     public bool IsUserPaused => _userPaused;
     public event Action<bool>? PauseChanged;
     public event Action<IReadOnlyList<DriftItem>>? AutoAppliedRebootRequired;
@@ -64,6 +77,23 @@ public sealed class MonitorService : IDisposable
         var cfg = _store.Load();
         var ms = Math.Max(5, cfg.PollIntervalSeconds) * 1000;
         _timer.Change(ms, ms);
+    }
+
+    /// <summary>
+    /// Called by the SettingsWindow's Apply / Save &amp; close path to seed our
+    /// in-memory "what we last applied" table with the freshly-applied values.
+    /// Without this, the very first background tick after a manual Apply would
+    /// misread "no prior verified value" and skip the EXTRESET detection until
+    /// the second tick after the eventual revert.
+    /// </summary>
+    public void RecordVerifiedApplies(IEnumerable<ApplyResult> results)
+    {
+        var now = DateTimeOffset.UtcNow;
+        foreach (var r in results)
+        {
+            if (!r.Verified) continue;
+            _lastVerified[r.SettingId] = new LastVerified(r.RawAfter, r.After, now);
+        }
     }
 
     private async Task TickAsync()
@@ -110,6 +140,28 @@ public sealed class MonitorService : IDisposable
             }
             _store.Save(config);
 
+            // External-reset detection happens BEFORE auto-apply so we log the
+            // cause (EXTRESET) and the effect (the corrective apply) as two
+            // separate, easily-correlated lines.
+            var externalResetIds = new HashSet<string>();
+            foreach (var d in drifted)
+            {
+                if (!_lastVerified.TryGetValue(d.SettingId, out var prev)) continue;
+                // Drift exists on a setting we previously verified-applied. By
+                // definition this is an external reset — we set it correctly,
+                // something else moved it.
+                externalResetIds.Add(d.SettingId);
+                _stickiness[d.SettingId] = _stickiness.GetValueOrDefault(d.SettingId) + 1;
+                ChangeLogger.LogExternalReset(
+                    settingId: d.SettingId,
+                    description: d.Description,
+                    lastAppliedValue: $"{prev.DisplayValue} ({prev.RawValue})",
+                    currentValue: $"{d.CurrentValue} ({d.RawBefore})",
+                    lastAppliedAt: prev.At,
+                    stickinessCount: _stickiness[d.SettingId],
+                    autoApplyOn: d.AutoApply);
+            }
+
             var now = DateTimeOffset.UtcNow;
             var auto = drifted
                 .Where(d => d.AutoApply)
@@ -117,24 +169,64 @@ public sealed class MonitorService : IDisposable
                 .ToList();
             if (auto.Count > 0)
             {
-                var results = await ChangeApplier.ApplyAndVerifyAsync(auto, _monitors, config);
-                ChangeLogger.LogApplyResults(results, "auto");
+                // Split into corrective (was previously verified, now drifted)
+                // vs initial. Each batch gets its own session id so log readers
+                // can distinguish "Windows reverted, we restored" from
+                // "drift first detected" at a glance.
+                var corrective = auto.Where(a => externalResetIds.Contains(a.SettingId)).ToList();
+                var initial    = auto.Where(a => !externalResetIds.Contains(a.SettingId)).ToList();
 
-                // Update backoff: failed verifies get a 15-minute pause to stop
-                // UAC spam on settings Windows refuses to actually change. Successes
-                // clear any prior backoff entry.
-                for (int i = 0; i < auto.Count && i < results.Count; i++)
+                var allResults = new List<ApplyResult>(auto.Count);
+
+                if (corrective.Count > 0)
                 {
-                    if (results[i].Verified)
-                        _autoApplyBackoff.Remove(auto[i].SettingId);
+                    var sid = ChangeApplier.NewSessionId();
+                    var results = await ChangeApplier.ApplyAndVerifyAsync(
+                        corrective, _monitors, config, source: "auto-revert", sessionId: sid);
+                    // Stamp the corrective-context fields the applier can't know about.
+                    for (int i = 0; i < results.Count; i++)
+                    {
+                        results[i] = results[i] with
+                        {
+                            ExternalResetDetected = true,
+                            StickinessCount = _stickiness.GetValueOrDefault(results[i].SettingId)
+                        };
+                    }
+                    ChangeLogger.LogApplyResults(results, "auto-revert");
+                    allResults.AddRange(results);
+                }
+                if (initial.Count > 0)
+                {
+                    var sid = ChangeApplier.NewSessionId();
+                    var results = await ChangeApplier.ApplyAndVerifyAsync(
+                        initial, _monitors, config, source: "auto", sessionId: sid);
+                    ChangeLogger.LogApplyResults(results, "auto");
+                    allResults.AddRange(results);
+                }
+
+                // Update backoff + last-verified using the combined batch.
+                for (int i = 0; i < auto.Count && i < allResults.Count; i++)
+                {
+                    var driftItem = auto.First(d => d.SettingId == allResults[i].SettingId);
+                    if (allResults[i].Verified)
+                    {
+                        _autoApplyBackoff.Remove(allResults[i].SettingId);
+                        _lastVerified[allResults[i].SettingId] = new LastVerified(
+                            allResults[i].RawAfter, allResults[i].After, now);
+                    }
                     else
-                        _autoApplyBackoff[auto[i].SettingId] = now + AutoApplyBackoffWindow;
+                    {
+                        _autoApplyBackoff[allResults[i].SettingId] = now + AutoApplyBackoffWindow;
+                        // Don't update _lastVerified on failure -- next tick's drift
+                        // shouldn't look like an external reset if we just couldn't write.
+                    }
+                    _ = driftItem; // referenced for clarity above
                 }
 
                 var rebootSettings = new List<DriftItem>();
-                for (int i = 0; i < auto.Count && i < results.Count; i++)
+                for (int i = 0; i < auto.Count && i < allResults.Count; i++)
                 {
-                    if (results[i].Verified && auto[i].RequiresReboot)
+                    if (allResults[i].Verified && auto[i].RequiresReboot)
                         rebootSettings.Add(auto[i]);
                 }
                 if (rebootSettings.Count > 0)
