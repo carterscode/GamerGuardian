@@ -14,6 +14,9 @@ public sealed class AppConfig
     public Dictionary<string, DisplayPreference> Displays { get; set; } = new();
     public GlobalPreferences Global { get; set; } = new();
     public Dictionary<string, ServicePref> Services { get; set; } = new();
+    /// <summary>Per-package preferences for the Windows AI UWP removal feature.
+    /// Keyed by <c>WindowsAiAppDefinition.PackageName</c>.</summary>
+    public Dictionary<string, WindowsAiAppPref> WindowsAiApps { get; set; } = new();
 }
 
 public sealed class ServicePref
@@ -84,6 +87,15 @@ public sealed class GlobalPreferences
     public ToggleSettingPref UsbSelectiveSuspend { get; set; } = new() { DesiredOn = true };
     public ToggleSettingPref GamesTaskProfile { get; set; } = new() { DesiredOn = true };
     public PowerPlanPref PowerPlan { get; set; } = new();
+
+    // ---- Windows AI lockdown toggles (DesiredOn = true keeps Windows defaults) ----
+    // Default DesiredOn=true + Monitor=false: zero behavior change for existing users
+    // until they open the Windows AI tab and opt into managing one of these.
+    public ToggleSettingPref Copilot { get; set; } = new() { DesiredOn = true };
+    public ToggleSettingPref Recall { get; set; } = new() { DesiredOn = true };
+    public ToggleSettingPref ClickToDo { get; set; } = new() { DesiredOn = true };
+    public ToggleSettingPref EdgeAi { get; set; } = new() { DesiredOn = true };
+    public ToggleSettingPref NotepadPaintAi { get; set; } = new() { DesiredOn = true };
 }
 
 public sealed class ToggleSettingPref

@@ -30,6 +30,8 @@ public partial class SettingsWindow : FluentWindow
     private readonly Action _exitApp;
     public ObservableCollection<DisplayRow> DisplayRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> GlobalToggleRows { get; } = new();
+    public ObservableCollection<GlobalToggleRow> WindowsAiRowsCollection { get; } = new();
+    public ObservableCollection<WindowsAiAppRow> WindowsAiAppRowsCollection { get; } = new();
     public ObservableCollection<ServiceRow> ServiceRows { get; } = new();
     private bool _suppressPresetEvents;
     /// <summary>
@@ -73,10 +75,13 @@ public partial class SettingsWindow : FluentWindow
         DisplaysList.ItemsSource = DisplayRows;
         GlobalTogglesList.ItemsSource = GlobalToggleRows;
         ServicesList.ItemsSource = ServiceRows;
+        WindowsAiRows.ItemsSource = WindowsAiRowsCollection;
+        WindowsAiAppRows.ItemsSource = WindowsAiAppRowsCollection;
 
         LoadGlobals();
         LoadDisplays();
         LoadServices();
+        LoadWindowsAi();
         UpdatePendingStatus();
     }
 
@@ -185,8 +190,83 @@ public partial class SettingsWindow : FluentWindow
     }
 
     /// <summary>
+    /// Populates the Windows AI tab: 5 policy toggles (same template as
+    /// Global gaming) + the UWP-removal section. Reads current state via
+    /// each monitor's static ReadCurrent / IsInstalled probe.
+    /// </summary>
+    private void LoadWindowsAi()
+    {
+        WindowsAiRowsCollection.Clear();
+        var g = _draft.Global;
+
+        WindowsAiRowsCollection.Add(new GlobalToggleRow(
+            name: "Windows Copilot",
+            description: "System-wide Copilot disable policy. Off hides the taskbar button and blocks the Copilot panel from opening.",
+            currentText: $"Current: {OnOffText(SafeRead(CopilotMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
+            pref: g.Copilot, groupName: "ai_copilot",
+            onPrefChanged: OnRowPrefChanged));
+
+        WindowsAiRowsCollection.Add(new GlobalToggleRow(
+            name: "Windows Recall + AI data analysis",
+            description: "Group-policy block for Recall snapshotting and on-device AI screen analysis.",
+            currentText: $"Current: {OnOffText(SafeRead(RecallMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
+            pref: g.Recall, groupName: "ai_recall",
+            onPrefChanged: OnRowPrefChanged));
+
+        WindowsAiRowsCollection.Add(new GlobalToggleRow(
+            name: "Click-to-Do (Snipping Tool AI)",
+            description: "Disable the AI 'do something with this' action layer over screenshots.",
+            currentText: $"Current: {OnOffText(SafeRead(ClickToDoMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
+            pref: g.ClickToDo, groupName: "ai_ctd",
+            onPrefChanged: OnRowPrefChanged));
+
+        WindowsAiRowsCollection.Add(new GlobalToggleRow(
+            name: "Microsoft Edge Copilot / Hubs sidebar / GenAI",
+            description: "Three Edge enterprise policies: hide the right-edge Copilot icon, block page-context sharing, and disable local generative AI.",
+            currentText: $"Current: {OnOffText(SafeRead(EdgeAiMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
+            pref: g.EdgeAi, groupName: "ai_edge",
+            onPrefChanged: OnRowPrefChanged));
+
+        WindowsAiRowsCollection.Add(new GlobalToggleRow(
+            name: "Notepad Rewrite + Paint AI",
+            description: "Per-user disable of Notepad Rewrite and Paint Cocreator / Image Creator / Generative Erase.",
+            currentText: $"Current: {OnOffText(SafeRead(NotepadPaintAiMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
+            pref: g.NotepadPaintAi, groupName: "ai_notepadpaint",
+            onPrefChanged: OnRowPrefChanged));
+
+        // UWP packages
+        WindowsAiAppRowsCollection.Clear();
+        foreach (var def in WindowsAiAppCatalog.All)
+        {
+            if (!_draft.WindowsAiApps.TryGetValue(def.PackageName, out var pref) || pref is null)
+            {
+                pref = new WindowsAiAppPref();
+                _draft.WindowsAiApps[def.PackageName] = pref;
+            }
+            bool? installed = WindowsAiAppMonitor.IsInstalled(def.PackageName);
+            string currentText = installed switch
+            {
+                true => "Current: Installed for current user",
+                false => "Current: Not installed",
+                _ => "Current: probe failed (PowerShell missing?)"
+            };
+            WindowsAiAppRowsCollection.Add(new WindowsAiAppRow(def, pref, currentText, OnRowPrefChanged));
+        }
+    }
+
+    /// <summary>
     /// Reads a DWORD policy value without elevation. Reading HKLM Policies
-    /// keys doesn't require admin — only writing does. Returns null if the
+    /// keys doesn't require admin -- only writing does. Returns null if the
     /// key/value doesn't exist or isn't a DWORD.
     /// </summary>
     private static int? ReadPolicyDword(GamerGuardian.Models.PolicyOverride po)
@@ -646,6 +726,7 @@ public partial class SettingsWindow : FluentWindow
         LoadGlobals();
         LoadDisplays();
         LoadServices();
+        LoadWindowsAi();
         UpdatePendingStatus();
 
         if (results.Count > 0)
@@ -775,6 +856,76 @@ public partial class SettingsWindow : FluentWindow
         _suppressSaveOnClose = true;
         Close();
     }
+}
+
+/// <summary>
+/// Row for a single Windows AI UWP package in the Windows AI tab. Mutates a
+/// <see cref="WindowsAiAppPref"/> reference from the draft config; pending
+/// changes only land in <see cref="ConfigStore"/> when the user clicks Apply.
+/// </summary>
+public sealed class WindowsAiAppRow : INotifyPropertyChanged
+{
+    private readonly WindowsAiAppPref _pref;
+    private readonly Action<string, string, string, string>? _onPrefChanged;
+
+    public WindowsAiAppDefinition Definition { get; }
+    public string Name => Definition.DisplayName;
+    public string PackageName => Definition.PackageName;
+    public string Description => Definition.Description;
+    public string CurrentText { get; }
+
+    public bool Monitor
+    {
+        get => _pref.Monitor;
+        set
+        {
+            if (_pref.Monitor == value) return;
+            var before = _pref.Monitor;
+            _pref.Monitor = value;
+            OnPropertyChanged();
+            _onPrefChanged?.Invoke($"AI app: {Definition.DisplayName}", "Monitor", before.ToString(), value.ToString());
+        }
+    }
+    public bool DesiredRemoved
+    {
+        get => _pref.DesiredRemoved;
+        set
+        {
+            if (_pref.DesiredRemoved == value) return;
+            var before = _pref.DesiredRemoved;
+            _pref.DesiredRemoved = value;
+            OnPropertyChanged();
+            _onPrefChanged?.Invoke($"AI app: {Definition.DisplayName}", "Remove", before.ToString(), value.ToString());
+        }
+    }
+    public bool AutoApply
+    {
+        get => _pref.AutoApply;
+        set
+        {
+            if (_pref.AutoApply == value) return;
+            var before = _pref.AutoApply;
+            _pref.AutoApply = value;
+            OnPropertyChanged();
+            _onPrefChanged?.Invoke($"AI app: {Definition.DisplayName}", "AutoApply", before.ToString(), value.ToString());
+        }
+    }
+
+    public WindowsAiAppRow(
+        WindowsAiAppDefinition def,
+        WindowsAiAppPref pref,
+        string currentText,
+        Action<string, string, string, string>? onPrefChanged)
+    {
+        Definition = def;
+        _pref = pref;
+        CurrentText = currentText;
+        _onPrefChanged = onPrefChanged;
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+    private void OnPropertyChanged([CallerMemberName] string? name = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }
 
 public sealed class PowerPlanItem

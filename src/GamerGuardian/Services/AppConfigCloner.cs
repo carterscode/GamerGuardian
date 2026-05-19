@@ -50,5 +50,6 @@ public static class AppConfigCloner
         target.Displays = source.Displays;
         target.Global = source.Global;
         target.Services = source.Services;
+        target.WindowsAiApps = source.WindowsAiApps;
     }
 }

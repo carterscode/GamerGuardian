@@ -315,6 +315,116 @@
                     </ScrollViewer>
                 </TabItem>
 
+                <TabItem Header="Windows AI"
+                         HorizontalContentAlignment="Stretch"
+                         VerticalContentAlignment="Stretch">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,8,8,0">
+                        <StackPanel>
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <TextBlock Text="Windows AI lockdown" FontWeight="SemiBold"/>
+                                    <TextBlock TextWrapping="Wrap" Margin="0,4,0,0"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               FontSize="12"
+                                               Text="Group-policy switches for Copilot, Recall, Click-to-Do, Edge Copilot and Notepad/Paint AI. Off means GamerGuardian writes the documented disable policy; On (default) means the policy is removed so Windows falls back to its default. Every change here is reversible by deleting the same registry values. Inspired by github.com/zoicware/RemoveWindowsAI but stays in the safe policy-toggle lane."/>
+                                </StackPanel>
+                            </ui:Card>
+
+                            <!-- Policy toggles, same template as Global gaming -->
+                            <ItemsControl x:Name="WindowsAiRows" Margin="0,0,0,8">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <ui:Card Padding="16" Margin="0,0,0,8">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                    <Border Visibility="{Binding RebootBadgeVisibility}"
+                                                            Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                                                            CornerRadius="3" Padding="6,1"
+                                                            HorizontalAlignment="Left"
+                                                            Margin="0,4,0,0">
+                                                        <TextBlock Text="reboot required"
+                                                                   Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                                                   FontSize="10" FontWeight="SemiBold"/>
+                                                    </Border>
+                                                    <TextBlock Text="{Binding Description}"
+                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                               FontSize="12" Margin="0,3,0,0"
+                                                               TextWrapping="Wrap"/>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                        <TextBlock Text="{Binding CurrentText}"
+                                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                   FontSize="11" Margin="0,0,12,0"/>
+                                                        <TextBlock Text="{Binding DefaultText}"
+                                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                   FontSize="11"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Orientation="Vertical">
+                                                    <CheckBox Content="Monitor" IsChecked="{Binding Monitor}"/>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
+                                                        <TextBlock Text="Want:" Margin="0,4,8,0"/>
+                                                        <RadioButton GroupName="{Binding GroupName}" Content="{Binding OnLabel}" IsChecked="{Binding DesiredOn}" Margin="0,0,8,0"/>
+                                                        <RadioButton GroupName="{Binding GroupName}" Content="{Binding OffLabel}" IsChecked="{Binding DesiredOff}"/>
+                                                    </StackPanel>
+                                                    <CheckBox Content="Auto-apply silently" IsChecked="{Binding AutoApply}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </ui:Card>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <TextBlock Text="Windows AI apps (UWP removal)" FontWeight="SemiBold"/>
+                                    <TextBlock TextWrapping="Wrap" Margin="0,4,0,0"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               FontSize="12"
+                                               Text="One-way removal of Windows AI UWP packages. Drift only flags installed -> remove; GamerGuardian cannot reinstall removed packages (use the Microsoft Store). Tick Auto-apply if you want re-provisioned packages re-removed automatically on the next tick after a Windows Update."/>
+                                </StackPanel>
+                            </ui:Card>
+
+                            <ItemsControl x:Name="WindowsAiAppRows" Margin="0,0,0,8">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <ui:Card Padding="16" Margin="0,0,0,8">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding PackageName}"
+                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                               FontFamily="Consolas" FontSize="11" Margin="0,2,0,0"/>
+                                                    <TextBlock Text="{Binding Description}"
+                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                               FontSize="12" Margin="0,3,0,0"
+                                                               TextWrapping="Wrap"/>
+                                                    <TextBlock Text="{Binding CurrentText}"
+                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                               FontSize="11" Margin="0,6,0,0"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Orientation="Vertical">
+                                                    <CheckBox Content="Monitor" IsChecked="{Binding Monitor}"/>
+                                                    <CheckBox Content="Remove (one-way)" IsChecked="{Binding DesiredRemoved}" Margin="0,4,0,4"/>
+                                                    <CheckBox Content="Auto-apply silently" IsChecked="{Binding AutoApply}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </ui:Card>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
                 <TabItem Header="Display"
                          HorizontalContentAlignment="Stretch"
                          VerticalContentAlignment="Stretch">

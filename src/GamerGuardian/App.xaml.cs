@@ -76,10 +76,20 @@ public partial class App : WpfApplication
             new MousePrecisionMonitor(),
             new FullscreenOptimizationsMonitor(),
             new PowerPlanMonitor(),
+            // Windows AI lockdown -- registry-policy monitors. UWP-removal
+            // (Microsoft.Copilot etc.) is registered separately below as
+            // per-package monitors via WindowsAiAppCatalog.
+            new CopilotMonitor(),
+            new RecallMonitor(),
+            new ClickToDoMonitor(),
+            new EdgeAiMonitor(),
+            new NotepadPaintAiMonitor(),
         };
         var serviceMonitors = GamerGuardian.Services.ServiceCatalog.All
             .Select(d => (IMonitoredSetting)new WindowsServiceMonitor(d));
-        _allMonitors = fixedMonitors.Concat(serviceMonitors).ToArray();
+        var aiAppMonitors = GamerGuardian.Services.WindowsAiAppCatalog.All
+            .Select(d => (IMonitoredSetting)new WindowsAiAppMonitor(d));
+        _allMonitors = fixedMonitors.Concat(serviceMonitors).Concat(aiAppMonitors).ToArray();
         _monitor = new MonitorService(_store, _allMonitors, report => _notifier.ShowAsync(report));
         _monitor.AutoAppliedRebootRequired += items =>
         {

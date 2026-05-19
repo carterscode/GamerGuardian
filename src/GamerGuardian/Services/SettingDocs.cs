@@ -21,6 +21,11 @@ public static class SettingDocs
                 return $"reg add HKLM\\{po.PolicyKey} /v {po.PolicyValue} (Group Policy override; Windows reverts the standard sc.exe path)";
             return $"sc.exe stop / config (writes HKLM\\SYSTEM\\CurrentControlSet\\Services\\{name}\\Start)";
         }
+        if (settingId.StartsWith("ai.app:"))
+        {
+            var pkg = settingId["ai.app:".Length..];
+            return $"Get-AppxPackage / Remove-AppxPackage (package: {pkg})";
+        }
         return settingId switch
         {
             "hags" => @"HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\HwSchMode (DWORD)",
@@ -35,6 +40,11 @@ public static class SettingDocs
             "usbsuspend" => @"HKLM\SYSTEM\CurrentControlSet\Services\USB\DisableSelectiveSuspend (DWORD)",
             "gamestask" => @"HKLM\SOFTWARE\...\Multimedia\SystemProfile\Tasks\Games (Priority + Scheduling Category + SFIO Priority)",
             "powerplan" => @"powrprof.dll PowerSetActiveScheme  (verifiable via 'powercfg /getactivescheme')",
+            "ai.copilot" => @"HKLM + HKCU\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot\TurnOffWindowsCopilot  +  HKCU\...\Explorer\Advanced\ShowCopilotButton",
+            "ai.recall" => @"HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI\{AllowRecallEnablement, DisableAIDataAnalysis}",
+            "ai.clicktodo" => @"HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI\DisableClickToDo  +  HKCU\Software\Microsoft\Windows\Shell\ClickToDo\DisableClickToDo",
+            "ai.edge" => @"HKLM\SOFTWARE\Policies\Microsoft\Edge\{HubsSidebarEnabled, CopilotPageContext, GenAILocalFoundationalModelSettings}",
+            "ai.notepadpaint" => @"HKCU\Software\Microsoft\Notepad\RewriteEnabled  +  HKCU\...\Paint\{DisableCocreator, DisableImageCreator, DisableGenerativeErase}",
             _ => "(unknown)",
         };
     }
@@ -75,6 +85,11 @@ public static class SettingDocs
             };
             return $"sc.exe stop \"{name}\"; sc.exe config \"{name}\" start= {startWord}";
         }
+        if (settingId.StartsWith("ai.app:"))
+        {
+            var pkg = settingId["ai.app:".Length..];
+            return $"Get-AppxPackage -Name '{pkg}' | Remove-AppxPackage";
+        }
         if (settingId.StartsWith("hdr:"))
             return "(no direct PowerShell equivalent; uses DisplayConfigSetDeviceInfo via the CCD API)";
         if (settingId.StartsWith("refresh:"))
@@ -96,6 +111,24 @@ public static class SettingDocs
             "usbsuspend" => $@"Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\USB' -Name DisableSelectiveSuspend -Value {OrDefault(rawDesired, "1")} -Type DWord",
             "gamestask" => @"# Apply the Games multimedia task profile (Priority/Scheduling Category/SFIO Priority). The app writes 4 DWORDs under HKLM\...\Tasks\Games -- see SettingDocs.MechanismFor for the path.",
             "powerplan" => $"powercfg /setactive {OrDefault(rawDesired, "(plan-guid)")}",
+            "ai.copilot" => @"# Disable Windows Copilot:" + "\n" +
+                           @"Set-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot' -Name TurnOffWindowsCopilot -Value 1 -Type DWord; " +
+                           @"Set-ItemProperty 'HKCU:\Software\Policies\Microsoft\Windows\WindowsCopilot' -Name TurnOffWindowsCopilot -Value 1 -Type DWord; " +
+                           @"Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name ShowCopilotButton -Value 0 -Type DWord",
+            "ai.recall" => @"$k='HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI'; New-Item $k -Force | Out-Null; " +
+                          @"Set-ItemProperty $k -Name AllowRecallEnablement -Value 0 -Type DWord; " +
+                          @"Set-ItemProperty $k -Name DisableAIDataAnalysis -Value 1 -Type DWord",
+            "ai.clicktodo" => @"Set-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name DisableClickToDo -Value 1 -Type DWord; " +
+                              @"Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\Shell\ClickToDo' -Name DisableClickToDo -Value 1 -Type DWord",
+            "ai.edge" => @"$k='HKLM:\SOFTWARE\Policies\Microsoft\Edge'; New-Item $k -Force | Out-Null; " +
+                        @"Set-ItemProperty $k -Name HubsSidebarEnabled -Value 0 -Type DWord; " +
+                        @"Set-ItemProperty $k -Name CopilotPageContext -Value 0 -Type DWord; " +
+                        @"Set-ItemProperty $k -Name GenAILocalFoundationalModelSettings -Value 1 -Type DWord",
+            "ai.notepadpaint" => @"Set-ItemProperty 'HKCU:\Software\Microsoft\Notepad' -Name RewriteEnabled -Value 0 -Type DWord; " +
+                                @"$pt='HKCU:\Software\Microsoft\Windows\CurrentVersion\Paint'; New-Item $pt -Force | Out-Null; " +
+                                @"Set-ItemProperty $pt -Name DisableCocreator -Value 1 -Type DWord; " +
+                                @"Set-ItemProperty $pt -Name DisableImageCreator -Value 1 -Type DWord; " +
+                                @"Set-ItemProperty $pt -Name DisableGenerativeErase -Value 1 -Type DWord",
             _ => "",
         };
     }
@@ -105,8 +138,13 @@ public static class SettingDocs
 
     public static string VerifyCommandFor(string settingId)
     {
+        if (settingId.StartsWith("ai.app:"))
+        {
+            var pkg = settingId["ai.app:".Length..];
+            return $"Get-AppxPackage -Name '{pkg}'   # empty output = removed";
+        }
         if (settingId.StartsWith("hdr:") || settingId.StartsWith("refresh:") || settingId.StartsWith("resolution:"))
-            return "Open Settings → System → Display, or run: dxdiag";
+            return "Open Settings -> System -> Display, or run: dxdiag";
         if (settingId.StartsWith("service:"))
         {
             var name = settingId["service:".Length..];
@@ -130,6 +168,11 @@ public static class SettingDocs
             "usbsuspend" => @"(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\USB' -Name DisableSelectiveSuspend).DisableSelectiveSuspend",
             "gamestask" => @"Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games'",
             "powerplan" => @"powercfg /getactivescheme",
+            "ai.copilot" => @"(Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot' -Name TurnOffWindowsCopilot -EA SilentlyContinue).TurnOffWindowsCopilot",
+            "ai.recall" => @"$k='HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI'; @{Allow=(Get-ItemProperty $k -Name AllowRecallEnablement -EA SilentlyContinue).AllowRecallEnablement; Disable=(Get-ItemProperty $k -Name DisableAIDataAnalysis -EA SilentlyContinue).DisableAIDataAnalysis}",
+            "ai.clicktodo" => @"(Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name DisableClickToDo -EA SilentlyContinue).DisableClickToDo",
+            "ai.edge" => @"$k='HKLM:\SOFTWARE\Policies\Microsoft\Edge'; @{Hubs=(Get-ItemProperty $k -Name HubsSidebarEnabled -EA SilentlyContinue).HubsSidebarEnabled; Ctx=(Get-ItemProperty $k -Name CopilotPageContext -EA SilentlyContinue).CopilotPageContext; Gen=(Get-ItemProperty $k -Name GenAILocalFoundationalModelSettings -EA SilentlyContinue).GenAILocalFoundationalModelSettings}",
+            "ai.notepadpaint" => @"$np='HKCU:\Software\Microsoft\Notepad'; $pt='HKCU:\Software\Microsoft\Windows\CurrentVersion\Paint'; @{Rewrite=(Get-ItemProperty $np -Name RewriteEnabled -EA SilentlyContinue).RewriteEnabled; Cocreator=(Get-ItemProperty $pt -Name DisableCocreator -EA SilentlyContinue).DisableCocreator}",
             _ => "",
         };
     }
