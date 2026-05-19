@@ -206,7 +206,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: On",
             onLabel: "On", offLabel: "Off",
             pref: g.Copilot, groupName: "ai_copilot",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "ai.copilot"));
 
         WindowsAiRowsCollection.Add(new GlobalToggleRow(
             name: "Windows Recall + AI data analysis",
@@ -215,7 +216,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: On",
             onLabel: "On", offLabel: "Off",
             pref: g.Recall, groupName: "ai_recall",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "ai.recall"));
 
         WindowsAiRowsCollection.Add(new GlobalToggleRow(
             name: "Click-to-Do (Snipping Tool AI)",
@@ -224,7 +226,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: On",
             onLabel: "On", offLabel: "Off",
             pref: g.ClickToDo, groupName: "ai_ctd",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "ai.clicktodo"));
 
         WindowsAiRowsCollection.Add(new GlobalToggleRow(
             name: "Microsoft Edge Copilot / Hubs sidebar / GenAI",
@@ -233,7 +236,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: On",
             onLabel: "On", offLabel: "Off",
             pref: g.EdgeAi, groupName: "ai_edge",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "ai.edge"));
 
         WindowsAiRowsCollection.Add(new GlobalToggleRow(
             name: "Notepad Rewrite + Paint AI",
@@ -242,7 +246,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: On",
             onLabel: "On", offLabel: "Off",
             pref: g.NotepadPaintAi, groupName: "ai_notepadpaint",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "ai.notepadpaint"));
 
         // UWP packages
         WindowsAiAppRowsCollection.Clear();
@@ -381,7 +386,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: Enabled",
             onLabel: "Enabled", offLabel: "Disabled",
             pref: g.GameMode, groupName: "gm",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "gamemode"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Game DVR background recording",
@@ -390,7 +396,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: Enabled",
             onLabel: "Enabled", offLabel: "Disabled",
             pref: g.GameDvr, groupName: "dvr",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "gamedvr"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Hardware-accelerated GPU Scheduling (HAGS)",
@@ -400,7 +407,8 @@ public partial class SettingsWindow : FluentWindow
             onLabel: "Enabled", offLabel: "Disabled",
             requiresReboot: true,
             pref: g.Hags, groupName: "hags",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "hags"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Memory Integrity / VBS (Core Isolation)",
@@ -410,7 +418,8 @@ public partial class SettingsWindow : FluentWindow
             onLabel: "Enabled", offLabel: "Disabled",
             requiresReboot: true,
             pref: g.MemoryIntegrity, groupName: "memint",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "memintegrity"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "System Responsiveness",
@@ -420,7 +429,8 @@ public partial class SettingsWindow : FluentWindow
             onLabel: "Gaming", offLabel: "Default",
             requiresReboot: true,
             pref: g.SystemResponsiveness, groupName: "sysresp",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "sysresponse"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Network Throttling",
@@ -429,7 +439,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: 10    Gaming: Disabled",
             onLabel: "Gaming", offLabel: "Default",
             pref: g.NetworkThrottling, groupName: "netthr",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "netthrottle"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "USB Selective Suspend (global)",
@@ -439,7 +450,8 @@ public partial class SettingsWindow : FluentWindow
             onLabel: "Gaming", offLabel: "Default",
             requiresReboot: true,
             pref: g.UsbSelectiveSuspend, groupName: "usbsus",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "usbsuspend"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Games multimedia task profile",
@@ -448,7 +460,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: standard    Gaming: boosted",
             onLabel: "Gaming", offLabel: "Default",
             pref: g.GamesTaskProfile, groupName: "gtask",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "gamestask"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Mouse \"Enhance pointer precision\"",
@@ -457,7 +470,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: Enabled",
             onLabel: "Enabled", offLabel: "Disabled",
             pref: g.MousePrecision, groupName: "mp",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "mouseaccel"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Fullscreen optimizations (global)",
@@ -466,7 +480,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: Enabled",
             onLabel: "Enabled", offLabel: "Disabled",
             pref: g.FullscreenOptimizations, groupName: "fso",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "fso"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Variable Refresh Rate (DirectX)",
@@ -475,7 +490,8 @@ public partial class SettingsWindow : FluentWindow
             defaultText: "Default: not set",
             onLabel: "Enabled", offLabel: "Disabled",
             pref: g.Vrr, groupName: "vrr",
-            onPrefChanged: OnRowPrefChanged));
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "vrr"));
 
         var planNames = PowerPlanMonitor.ListAvailablePlans();
         var active = SafeRunGuid(PowerPlanMonitor.GetActivePlan);
@@ -674,6 +690,11 @@ public partial class SettingsWindow : FluentWindow
         }
     }
 
+    /// <summary>Guards against re-entrant Apply / Save&amp;close while one is in flight.
+    /// Without this, async void handlers let a second click race with the first --
+    /// each fires its own UAC stream and they can interleave.</summary>
+    private bool _applyInFlight;
+
     private async void ApplyButton_Click(object sender, RoutedEventArgs e)
     {
         await ApplyChangesAsync(closeAfter: false);
@@ -681,10 +702,48 @@ public partial class SettingsWindow : FluentWindow
 
     private async void SaveButton_Click(object sender, RoutedEventArgs e)
     {
+        // Pure-close path: no draft edits since the window opened (or since the
+        // last Apply), so there's nothing to apply. Just close. Without this,
+        // Save&close re-runs the drift+apply pass and re-prompts UAC for any
+        // setting Windows reverted between the two clicks -- which surprises
+        // users who already approved everything via Apply.
+        if (_pendingCount == 0)
+        {
+            Close();
+            return;
+        }
         await ApplyChangesAsync(closeAfter: true);
     }
 
+    private void SetButtonsEnabled(bool enabled)
+    {
+        try
+        {
+            // Found via the named template parts in SettingsWindow.xaml.
+            // Cancel stays enabled so the user can always escape a hang.
+            ApplyButton.IsEnabled = enabled;
+            SaveButton.IsEnabled = enabled;
+        }
+        catch { /* XAML controls may not be ready during very early calls */ }
+    }
+
     private async Task ApplyChangesAsync(bool closeAfter)
+    {
+        if (_applyInFlight) return;
+        _applyInFlight = true;
+        SetButtonsEnabled(false);
+        try
+        {
+            await ApplyChangesCoreAsync(closeAfter);
+        }
+        finally
+        {
+            _applyInFlight = false;
+            SetButtonsEnabled(true);
+        }
+    }
+
+    private async Task ApplyChangesCoreAsync(bool closeAfter)
     {
         // 1. Flush every form field into the draft (the rows already wrote to
         //    draft on each toggle; this picks up the controls that don't have
@@ -840,6 +899,43 @@ public partial class SettingsWindow : FluentWindow
         UpdatePendingStatus();
     }
 
+    /// <summary>
+    /// Re-reads every monitored setting against the committed config and
+    /// writes a [SNAPSHOT] entry to changes.log. Nothing is applied. A status
+    /// popup tells the user where to look.
+    /// </summary>
+    private void VerifyAllButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var rows = new List<(string, string, string, string, bool)>();
+            int drifting = 0;
+            foreach (var m in _monitors)
+            {
+                IEnumerable<DriftItem> items;
+                try { items = m.CheckDrift(_config).ToList(); }
+                catch { continue; }
+                foreach (var d in items)
+                {
+                    rows.Add((d.SettingId, d.DisplayLabel, d.CurrentValue, d.DesiredValue, false));
+                    drifting++;
+                }
+            }
+            ChangeLogger.LogStateSnapshot(rows);
+            var msg = drifting == 0
+                ? "All monitored settings match your preferences. Snapshot written to changes.log."
+                : $"{drifting} setting(s) currently drifting from your preferences. Snapshot written to changes.log -- nothing was applied.";
+            System.Windows.MessageBox.Show(this, msg, "GamerGuardian -- Verify all",
+                System.Windows.MessageBoxButton.OK,
+                drifting == 0 ? System.Windows.MessageBoxImage.Information : System.Windows.MessageBoxImage.Warning);
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(this, "Verify all failed: " + ex.Message, "GamerGuardian",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+        }
+    }
+
     private void CancelButton_Click(object sender, RoutedEventArgs e)
     {
         // Discards the draft entirely. _config (and on-disk config.json) are
@@ -873,6 +969,11 @@ public sealed class WindowsAiAppRow : INotifyPropertyChanged
     public string PackageName => Definition.PackageName;
     public string Description => Definition.Description;
     public string CurrentText { get; }
+
+    public string SettingId => $"ai.app:{Definition.PackageName}";
+    public string LearnMoreContent => SettingDocsCatalog.FormatForExpander(SettingId);
+    public Visibility LearnMoreVisibility =>
+        string.IsNullOrEmpty(LearnMoreContent) ? Visibility.Collapsed : Visibility.Visible;
 
     public bool Monitor
     {
@@ -950,6 +1051,11 @@ public sealed class GlobalToggleRow : INotifyPropertyChanged
     public bool RequiresReboot { get; }
     public Visibility RebootBadgeVisibility => RequiresReboot ? Visibility.Visible : Visibility.Collapsed;
 
+    public string SettingId { get; }
+    public string LearnMoreContent => SettingDocsCatalog.FormatForExpander(SettingId);
+    public Visibility LearnMoreVisibility =>
+        string.IsNullOrEmpty(LearnMoreContent) ? Visibility.Collapsed : Visibility.Visible;
+
     public bool Monitor
     {
         get => _pref.Monitor;
@@ -997,7 +1103,8 @@ public sealed class GlobalToggleRow : INotifyPropertyChanged
                            string onLabel, string offLabel,
                            ToggleSettingPref pref, string groupName,
                            bool requiresReboot = false,
-                           Action<string, string, string, string>? onPrefChanged = null)
+                           Action<string, string, string, string>? onPrefChanged = null,
+                           string settingId = "")
     {
         Name = name;
         Description = description;
@@ -1009,6 +1116,7 @@ public sealed class GlobalToggleRow : INotifyPropertyChanged
         GroupName = groupName;
         RequiresReboot = requiresReboot;
         _onPrefChanged = onPrefChanged;
+        SettingId = settingId;
     }
 
     public void WriteBack() { /* mutations are direct; nothing to do */ }
@@ -1039,6 +1147,11 @@ public sealed class ServiceRow : INotifyPropertyChanged
         Definition.RecommendedTarget.HasValue ? Visibility.Visible : Visibility.Collapsed;
     public Visibility NotInstalledBadgeVisibility =>
         IsInstalled ? Visibility.Collapsed : Visibility.Visible;
+
+    public string SettingId => $"service:{Definition.Name}";
+    public string LearnMoreContent => SettingDocsCatalog.FormatForExpander(SettingId);
+    public Visibility LearnMoreVisibility =>
+        string.IsNullOrEmpty(LearnMoreContent) ? Visibility.Collapsed : Visibility.Visible;
 
     public bool Monitor
     {

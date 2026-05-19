@@ -44,11 +44,26 @@ public static class ChangeApplier
             elapsed[i] = sw.ElapsedMilliseconds;
         }
 
-        var afterDrift = new List<DriftItem>();
-        foreach (var m in monitors)
+        // Verify pass with a short retry. Some Apply paths (sc.exe stop/config,
+        // policy-driven service overrides, AppX removal) can race the immediate
+        // re-read: the write returned successfully but the SCM / registry / AppX
+        // catalog hasn't propagated to a parent-process read yet. A bounded
+        // retry (3 tries x 200 ms) catches those cases without making the
+        // happy path noticeably slower.
+        var driftedIds = new HashSet<string>(drifted.Select(d => d.SettingId));
+        List<DriftItem> afterDrift = new();
+        for (int attempt = 0; attempt < 3; attempt++)
         {
-            try { afterDrift.AddRange(m.CheckDrift(config)); }
-            catch { }
+            afterDrift.Clear();
+            foreach (var m in monitors)
+            {
+                try { afterDrift.AddRange(m.CheckDrift(config)); }
+                catch { }
+            }
+            // Only retry while at least one setting we just applied is still drifted.
+            // Stop early if none of our settings are in the drift list.
+            if (!afterDrift.Any(a => driftedIds.Contains(a.SettingId))) break;
+            if (attempt < 2) await Task.Delay(200);
         }
 
         var results = new List<ApplyResult>(drifted.Count);

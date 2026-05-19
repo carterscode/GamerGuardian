@@ -156,6 +156,36 @@ public static class ChangeLogger
     }
 
     /// <summary>
+    /// Dumps a single-line snapshot of every monitored setting's current state.
+    /// Called once on session start (via App.xaml.cs) and on demand from the UI
+    /// "Verify all" button. Grepping for "[SNAPSHOT  ]" gives you a baseline of
+    /// what the machine looked like at each session start so you can correlate
+    /// drift later in the log against a known point.
+    /// </summary>
+    public static void LogStateSnapshot(IEnumerable<(string settingId, string label, string current, string desired, bool inSync)> rows)
+    {
+        try
+        {
+            EnsureLogDir();
+            RotateIfNeeded();
+            var list = rows as IList<(string, string, string, string, bool)> ?? rows.ToList();
+            var sb = new StringBuilder();
+            sb.AppendLine(Divider);
+            sb.AppendLine($"[{Now()}] [SNAPSHOT  ] {list.Count} monitored setting(s)");
+            int inSync = 0, drift = 0;
+            foreach (var (id, label, current, desired, ok) in list)
+            {
+                var marker = ok ? "  OK" : "DRIFT";
+                sb.AppendLine($"  {marker}  {id,-30}  current={current}  desired={desired}  ({label})");
+                if (ok) inSync++; else drift++;
+            }
+            sb.AppendLine($"  -- summary: {inSync} in sync, {drift} drifting");
+            File.AppendAllText(LogPath, sb.ToString(), Encoding.UTF8);
+        }
+        catch { }
+    }
+
+    /// <summary>
     /// Records that Windows (or another tool) changed a value the app had
     /// previously applied and verified. Distinct line type so log readers can
     /// answer "what keeps reverting?" with a single grep. Includes how long the
