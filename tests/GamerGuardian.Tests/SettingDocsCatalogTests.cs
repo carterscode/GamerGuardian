@@ -110,6 +110,37 @@ public class SettingDocsCatalogTests
     }
 
     [Fact]
+    public void FormatForExpander_IncludesPowerShellSection_WhenAvailable()
+    {
+        // HAGS has all three (Mechanism, Apply, Verify) populated in SettingDocs.
+        var text = SettingDocsCatalog.FormatForExpander("hags");
+        Assert.Contains("PowerShell", text);
+        Assert.Contains("Location / mechanism", text);
+        Assert.Contains("Apply / disable", text);
+        Assert.Contains("Verify current value", text);
+        // The actual PowerShell snippets should appear too.
+        Assert.Contains("HwSchMode", text);
+        Assert.Contains("Get-ItemProperty", text);
+        Assert.Contains("Set-ItemProperty", text);
+    }
+
+    [Fact]
+    public void FormatForExpander_AiSetting_HasPowerShellApplyCommand()
+    {
+        var text = SettingDocsCatalog.FormatForExpander("ai.settingssearch");
+        Assert.Contains("DisableSearchBoxSuggestions", text);
+        Assert.Contains("Set-ItemProperty", text);
+    }
+
+    [Fact]
+    public void FormatForExpander_ServiceSetting_HasScExeCommand()
+    {
+        var text = SettingDocsCatalog.FormatForExpander("service:DiagTrack");
+        Assert.Contains("sc qc", text);  // verify command
+        Assert.Contains("PowerShell", text);  // section header
+    }
+
+    [Fact]
     public void FormatForExpander_UnknownId_ReturnsEmpty()
     {
         Assert.Equal(string.Empty, SettingDocsCatalog.FormatForExpander("nope"));

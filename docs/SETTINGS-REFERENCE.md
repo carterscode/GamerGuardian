@@ -65,27 +65,29 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 
 ### Active Windows power plan
 
-`powerplan` &nbsp; **Recommended:** High Performance
+`powerplan` &nbsp; **Recommended:** CPU-aware: Balanced for AMD X3D, High Performance for everything else. The Recommended preset reads HKLM\HARDWARE\DESCRIPTION\System\CentralProcessor\0\ProcessorNameString and picks based on the X3D marker.
 
 **What it does.** The active Windows power scheme. Controls CPU throttling thresholds, sleep timers, hard-drive spindown, USB selective suspend, and dozens of other power-related defaults.
 
-**Why you'd change it.** Balanced (the default) lets the OS dynamically scale CPU clocks to save power, which costs you a few ms of latency at the start of any CPU-bound burst. High Performance / Ultimate Performance keeps CPU clocks pegged at the top of the curve for predictable response.
+**Why you'd change it.** Balanced (the default) lets the OS dynamically scale CPU clocks to save power -- on most CPUs that costs a few ms of latency at the start of CPU-bound bursts but is otherwise fine. High Performance pegs clocks at the top of the curve for predictable response. AMD X3D chips are a documented exception: their V-Cache CCD has a lower max clock, and pegging the non-X3D CCD via High Performance can starve games of the V-Cache CCD's huge latency advantage. AMD officially recommends Balanced for X3D.
 
-**How it helps.** Eliminates CPU clock-ramp latency. First-frame and first-input responses feel snappier. Background tasks finish faster.
+**How it helps.** On non-X3D CPUs: High Performance eliminates clock-ramp latency for snappier first-frame and first-input response. On X3D CPUs: Balanced lets AMD's CPPC scheduling park games on the V-Cache CCD where they belong.
 
 **Per-scenario recommendation:**
 
 | Scenario | Setting |
 |---|---|
-| Competitive FPS / Streaming | High Performance or a tuned custom plan |
-| Casual single-player on a desktop | High Performance |
+| AMD X3D CPU (any 5800X3D / 7x00X3D / 9x00X3D) | Balanced -- AMD's documented recommendation |
+| Non-X3D AMD or Intel desktop, gaming | High Performance |
+| Streaming + game | High Performance (non-X3D) or Balanced (X3D) |
+| Casual single-player on a desktop | High Performance (non-X3D) or Balanced (X3D) |
 | Laptop on battery | Balanced (saves power) |
-| Laptop plugged in | High Performance |
+| Laptop plugged in | High Performance (non-X3D) or Balanced (X3D) |
 | Idle workstation | Balanced (drops back to power-saving when idle) |
 
-**Risks.** Higher idle power draw -- typically 10-30 W on desktop, more on high-end. Components run a few degrees warmer. Fan noise slightly higher. On laptops on battery: noticeably worse battery life.
+**Risks.** High Performance: higher idle power draw (~10-30 W on desktop), components run a few degrees warmer, fan noise slightly up, laptop battery life noticeably worse. On X3D CPUs: setting High Performance can actively hurt game performance because the OS scheduler ignores the V-Cache CCD's advantage and pegs clocks on the wrong CCD.
 
-**Reversible via.** powercfg /setactive SCHEME_BALANCED (or pick another plan from Settings > System > Power).
+**Reversible via.** powercfg /setactive SCHEME_BALANCED (or pick another plan from Settings > System > Power & battery > Power mode).
 
 
 ### Display refresh rate

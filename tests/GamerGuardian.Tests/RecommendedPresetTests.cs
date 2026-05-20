@@ -141,6 +141,27 @@ public class RecommendedPresetTests
     }
 
     [Fact]
+    public void Apply_PowerPlan_SetsPlanFromCpuAwareLogic_OrSkipsIfPlanMissing()
+    {
+        // Hard to test the CPU-aware GUID selection deterministically without
+        // mocking CpuInfo + PowerPlanMonitor.ListAvailablePlans. Smoke test:
+        // verify that IF the preset touched the power plan, the chosen GUID
+        // matches one of the two well-known plans (Balanced for X3D, High
+        // Performance otherwise). If neither plan is installed locally, the
+        // preset skips and DesiredGuid stays null.
+        var cfg = new AppConfig();
+        RecommendedPreset.ApplyToDraft(cfg);
+        var guid = cfg.Global.PowerPlan.DesiredGuid;
+        if (!string.IsNullOrEmpty(guid))
+        {
+            Assert.True(
+                string.Equals(guid, "381b4222-f694-41f0-9685-ff5bb260df2e", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(guid, "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c", StringComparison.OrdinalIgnoreCase),
+                $"PowerPlan.DesiredGuid was set to '{guid}' which is neither Balanced nor High Performance");
+        }
+    }
+
+    [Fact]
     public void Apply_DoesNotRemoveUwpAiApps()
     {
         // UWP removal is intentionally not in the preset (irreversible without Store).

@@ -37,10 +37,11 @@ public static class RecommendedPreset
         IReadOnlyList<string> ChangeDescriptions);
 
     /// <summary>
-    /// Microsoft's well-known High Performance plan GUID. If not installed on
-    /// the target machine, the preset leaves the power plan alone.
+    /// Microsoft's well-known plan GUIDs. If the chosen plan isn't installed
+    /// on the target machine, the preset leaves the power plan alone.
     /// </summary>
     private const string HighPerformanceGuid = "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c";
+    private const string BalancedGuid        = "381b4222-f694-41f0-9685-ff5bb260df2e";
 
     public static Result ApplyToDraft(AppConfig draft)
     {
@@ -156,27 +157,40 @@ public static class RecommendedPreset
 
     private static bool SetPowerPlan(PowerPlanPref pref, List<string> changes)
     {
-        // Only switch to High Performance if it's installed locally. If the
+        // CPU-aware recommendation. AMD X3D chips have a V-Cache CCD with a
+        // lower max clock; AMD officially recommends Balanced (with their
+        // chipset driver's CPPC scheduling) rather than High Performance,
+        // which pegs both CCDs to the non-V-Cache CCD's higher clock and can
+        // hurt game performance. Everything else gets the historical
+        // recommendation (High Performance).
+        var cpuName = CpuInfo.GetName();
+        var isX3D = CpuInfo.IsAmdX3D(cpuName);
+        var recommendedGuid = isX3D ? BalancedGuid : HighPerformanceGuid;
+        var recommendedName = isX3D ? "Balanced" : "High performance";
+        var recommendedChoice = isX3D ? PowerPlanChoice.Balanced : PowerPlanChoice.HighPerformance;
+
+        // Only switch if the recommended plan is installed locally. If the
         // user has a custom power plan they prefer, leave it alone -- the
         // preset shouldn't second-guess a custom plan choice.
         var plans = SafeListPlans();
-        if (!plans.Any(p => string.Equals(p.Key.ToString("D"), HighPerformanceGuid, StringComparison.OrdinalIgnoreCase)))
+        if (!plans.Any(p => string.Equals(p.Key.ToString("D"), recommendedGuid, StringComparison.OrdinalIgnoreCase)))
             return false;
 
         var (bGuid, bMon, bAuto) = (pref.DesiredGuid, pref.Monitor, pref.AutoApply);
-        bool already = string.Equals(bGuid, HighPerformanceGuid, StringComparison.OrdinalIgnoreCase)
+        bool already = string.Equals(bGuid, recommendedGuid, StringComparison.OrdinalIgnoreCase)
                        && bMon && bAuto;
         if (already) return false;
 
-        pref.DesiredGuid = HighPerformanceGuid;
-        pref.DesiredName = "High performance";
-        pref.Desired = PowerPlanChoice.HighPerformance;
+        pref.DesiredGuid = recommendedGuid;
+        pref.DesiredName = recommendedName;
+        pref.Desired = recommendedChoice;
         pref.Monitor = true;
         pref.AutoApply = true;
-        ChangeLogger.LogPreferenceChange("[Recommended] Power plan", "preset",
+        var reason = isX3D ? $"AMD X3D CPU detected ({cpuName})" : (cpuName ?? "default");
+        ChangeLogger.LogPreferenceChange($"[Recommended] Power plan ({reason})", "preset",
             $"Want={bGuid ?? "(unset)"} Monitor={B(bMon)} AutoApply={B(bAuto)}",
-            "Want=High performance Monitor=On AutoApply=On");
-        changes.Add("Power plan: High Performance, Monitor on, Auto-apply on");
+            $"Want={recommendedName} Monitor=On AutoApply=On");
+        changes.Add($"Power plan: {recommendedName} ({reason}), Monitor on, Auto-apply on");
         return true;
     }
 
