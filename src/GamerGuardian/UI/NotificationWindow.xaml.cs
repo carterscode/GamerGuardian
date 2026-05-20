@@ -13,6 +13,7 @@ public partial class NotificationWindow : FluentWindow
         InitializeComponent();
         _report = report;
         ItemsList.ItemsSource = report.Items;
+        HeaderText.Text = Services.NotificationHeader.For(report);
         Loaded += OnLoaded;
     }
 

@@ -138,7 +138,14 @@ public sealed class MonitorService : IDisposable
                 try { drifted.AddRange(m.CheckDrift(config).Where(d => d.IsMonitored)); }
                 catch { /* swallow per-monitor failure to keep loop alive */ }
             }
-            _store.Save(config);
+            // NOTE: do NOT _store.Save(config) here. The tick's `config` is a
+            // local snapshot loaded at the top of TickAsync; writing it back
+            // races with the user's Settings-window Apply: if the user saves
+            // a new draft between our Load and Save, our save overwrites the
+            // user's just-saved prefs (silently dropping any newly-added
+            // properties -- e.g. the v0.1.39 Windows AI prefs). CheckDrift
+            // doesn't mutate config anyway, so the save was a no-op except
+            // for triggering this race. Removed in v0.1.40.
 
             // External-reset detection happens BEFORE auto-apply so we log the
             // cause (EXTRESET) and the effect (the corrective apply) as two

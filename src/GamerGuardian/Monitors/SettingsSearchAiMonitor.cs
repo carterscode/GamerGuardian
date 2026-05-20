@@ -52,7 +52,18 @@ public sealed class SettingsSearchAiMonitor : IMonitoredSetting
             using var advanced = Registry.CurrentUser.OpenSubKey(AdvancedKey, writable: false);
             var disable = policy?.GetValue(PolicyVal) as int?;
             var companion = advanced?.GetValue(TaskbarCompanionVal) as int?;
-            bool off = disable == 1 && companion == 0;
+
+            // The PolicyVal (DisableSearchBoxSuggestions) is the primary signal
+            // and authoritative. The TaskbarCompanion value is a belt-and-
+            // suspenders write -- on many Windows builds the value name isn't
+            // recognized by Explorer and the write silently doesn't stick. We
+            // treat companion as "off" when it's absent OR explicitly 0; only
+            // companion == 1 counts as "companion still on". Without this,
+            // ReadCurrent would forever report "on" after Apply even though
+            // the user-visible search box AI suggestions are actually off.
+            bool searchSuggestionsOff = disable == 1;
+            bool companionOff = companion != 1;
+            bool off = searchSuggestionsOff && companionOff;
             return !off;
         }
         catch { return null; }
