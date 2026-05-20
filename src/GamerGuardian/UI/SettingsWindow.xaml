@@ -7,7 +7,7 @@
         Width="820" Height="720"
         MinWidth="680" MinHeight="500"
         WindowStartupLocation="CenterScreen"
-        WindowBackdropType="Mica"
+        WindowBackdropType="None"
         ExtendsContentIntoTitleBar="True"
         WindowCornerPreference="Round">
     <Grid>

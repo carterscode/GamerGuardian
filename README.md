@@ -89,10 +89,16 @@ Policy-toggle disables for Copilot, Recall, Click-to-Do, Edge Copilot/Hubs/GenAI
 
 Designed to be invisible during gameplay.
 
-- **~23 MB working set** at idle, **~10 ms** per polling tick (default 30 s interval).
+- **Idle memory (tray only, Settings never opened): ~30 MB working set / ~105 MB private bytes.** Effectively zero CPU at idle.
+- **After Settings is opened once: ~55 MB working set / ~200 MB private bytes.** WPF lazy-loads its rendering pipeline on first window open and doesn't unload it; subsequent open/close cycles stay flat.
+- **~10 ms per polling tick** (default 30 s interval). 50+ monitor reads -- registry, service control manager, display API, power scheme -- in well under 1 ms each.
+- **Software-rendered WPF** (`RenderOptions.ProcessRenderMode = SoftwareOnly`) keeps the GPU's user-mode D3D driver out of our address space for the tray-only case. Saves ~80-200 MB of mapped pages depending on GPU vendor.
+- **No `Mica` glass backdrop** -- we deliberately use `WindowBackdropType="None"` so the Mica compositor doesn't pull in DirectComposition. Functional, not pretty.
 - **Pauses entirely** during fullscreen games, borderless-fullscreen games, and known benchmarks (3DMark, Cinebench, Geekbench, AIDA64, Unigine, OCCT, etc.).
 - **No process spawning** for reads. Power plan reads/writes go through `powrprof.dll` directly.
 - **No kernel hooks, no drivers, no admin** — only HKLM writes need elevation, which prompts UAC.
+
+Realistic single largest contributor to remaining memory: the .NET 8 self-contained runtime (~70 MB of CoreCLR + BCL framework). Switching to framework-dependent publish would drop ~70 MB further at the cost of requiring users to install the .NET 8 desktop runtime separately.
 
 Memory + pause-detection details: [Build from source](https://github.com/carterscode/GamerGuardian/wiki/Build-from-source) (CI build flags) and [`MonitorService.cs`](src/GamerGuardian/Services/MonitorService.cs).
 
