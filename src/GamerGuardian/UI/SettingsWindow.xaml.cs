@@ -940,6 +940,58 @@ public partial class SettingsWindow : FluentWindow
     }
 
     /// <summary>
+    /// One-click "use the gaming preset" button. Mutates the draft (not the
+    /// live config) via <see cref="RecommendedPreset.ApplyToDraft"/>, bumps
+    /// the pending count by the number of settings actually changed (so
+    /// Save&amp;close knows there's work and doesn't short-circuit), rebuilds
+    /// the row collections so the UI reflects the new draft, and pops a
+    /// summary dialog telling the user what just got staged.
+    ///
+    /// <para>Idempotent: running it a second time when everything's already
+    /// in the recommended state stages zero changes and shows the
+    /// "already correct" message. Designed so a future GamerGuardian release
+    /// that adds new settings to the preset can be picked up by the user
+    /// re-clicking this button -- only the new deltas land.</para>
+    /// </summary>
+    private void ApplyRecommendedPresetButton_Click(object sender, RoutedEventArgs e)
+    {
+        RecommendedPreset.Result result;
+        try { result = RecommendedPreset.ApplyToDraft(_draft); }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(this, "Recommended preset failed: " + ex.Message,
+                "GamerGuardian", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            return;
+        }
+
+        _pendingCount += result.SettingsChanged;
+        UpdatePendingStatus();
+
+        // Rebuild every row collection so the UI reflects the mutated draft.
+        // (Row setters short-circuit on equality so this rebinds cleanly
+        // without firing per-row PREF-STAGE events -- those would double-log.)
+        LoadGlobals();
+        LoadDisplays();
+        LoadServices();
+        LoadWindowsAi();
+
+        if (RecommendedStatusText is not null)
+        {
+            RecommendedStatusText.Text = result.SettingsChanged == 0
+                ? $"All {result.SettingsAlreadyCorrect} preset-managed setting(s) already in the recommended state. Nothing to do."
+                : $"Staged {result.SettingsChanged} setting(s); {result.SettingsAlreadyCorrect} already correct. Click Apply or Save & close to commit.";
+        }
+
+        var dialogMsg = result.SettingsChanged == 0
+            ? $"Your draft already matches the Recommended preset across all {result.SettingsAlreadyCorrect} preset-managed setting(s). Nothing to do."
+            : $"Staged {result.SettingsChanged} change(s) to the Recommended preset. {result.SettingsAlreadyCorrect} setting(s) were already correct and skipped."
+              + "\n\nReview the per-tab changes if you want. Click Apply (stay in Settings) or Save & close to commit the apply pass. Click Cancel to discard.";
+
+        System.Windows.MessageBox.Show(this, dialogMsg, "GamerGuardian -- Recommended preset",
+            System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+    }
+
+    /// <summary>
     /// Re-reads every monitored setting against the committed config and
     /// writes a [SNAPSHOT] entry to changes.log. Nothing is applied. A status
     /// popup tells the user where to look.

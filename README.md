@@ -31,6 +31,7 @@ It's also paranoid about not making your gaming worse. Polling pauses entirely d
 ## Highlights
 
 - 🎯 **17+ monitored settings** spanning display, security, performance, capture, input, and Windows services
+- ⚙️ **One-click Recommended preset** -- General tab button stages the gaming-optimized configuration across every setting (Want + Monitor + Auto-apply). Idempotent, so re-running it after a future update picks up only the new settings.
 - 🎮 **Pauses during gameplay** — fullscreen, borderless, *and* during benchmark runs (3DMark, Cinebench, Geekbench, etc.)
 - ⚡ **One-click apply** with a per-setting auto-apply opt-in
 - 🪟 **Native Win11 Fluent design** with light / dark / system themes
