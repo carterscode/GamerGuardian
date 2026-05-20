@@ -340,16 +340,73 @@ public static class SettingDocsCatalog
         ["ai.notepadpaint"] = new(
             SettingId: "ai.notepadpaint",
             DisplayName: "Notepad Rewrite + Paint AI features",
-            What: "Per-user disable of Notepad Rewrite, Paint Cocreator, Paint Image Creator, and Paint Generative Erase. All are HKCU registry writes -- no elevation needed.",
-            Why: "These features bolt cloud AI onto otherwise simple apps. Users who don't use the AI features may prefer Notepad and Paint without the buttons.",
-            HowItHelps: "Notepad and Paint behave like classic versions; no AI action buttons; no cloud calls when you open a document or image.",
+            What: "Per-user disable of Notepad Rewrite, Paint Cocreator, Paint Image Creator, and Paint Generative Erase. Plus a per-user opt-out of Paint's experiment-targeting service and the HKLM machine-wide Paint policy that stops Image Creator from offering itself before per-user toggle. Combined HKCU + HKLM writes.",
+            Why: "These features bolt cloud AI onto otherwise simple apps. Users who don't use the AI features may prefer Notepad and Paint without the buttons. v0.1.39 added the targeting opt-out + HKLM policy so the disable holds across new Paint experiments rolling out under feature flags.",
+            HowItHelps: "Notepad and Paint behave like classic versions; no AI action buttons; no cloud calls when you open a document or image; no opt-in prompts when MS rolls out new AI experiments.",
             Scenarios: Scenarios(
                 ("Anyone who doesn't use AI in Notepad / Paint", "Off"),
                 ("Active user of Paint Cocreator / Image Creator", "On"),
                 ("Privacy-conscious", "Off")),
             Recommended: "Off",
             Risks: "None. AI features disappear from those two apps.",
-            ReversibleVia: "Delete the registry values under HKCU\\Software\\Microsoft\\Notepad (RewriteEnabled) and HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Paint (DisableCocreator, DisableImageCreator, DisableGenerativeErase)."),
+            ReversibleVia: "Delete the registry values under HKCU\\Software\\Microsoft\\Notepad (RewriteEnabled), HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Paint (DisableCocreator, DisableImageCreator, DisableGenerativeErase), HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Paint\\View (IsSignedUpForTargetingService), and HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Paint (DisableImageCreator)."),
+
+        ["ai.settingssearch"] = new(
+            SettingId: "ai.settingssearch",
+            DisplayName: "Search box AI suggestions + taskbar companion",
+            What: "Two HKCU policies: DisableSearchBoxSuggestions (kills the AI/Copilot-flavored web suggestion layer in the Windows search box) and TaskbarCompanion (the floating Copilot widget Windows can dock next to the taskbar). HKCU only -- no UAC.",
+            Why: "The search box's AI suggestion layer calls Microsoft web endpoints to suggest answers as you type. The taskbar companion is a floating overlay some Windows 11 builds enable by default. Both are noise for users who use the search box for files and apps.",
+            HowItHelps: "Search box returns local files / apps only -- no web suggestions, no Copilot answers inline, no taskbar companion widget. Indexing itself (Start menu, Explorer, Outlook) is untouched.",
+            Scenarios: Scenarios(
+                ("Anyone who uses Windows Search for local files only", "Off"),
+                ("Active user of search box web/Copilot suggestions", "On"),
+                ("Privacy-conscious", "Off")),
+            Recommended: "Off",
+            Risks: "You lose the web-suggestion layer and the taskbar companion. Search itself works exactly as before.",
+            ReversibleVia: "Delete DisableSearchBoxSuggestions from HKCU\\SOFTWARE\\Policies\\Microsoft\\Windows\\Explorer and TaskbarCompanion from HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced."),
+
+        ["ai.actions"] = new(
+            SettingId: "ai.actions",
+            DisplayName: "Windows AI Actions",
+            What: "Windows' shell-level AI Actions surface (right-click \"rewrite with AI / summarize / search the web for this\" on selected text, images, etc.). Toggled via the FeatureManagement override hive -- two numeric feature IDs (1853569164 and 4098520719) get EnabledState = 1 (force-disabled).",
+            Why: "AI Actions is a 24H2-era Windows feature that adds AI suggestions to right-click menus and similar surfaces. The FeatureManagement override is the documented kill switch (zoicware uses the same IDs).",
+            HowItHelps: "Right-click menus, image picker dialogs, and other shell surfaces stop showing AI action options. No cloud calls when you right-click an image or selected text.",
+            Scenarios: Scenarios(
+                ("Anyone who doesn't use AI right-click actions", "Off"),
+                ("Active user of AI Actions", "On"),
+                ("Privacy-conscious", "Off")),
+            Recommended: "Off",
+            Risks: "You lose the AI options in right-click / image-context menus. The right-click menus themselves still work for everything else.",
+            ReversibleVia: "Delete EnabledState from HKLM\\SYSTEM\\ControlSet001\\Control\\FeatureManagement\\Overrides\\8\\1853569164 and 4098520719. Feature IDs may change in future Windows builds -- if you see new AI Actions surfaces after a Windows Update, GamerGuardian's existing overrides will still hold for these two but new feature IDs would need a new monitor entry."),
+
+        ["ai.inputinsights"] = new(
+            SettingId: "ai.inputinsights",
+            DisplayName: "Typing / input insights data collection",
+            What: "Two HKCU settings that disable Windows' typing-data and ink-data harvesting: RestrictImplicitTextCollection (blocks the OS from saving the plain text you type for personalized suggestions) and InsightsEnabled (the per-user master switch in the Input settings panel). HKCU only -- no UAC.",
+            Why: "By default, Windows builds a per-user typing model from text you've typed in apps. That data feeds personalized suggestions, autocorrect, and (in some Insider builds) AI features. Users who don't want their typing harvested can opt out at the OS level.",
+            HowItHelps: "Stops the OS from saving samples of what you type. Personalized typing suggestions degrade slightly (Windows falls back to the global suggestion model); everything else works as normal.",
+            Scenarios: Scenarios(
+                ("Privacy-conscious", "Off"),
+                ("Anyone who doesn't notice typing suggestions getting better over time", "Off"),
+                ("Active user of personalized typing suggestions on a touch keyboard", "On")),
+            Recommended: "Off",
+            Risks: "Typing suggestions become slightly less personalized over time. No effect on autocorrect or basic spell-check.",
+            ReversibleVia: "Delete RestrictImplicitTextCollection from HKCU\\Software\\Microsoft\\InputPersonalization and InsightsEnabled from HKCU\\Software\\Microsoft\\input\\Settings."),
+
+        ["ai.office"] = new(
+            SettingId: "ai.office",
+            DisplayName: "Microsoft 365 Copilot in Word / Excel / OneNote",
+            What: "Disables the Copilot button + ribbon entries inside the desktop Word, Excel, and OneNote apps; also opts the machine out of Microsoft's AI model training on document contents (HKLM\\Policies\\office admin template).",
+            Why: "Microsoft 365 Copilot is opt-in by license, but the UI affordances still show up in every Word document; disabling cleanly removes them. The training opt-out is a separate policy that prevents document text from being used to train Microsoft's models even if a user happens to invoke Copilot.",
+            HowItHelps: "No Copilot ribbon. No suggestions panel. No accidental cloud calls. No document-text contribution to model training.",
+            Scenarios: Scenarios(
+                ("Office user who doesn't have a Copilot license", "Off -- the buttons are just dead weight"),
+                ("Office user with Copilot license, occasional use", "On (or selectively per app)"),
+                ("Privacy-conscious / regulated workflows", "Off"),
+                ("Office not installed", "Doesn't matter -- the toggle is a no-op")),
+            Recommended: "Off",
+            Risks: "If you do have a Copilot license and want to use it, you lose the in-app entry points. Reverse by deleting the keys.",
+            ReversibleVia: "Delete EnableCopilot from HKCU\\Software\\Microsoft\\Office\\16.0\\Word\\Options and Excel\\Options, CopilotEnabled from HKCU\\...\\OneNote\\Options\\Copilot, and disabletraining from HKLM\\SOFTWARE\\Policies\\Microsoft\\office\\16.0\\common\\ai\\training\\general."),
     };
 
     // ---- Display settings (single entry per kind) -------------------------
@@ -572,6 +629,16 @@ public static class SettingDocsCatalog
             recommended: "Default (Manual) -- only Disable if you've also flipped the AI policy toggles",
             risks: "If you re-enable any AI feature later, it will fail to launch until you re-enable this service.",
             reversibleVia: "Set-Service -Name WSAIFabricSvc -StartupType Manual"),
+
+        ["AarSvc"] = SvcRec(
+            "AarSvc",
+            "Agent Activation Runtime Service",
+            "Per-user service that backs Windows AI agent activations -- the runtime Copilot voice, Cortana legacy hooks, and certain shell AI surfaces call into when they want to launch in the background.",
+            "Like WSAIFabricSvc, this service is paired with the Windows AI policy toggles. If you've disabled Copilot, Recall, etc. at the policy level, AarSvc has nothing useful to do; if any AI feature is still enabled, leave it on.",
+            "Removes a per-user service backing AI features you've already disabled. Pairs naturally with WSAIFabricSvc + the Windows AI policy toggles.",
+            recommended: "Default (Manual) -- only Disable if you've also flipped the AI policy toggles + disabled WSAIFabricSvc",
+            risks: "Per-user services use a generated suffix on the actual service name (AarSvc_<hex>). GamerGuardian disables the template definition so every new per-user instance starts disabled, but existing user sessions may need a logoff/logon to pick up the change. If you re-enable any AI feature later, it will fail to launch until you re-enable this service.",
+            reversibleVia: "Set-Service -Name AarSvc -StartupType Manual"),
     };
 
     private static SettingDetails SvcRec(

@@ -249,6 +249,46 @@ public partial class SettingsWindow : FluentWindow
             onPrefChanged: OnRowPrefChanged,
             settingId: "ai.notepadpaint"));
 
+        WindowsAiRowsCollection.Add(new GlobalToggleRow(
+            name: "Search box AI suggestions + taskbar companion",
+            description: "Hides the AI-flavored web suggestions in the Windows search box and disables the floating Copilot taskbar widget. Indexing itself is untouched.",
+            currentText: $"Current: {OnOffText(SafeRead(SettingsSearchAiMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
+            pref: g.SettingsSearchAi, groupName: "ai_settingssearch",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "ai.settingssearch"));
+
+        WindowsAiRowsCollection.Add(new GlobalToggleRow(
+            name: "Windows AI Actions (right-click rewrite / summarize)",
+            description: "Disables Windows' shell-level AI Actions surface via the FeatureManagement override hive.",
+            currentText: $"Current: {OnOffText(SafeRead(AiActionsMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
+            pref: g.AiActions, groupName: "ai_actions",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "ai.actions"));
+
+        WindowsAiRowsCollection.Add(new GlobalToggleRow(
+            name: "Typing / input insights data collection",
+            description: "HKCU opt-out of Windows' typing-data harvesting. Personalized suggestions degrade slightly; everything else works normally.",
+            currentText: $"Current: {OnOffText(SafeRead(InputInsightsMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
+            pref: g.InputInsights, groupName: "ai_inputinsights",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "ai.inputinsights"));
+
+        WindowsAiRowsCollection.Add(new GlobalToggleRow(
+            name: "Microsoft 365 Copilot in Word / Excel / OneNote",
+            description: "Disables the Copilot ribbon entries in the desktop Office apps + opts out of MS AI model training on document contents. No-op if Office isn't installed.",
+            currentText: $"Current: {OnOffText(SafeRead(OfficeCopilotMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
+            pref: g.OfficeCopilot, groupName: "ai_office",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "ai.office"));
+
         // UWP packages
         WindowsAiAppRowsCollection.Clear();
         foreach (var def in WindowsAiAppCatalog.All)

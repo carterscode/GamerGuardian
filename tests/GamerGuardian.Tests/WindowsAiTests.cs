@@ -14,14 +14,20 @@ namespace GamerGuardian.Tests;
 public class WindowsAiTests
 {
     [Fact]
-    public void GlobalPreferences_HasAllFiveAiToggles()
+    public void GlobalPreferences_HasAllAiToggles()
     {
         var g = new GlobalPreferences();
+        // Original 5 (v0.1.38)
         Assert.NotNull(g.Copilot);
         Assert.NotNull(g.Recall);
         Assert.NotNull(g.ClickToDo);
         Assert.NotNull(g.EdgeAi);
         Assert.NotNull(g.NotepadPaintAi);
+        // v0.1.39 parity additions
+        Assert.NotNull(g.SettingsSearchAi);
+        Assert.NotNull(g.AiActions);
+        Assert.NotNull(g.InputInsights);
+        Assert.NotNull(g.OfficeCopilot);
         // Default-On so a fresh config doesn't aggressively disable anything
         // before the user opts in via Monitor=true.
         Assert.True(g.Copilot.DesiredOn);
@@ -29,21 +35,62 @@ public class WindowsAiTests
         Assert.True(g.ClickToDo.DesiredOn);
         Assert.True(g.EdgeAi.DesiredOn);
         Assert.True(g.NotepadPaintAi.DesiredOn);
+        Assert.True(g.SettingsSearchAi.DesiredOn);
+        Assert.True(g.AiActions.DesiredOn);
+        Assert.True(g.InputInsights.DesiredOn);
+        Assert.True(g.OfficeCopilot.DesiredOn);
         Assert.False(g.Copilot.Monitor);
+        Assert.False(g.OfficeCopilot.Monitor);
     }
 
     [Theory]
+    // v0.1.38 originals
     [InlineData("ai.copilot")]
     [InlineData("ai.recall")]
     [InlineData("ai.clicktodo")]
     [InlineData("ai.edge")]
     [InlineData("ai.notepadpaint")]
+    // v0.1.39 parity additions
+    [InlineData("ai.settingssearch")]
+    [InlineData("ai.actions")]
+    [InlineData("ai.inputinsights")]
+    [InlineData("ai.office")]
     public void SettingDocs_AiPolicyIds_HaveMechanismAndVerify(string id)
     {
         Assert.False(string.IsNullOrWhiteSpace(SettingDocs.MechanismFor(id)));
         Assert.NotEqual("(unknown)", SettingDocs.MechanismFor(id));
         Assert.False(string.IsNullOrWhiteSpace(SettingDocs.VerifyCommandFor(id)));
         Assert.False(string.IsNullOrWhiteSpace(SettingDocs.ApplyCommandFor(id)));
+    }
+
+    [Theory]
+    [InlineData("ai.settingssearch", "DisableSearchBoxSuggestions")]
+    [InlineData("ai.settingssearch", "TaskbarCompanion")]
+    [InlineData("ai.actions", "FeatureManagement")]
+    [InlineData("ai.actions", "1853569164")]
+    [InlineData("ai.actions", "4098520719")]
+    [InlineData("ai.inputinsights", "RestrictImplicitTextCollection")]
+    [InlineData("ai.inputinsights", "InsightsEnabled")]
+    [InlineData("ai.office", "EnableCopilot")]
+    [InlineData("ai.office", "disabletraining")]
+    public void SettingDocs_ApplyCommand_NewIds_TouchExpectedKeys(string id, string expectedSubstring)
+    {
+        var cmd = SettingDocs.ApplyCommandFor(id);
+        Assert.Contains(expectedSubstring, cmd);
+    }
+
+    [Theory]
+    [InlineData("ai.recall", "TurnOffSavingSnapshots")]
+    [InlineData("ai.edge", "ComposeInlineEnabled")]
+    [InlineData("ai.edge", "AllowBrowsingWithCopilot")]
+    [InlineData("ai.copilot", "BrandedKey")]
+    [InlineData("ai.copilot", "BackgroundAccessApplications")]
+    [InlineData("ai.notepadpaint", "IsSignedUpForTargetingService")]
+    [InlineData("ai.notepadpaint", "Policies\\Paint")]
+    public void SettingDocs_Mechanism_ExtendedMonitors_ListNewKeys(string id, string expectedSubstring)
+    {
+        var mech = SettingDocs.MechanismFor(id);
+        Assert.Contains(expectedSubstring, mech);
     }
 
     [Fact]
@@ -111,6 +158,15 @@ public class WindowsAiTests
             d.Name.Equals("WSAIFabricSvc", StringComparison.OrdinalIgnoreCase));
         Assert.NotNull(svc);
         Assert.Contains("AI Fabric", svc!.DisplayName);
+    }
+
+    [Fact]
+    public void ServiceCatalog_IncludesAarSvc()
+    {
+        var svc = ServiceCatalog.All.FirstOrDefault(d =>
+            d.Name.Equals("AarSvc", StringComparison.OrdinalIgnoreCase));
+        Assert.NotNull(svc);
+        Assert.Contains("Agent Activation", svc!.DisplayName);
     }
 
     [Fact]

@@ -26,6 +26,10 @@ public class SettingDocsCatalogTests
     [InlineData("ai.clicktodo")]
     [InlineData("ai.edge")]
     [InlineData("ai.notepadpaint")]
+    [InlineData("ai.settingssearch")]
+    [InlineData("ai.actions")]
+    [InlineData("ai.inputinsights")]
+    [InlineData("ai.office")]
     public void Get_KnownIds_ReturnsPopulatedEntry(string id)
     {
         var d = SettingDocsCatalog.Get(id);

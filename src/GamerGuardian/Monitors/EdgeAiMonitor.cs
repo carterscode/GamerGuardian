@@ -48,11 +48,16 @@ public sealed class EdgeAiMonitor : IMonitoredSetting
         try
         {
             using var k = Registry.LocalMachine.OpenSubKey(PolicyKey, writable: false);
-            var hubs = k?.GetValue("HubsSidebarEnabled") as int?;
-            var ctx  = k?.GetValue("CopilotPageContext") as int?;
-            var gen  = k?.GetValue("GenAILocalFoundationalModelSettings") as int?;
-            // "Off" when all three policy values match the disable-by-policy posture.
-            bool off = hubs == 0 && ctx == 0 && gen == 1;
+            var hubs    = k?.GetValue("HubsSidebarEnabled") as int?;
+            var ctx     = k?.GetValue("CopilotPageContext") as int?;
+            var gen     = k?.GetValue("GenAILocalFoundationalModelSettings") as int?;
+            var compose = k?.GetValue("ComposeInlineEnabled") as int?;
+            var browse  = k?.GetValue("AllowBrowsingWithCopilot") as int?;
+            // "Off" when all five policy values match the disable-by-policy posture.
+            // ComposeInlineEnabled + AllowBrowsingWithCopilot added in v0.1.39 for
+            // closer parity with zoicware -- they cover the in-page Compose box
+            // and the broader "browse with Copilot" workflow respectively.
+            bool off = hubs == 0 && ctx == 0 && gen == 1 && compose == 0 && browse == 0;
             return !off;
         }
         catch { return null; }
@@ -65,6 +70,8 @@ public sealed class EdgeAiMonitor : IMonitoredSetting
             ElevatedRegistry.DeleteHklmValue(PolicyKey, "HubsSidebarEnabled");
             ElevatedRegistry.DeleteHklmValue(PolicyKey, "CopilotPageContext");
             ElevatedRegistry.DeleteHklmValue(PolicyKey, "GenAILocalFoundationalModelSettings");
+            ElevatedRegistry.DeleteHklmValue(PolicyKey, "ComposeInlineEnabled");
+            ElevatedRegistry.DeleteHklmValue(PolicyKey, "AllowBrowsingWithCopilot");
         }
         else
         {
@@ -73,6 +80,8 @@ public sealed class EdgeAiMonitor : IMonitoredSetting
                 (subkey: PolicyKey, name: "HubsSidebarEnabled", kind: "REG_DWORD", data: "0"),
                 (subkey: PolicyKey, name: "CopilotPageContext", kind: "REG_DWORD", data: "0"),
                 (subkey: PolicyKey, name: "GenAILocalFoundationalModelSettings", kind: "REG_DWORD", data: "1"),
+                (subkey: PolicyKey, name: "ComposeInlineEnabled", kind: "REG_DWORD", data: "0"),
+                (subkey: PolicyKey, name: "AllowBrowsingWithCopilot", kind: "REG_DWORD", data: "0"),
             });
         }
     }
