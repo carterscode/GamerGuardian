@@ -1,4 +1,6 @@
-# feat/gaming-optimize — execution plan
+# feat/gaming-optimize — execution plan (historical)
+
+> **Status: largely shipped in v0.1.38 / v0.1.39.** See [README → Highlights](../README.md#highlights), [SETTINGS-REFERENCE.md](SETTINGS-REFERENCE.md), and [STAGED-APPLY-ARCHITECTURE.md](STAGED-APPLY-ARCHITECTURE.md) for the current shipped feature set. This file is retained as the original tracking doc for the branch's planning phase.
 
 Scope tracker for the `feat/gaming-optimize` branch. Integrates features from `~/Downloads/GamingOptimize-Guide.md` (the user's PowerShell optimization script) as `IMonitoredSetting` implementations in GamerGuardian, where the model fits.
 

@@ -26,17 +26,19 @@ A lightweight Windows 11 tray app that watches gaming-related display and system
 
 If you've ever fired up a game and realized 30 minutes later that HDR turned itself off after the last driver update, or that you've been gaming at 60 Hz instead of your monitor's actual max — GamerGuardian is for that. It periodically compares Windows settings against your preferences and either prompts you to fix drift in one click, or silently corrects it in the background.
 
-It's also paranoid about not making your gaming worse. Polling pauses entirely during fullscreen games (including borderless windowed) and benchmark runs. Working set is trimmed back to ~25 MB at idle. No process spawning, no kernel hooks, no DPC callbacks.
+It's also paranoid about not making your gaming worse. Polling pauses entirely during fullscreen games (including borderless windowed) and benchmark runs. Tray-only idle holds at **~30 MB working set / ~105 MB private bytes** (WPF software-rendered, no GPU driver pulled in). No process spawning, no kernel hooks, no DPC callbacks.
 
 ## Highlights
 
-- 🎯 **17+ monitored settings** spanning display, security, performance, capture, input, and Windows services
-- ⚙️ **One-click Recommended preset** -- General tab button stages the gaming-optimized configuration across every setting (Want + Monitor + Auto-apply). Idempotent, so re-running it after a future update picks up only the new settings.
+- 🎯 **40+ monitored settings** spanning display, security, performance, capture, input, Windows services, and Windows AI lockdown
+- ⚙️ **One-click Recommended preset** -- General tab button stages the gaming-optimized configuration across every setting (Want + Monitor + Auto-apply). **CPU-aware** -- AMD X3D chips get Balanced (per AMD); everything else gets High Performance. Idempotent: re-running it after a future update only stages the new deltas.
+- 📖 **Per-setting Learn more** -- in-app expander with What / Why / How-it-helps / per-scenario recommendation / risks / reversal, plus copy-pasteable PowerShell apply + verify + mechanism commands. Selectable text.
 - 🎮 **Pauses during gameplay** — fullscreen, borderless, *and* during benchmark runs (3DMark, Cinebench, Geekbench, etc.)
-- ⚡ **One-click apply** with a per-setting auto-apply opt-in
+- ⚡ **One-click apply** with a per-setting auto-apply opt-in and a staged-changes draft model -- click Cancel and nothing was actually written
+- 🔍 **Verify all** button -- re-reads every monitored setting and writes a `[SNAPSHOT]` to `changes.log`; nothing is applied
 - 🪟 **Native Win11 Fluent design** with light / dark / system themes
 - 🔄 **Auto-update** — checks GitHub Releases on startup, one-click install
-- 🪶 **~23 MB idle working set**, ~10 ms per polling tick
+- 🪶 **~30 MB tray-only working set / ~10 ms** per polling tick
 
 ## Screenshot
 
@@ -44,7 +46,7 @@ It's also paranoid about not making your gaming worse. Polling pauses entirely d
 
 <img src="docs/screenshots/settings-global-gaming.png" width="780" alt="GamerGuardian Settings — Global gaming tab" />
 
-*Settings → Global gaming tab. Each card shows the setting name, a short description, current value, Windows default, and per-setting Monitor / Want / Auto-apply controls. Reboot-required settings get a yellow badge. The other three tabs cover General preferences, Windows services, and per-display HDR/refresh/resolution.*
+*Settings → Global gaming tab. Each card shows the setting name, a short description, current value, Windows default, per-setting Monitor / Want / Auto-apply controls, and a Learn more expander with full per-setting docs + copy-pasteable PowerShell. Reboot-required settings get a yellow badge. The other four tabs cover General preferences (with the one-click Recommended preset), Windows services, Windows AI lockdown, and per-display HDR/refresh/resolution.*
 
 </div>
 
@@ -71,7 +73,7 @@ For each setting you choose: **monitor or not**, **desired value**, and whether 
 | [**Mouse "Enhance pointer precision"**](https://support.microsoft.com/en-us/windows/change-mouse-settings-e81356a4-0e74-fe38-7d01-9d79fbf8712b) | Acceleration curve applied to mouse movement. | |
 | [**Fullscreen optimizations**](https://devblogs.microsoft.com/directx/demystifying-full-screen-optimizations/) | Borderless-windowed compositing layer for fullscreen apps. | |
 | [**Variable Refresh Rate (DirectX)**](https://devblogs.microsoft.com/directx/os-variable-refresh-rate/) | G-Sync / FreeSync compatibility flag. Not the same as Dynamic Refresh Rate (DRR). | |
-| [**Power plan**](https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/configure-power-settings) | Active Windows power scheme. | |
+| [**Power plan**](https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/configure-power-settings) | Active Windows power scheme. Recommended preset is CPU-aware: AMD X3D chips get Balanced (per AMD); everything else gets High Performance. | |
 | [**System Responsiveness**](https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service) | MMCSS reservation percentage. | ✓ |
 | [**Network Throttling**](https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service) | MMCSS network packet pacing. | |
 | [**USB Selective Suspend**](https://learn.microsoft.com/en-us/windows-hardware/drivers/usbcon/usb-selective-suspend) | Lets Windows suspend idle USB devices. | ✓ |
@@ -125,11 +127,13 @@ GamerGuardian doesn't ask you to take its word for it. Independent ways to confi
 1. The Settings UI re-reads from the OS after every Apply
 2. The Apply Results window shows before / target / after for each setting
 3. The footer **Verify all** button re-reads every monitored setting and writes a `[SNAPSHOT]` to `changes.log` -- nothing is applied
-4. Every change writes a copy-pasteable PowerShell **apply** and **verify** command to [`changes.log`](https://github.com/carterscode/GamerGuardian/wiki/Logging)
-5. Verbose log lines include `[SESSION]` (version + OS + elevation), `[APPLY-START]` / per-change record / `[APPLY-END]`, `[EXTRESET]` (Windows reverted a value we'd applied), and `[PREF-STAGE]` (a draft toggle, not yet applied)
-6. `GamerGuardian.exe --test` dumps every monitor's current readout to `%TEMP%`
-7. Every Release ships with a [`SHA256SUMS.txt`](https://github.com/carterscode/GamerGuardian/wiki/Security#reproducibility) you can verify against your local download
-8. Every monitor is one ~30-line file in [`src/GamerGuardian/Monitors/`](src/GamerGuardian/Monitors/)
+4. Each row's **Learn more** expander includes the registry/API mechanism, a copy-pasteable PowerShell apply command, and a copy-pasteable PowerShell verify command. The text is selectable -- highlight any sub-range, Ctrl+C, paste into PowerShell.
+5. Every change writes a copy-pasteable PowerShell **apply** and **verify** command to [`changes.log`](https://github.com/carterscode/GamerGuardian/wiki/Logging)
+6. Verbose log lines include `[SESSION]` (version + OS + elevation), `[APPLY-START]` / per-change record / `[APPLY-END]`, `[SNAPSHOT]` (session-start baseline + Verify all output), `[EXTRESET]` (Windows reverted a value we'd applied), and `[PREF-STAGE]` (a draft toggle, not yet applied)
+7. `GamerGuardian.exe --test` dumps every monitor's current readout to `%TEMP%`
+8. `GamerGuardian.exe --gen-docs <path>` regenerates [`docs/SETTINGS-REFERENCE.md`](docs/SETTINGS-REFERENCE.md) from the in-code catalog -- a unit test asserts the committed file matches, so the doc and the code can't drift
+9. Every Release ships with a [`SHA256SUMS.txt`](https://github.com/carterscode/GamerGuardian/wiki/Security#reproducibility) you can verify against your local download
+10. Every monitor is one ~30-line file in [`src/GamerGuardian/Monitors/`](src/GamerGuardian/Monitors/)
 
 ## Documentation
 

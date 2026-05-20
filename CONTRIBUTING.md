@@ -68,17 +68,31 @@ A new monitor needs:
 
 1. A class implementing `IMonitoredSetting` in `src/GamerGuardian/Monitors/`.
 2. Registration in `App.xaml.cs` in the `_allMonitors` array.
-3. A row in `SettingsWindow.xaml.cs` `LoadGlobals` (or the equivalent for your tab).
-4. A `MechanismFor` and `VerifyCommandFor` entry in `src/GamerGuardian/Services/SettingDocs.cs`.
-5. **A test** in `tests/GamerGuardian.Tests/` (see *Tests* below).
+3. (If it's a global toggle / Windows AI policy:) a `ToggleSettingPref` field in `Models/AppConfig.cs` -> `GlobalPreferences` -- defaulting to gaming-recommended `DesiredOn` with `Monitor = false`.
+4. A row in `SettingsWindow.xaml.cs` `LoadGlobals` / `LoadWindowsAi` / `LoadServices` (whichever tab fits), passing the new `settingId`.
+5. `MechanismFor`, `VerifyCommandFor`, and `ApplyCommandFor` entries in `src/GamerGuardian/Services/SettingDocs.cs`. These are what `changes.log` and the in-app Learn more expander surface.
+6. A rich `SettingDetails` entry in `src/GamerGuardian/Services/SettingDocsCatalog.cs` -- What / Why / How-it-helps / per-scenario recommendation / Recommended / Risks / ReversibleVia. This drives the in-app Learn more text and `docs/SETTINGS-REFERENCE.md`.
+7. (If it belongs in the gaming-recommended preset:) a `SetToggle` / equivalent call in `Services/RecommendedPreset.cs` so the General-tab one-click preset picks up the new setting.
+8. **A test** in `tests/GamerGuardian.Tests/` (see *Tests* below).
+9. Regenerate the settings reference: `GamerGuardian.exe --gen-docs docs/SETTINGS-REFERENCE.md` and commit the regenerated file. A unit test asserts the committed doc matches the catalog, so CI will fail otherwise.
 
 If the new monitor writes to `HKLM`, route it through `ElevatedRegistry` so it shares the existing UAC-prompt behavior.
+
+If the setting's `ReadCurrent` checks multiple registry values that may individually be missing or controlled by Windows (not just by us), prefer a lenient OR-of-disable-signals semantic over strict AND. See `CopilotMonitor` / `SettingsSearchAiMonitor` for the pattern -- strict AND can verify-fail forever if any one value never persists.
 
 ## Adding a new Windows service to the catalog
 
 For the `Windows services` tab, just append to `ServiceCatalog.All` in `src/GamerGuardian/Services/ServiceCatalog.cs`. No code change required elsewhere — `WindowsServiceMonitor` is registered once per catalog entry by `App.xaml.cs`.
 
 If the service is one Windows actively protects (re-enables via `WaaSMedicSvc` etc.), set `RecommendedTarget: ServiceTargetState.Manual` rather than `Disabled`, or omit it from the catalog entirely. See `docs/wiki/Architecture-rationale.md` for the WU-protection background.
+
+Also add a rich `SvcRec` entry in `SettingDocsCatalog.Services` (keyed by service name) so the new service gets a populated Learn more expander; without it, the in-app expander is hidden and the entry is missing from the regenerated `SETTINGS-REFERENCE.md`.
+
+## Adding a Windows AI UWP package to the removal catalog
+
+`Services/WindowsAiAppCatalog.cs` is the curated list of UWP packages users can choose to one-way-remove (via the Windows AI tab). Append a new `WindowsAiAppDefinition` and that's it -- `WindowsAiAppMonitor` is registered once per catalog entry by `App.xaml.cs`, and the UI surfaces the row automatically. Add a SettingDocsCatalog entry under `AiApps` (keyed by package name) so it shows up in the Learn more + reference doc.
+
+UWP removal is one-way; CheckDrift only flags `installed -> remove`, never the reverse. The preset deliberately does **not** opt users into UWP removal (irreversible without the Store).
 
 ## Tests
 
