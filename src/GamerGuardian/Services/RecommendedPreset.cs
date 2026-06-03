@@ -1,4 +1,5 @@
 using GamerGuardian.Models;
+using GamerGuardian.Monitors;
 
 namespace GamerGuardian.Services;
 
@@ -36,13 +37,16 @@ public static class RecommendedPreset
         int SettingsAlreadyCorrect,
         IReadOnlyList<string> ChangeDescriptions);
 
-    /// <summary>
-    /// Microsoft's well-known High Performance plan GUID. If not installed on
-    /// the target machine, the preset leaves the power plan alone.
-    /// </summary>
-    private const string HighPerformanceGuid = "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c";
+    // Service-name fragments for the AMD CCD-routing stack + Xbox Game Bar that
+    // must never be disabled on an asymmetric dual-CCD X3D CPU (doing so breaks
+    // the cache-CCD routing the optimized plan depends on).
+    private static readonly string[] DualCcdProtectedFragments =
+        { "vcache", "3dcache", "provisioning", "gamebar", "gamingservices" };
 
-    public static Result ApplyToDraft(AppConfig draft)
+    public static Result ApplyToDraft(AppConfig draft) =>
+        ApplyToDraft(draft, CpuTuneCatalog.Resolve(CpuDetector.Current));
+
+    public static Result ApplyToDraft(AppConfig draft, CpuTuneResult recipe)
     {
         if (draft is null) throw new ArgumentNullException(nameof(draft));
 
@@ -75,13 +79,17 @@ public static class RecommendedPreset
         Count(SetToggle(g.InputInsights,   "Typing / input insights",        desiredOn: false, changes));
         Count(SetToggle(g.OfficeCopilot,   "Office 365 Copilot",             desiredOn: false, changes));
 
-        // ---- Power plan: High Performance if installed; otherwise leave alone ----
-        Count(SetPowerPlan(g.PowerPlan, changes));
+        // ---- Power plan: CPU-aware recommended prebuilt (Balanced for modern) ----
+        Count(SetPowerPlan(g.PowerPlan, recipe, changes));
 
         // ---- Services with a RecommendedTarget ----
         foreach (var def in ServiceCatalog.All)
         {
             if (def.RecommendedTarget is not { } target) continue;
+            // Guardrail: never disable the AMD CCD-routing stack / Game Bar on a
+            // dual-CCD X3D CPU -- it would break the optimization this app sets up.
+            if (target == ServiceTargetState.Disabled && ShouldProtectServiceOnDualCcd(def.Name, recipe))
+                continue;
             if (!draft.Services.TryGetValue(def.Name, out var pref) || pref is null)
             {
                 pref = new ServicePref();
@@ -154,30 +162,43 @@ public static class RecommendedPreset
         return true;
     }
 
-    private static bool SetPowerPlan(PowerPlanPref pref, List<string> changes)
+    private static bool SetPowerPlan(PowerPlanPref pref, CpuTuneResult recipe, List<string> changes)
     {
-        // Only switch to High Performance if it's installed locally. If the
-        // user has a custom power plan they prefer, leave it alone -- the
-        // preset shouldn't second-guess a custom plan choice.
+        // CPU-aware: recommend the prebuilt plan the catalog picked (Balanced for
+        // modern CPUs) -- never blindly High Performance. Building the custom
+        // optimized plan stays an explicit action on the CPU / Power tab. If the
+        // recommended plan isn't installed, leave the power plan alone.
+        var choice = recipe.RecommendedPrebuilt;
+        var targetGuid = PowerPlanMonitor.ToGuid(choice);
         var plans = SafeListPlans();
-        if (!plans.Any(p => string.Equals(p.Key.ToString("D"), HighPerformanceGuid, StringComparison.OrdinalIgnoreCase)))
+        if (!plans.TryGetValue(targetGuid, out var name))
             return false;
 
+        var guidStr = targetGuid.ToString();
         var (bGuid, bMon, bAuto) = (pref.DesiredGuid, pref.Monitor, pref.AutoApply);
-        bool already = string.Equals(bGuid, HighPerformanceGuid, StringComparison.OrdinalIgnoreCase)
-                       && bMon && bAuto;
+        bool already = string.Equals(bGuid, guidStr, StringComparison.OrdinalIgnoreCase)
+                       && bMon && bAuto && pref.Desired == choice;
         if (already) return false;
 
-        pref.DesiredGuid = HighPerformanceGuid;
-        pref.DesiredName = "High performance";
-        pref.Desired = PowerPlanChoice.HighPerformance;
+        pref.DesiredGuid = guidStr;
+        pref.DesiredName = name;
+        pref.Desired = choice;
         pref.Monitor = true;
         pref.AutoApply = true;
         ChangeLogger.LogPreferenceChange("[Recommended] Power plan", "preset",
             $"Want={bGuid ?? "(unset)"} Monitor={B(bMon)} AutoApply={B(bAuto)}",
-            "Want=High performance Monitor=On AutoApply=On");
-        changes.Add("Power plan: High Performance, Monitor on, Auto-apply on");
+            $"Want={name} Monitor=On AutoApply=On");
+        changes.Add($"Power plan: {name} (CPU-aware recommendation), Monitor on, Auto-apply on");
         return true;
+    }
+
+    /// <summary>True when the service backs the AMD CCD-routing stack / Game Bar
+    /// and the detected CPU is asymmetric dual-CCD X3D (so it must not be disabled).</summary>
+    public static bool ShouldProtectServiceOnDualCcd(string serviceName, CpuTuneResult recipe)
+    {
+        if (!recipe.NeedsCcdRoutingStack || string.IsNullOrEmpty(serviceName)) return false;
+        return DualCcdProtectedFragments.Any(f =>
+            serviceName.Contains(f, StringComparison.OrdinalIgnoreCase));
     }
 
     private static IDictionary<Guid, string> SafeListPlans()
