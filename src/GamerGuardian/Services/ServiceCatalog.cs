@@ -144,5 +144,11 @@ public static class ServiceCatalog
             DisplayName: "Windows AI Fabric Service",
             Description: "Backs the on-device AI runtime (Copilot+ / Recall / Click-to-Do). Disable only if you've decided you don't want Windows AI features at all -- otherwise those features will fail to launch. Pairs naturally with the Windows AI tab toggles.",
             DefaultStartType: ServiceStartType.Manual),
+
+        new(
+            Name: "AarSvc",
+            DisplayName: "Agent Activation Runtime Service",
+            Description: "Per-user service that backs Windows AI agent activations (Copilot voice, Cortana legacy, certain shell AI surfaces). Like WSAIFabricSvc, only disable if you've also flipped the Windows AI policy toggles -- otherwise AI features will silently fail to launch. The service uses a per-user suffix on the actual instance name (AarSvc_xxxxx); GamerGuardian targets the template service definition which controls every per-user instance.",
+            DefaultStartType: ServiceStartType.Manual),
     };
 }

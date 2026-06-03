@@ -25,7 +25,8 @@
         </ui:TitleBar>
 
         <StackPanel Grid.Row="1" Margin="20,8,20,16">
-            <TextBlock Text="Display settings have drifted"
+            <TextBlock x:Name="HeaderText"
+                       Text="Monitored settings have drifted"
                        FontSize="16" FontWeight="SemiBold"
                        Margin="0,0,0,12"/>
             <ItemsControl x:Name="ItemsList" Margin="0,0,0,12">

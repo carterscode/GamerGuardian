@@ -31,6 +31,7 @@ It's also paranoid about not making your gaming worse. Polling pauses entirely d
 ## Highlights
 
 - 🎯 **17+ monitored settings** spanning display, security, performance, capture, input, and Windows services
+- ⚙️ **One-click Recommended preset** -- General tab button stages the gaming-optimized configuration across every setting (Want + Monitor + Auto-apply). Idempotent, so re-running it after a future update picks up only the new settings.
 - 🎮 **Pauses during gameplay** — fullscreen, borderless, *and* during benchmark runs (3DMark, Cinebench, Geekbench, etc.)
 - ⚡ **One-click apply** with a per-setting auto-apply opt-in
 - 🪟 **Native Win11 Fluent design** with light / dark / system themes
@@ -82,7 +83,7 @@ A curated catalog of services GamerGuardian can stop + disable (or set to Manual
 
 ### Windows AI
 
-Policy-toggle disables for Copilot, Recall, Click-to-Do, Edge Copilot/Hubs/GenAI, and Notepad Rewrite / Paint AI. Optional one-way removal of Windows AI UWP packages (`Microsoft.Copilot`, `Microsoft.Windows.Ai.Copilot.Provider`, `MicrosoftWindows.Client.AIX`). Inspired by [zoicware/RemoveWindowsAI](https://github.com/zoicware/RemoveWindowsAI) but stays in the safe "policy toggle + service disable" lane -- every change is reversed by deleting the same registry value. Walk-through in the [Windows AI section of SETTINGS-REFERENCE.md](docs/SETTINGS-REFERENCE.md#windows-ai-policies).
+Policy-toggle disables for Copilot, Recall, Click-to-Do, Edge Copilot/Hubs/GenAI, Notepad Rewrite / Paint AI, Windows search AI suggestions, Windows AI Actions (right-click rewrite/summarize), typing-data harvesting, and Microsoft 365 Copilot in Word/Excel/OneNote. Optional one-way removal of Windows AI UWP packages (`Microsoft.Copilot`, `Microsoft.Windows.Ai.Copilot.Provider`, `MicrosoftWindows.Client.AIX`) and service disables for `WSAIFabricSvc` + `AarSvc`. Inspired by [zoicware/RemoveWindowsAI](https://github.com/zoicware/RemoveWindowsAI) but stays in the safe "policy toggle + service disable + opt-in UWP removal" lane -- every change is reversed by deleting the same registry value or re-enabling the service. Walk-through in the [Windows AI section of SETTINGS-REFERENCE.md](docs/SETTINGS-REFERENCE.md#windows-ai-policies).
 
 ## Performance & gaming impact
 

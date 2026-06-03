@@ -249,6 +249,46 @@ public partial class SettingsWindow : FluentWindow
             onPrefChanged: OnRowPrefChanged,
             settingId: "ai.notepadpaint"));
 
+        WindowsAiRowsCollection.Add(new GlobalToggleRow(
+            name: "Search box AI suggestions + taskbar companion",
+            description: "Hides the AI-flavored web suggestions in the Windows search box and disables the floating Copilot taskbar widget. Indexing itself is untouched.",
+            currentText: $"Current: {OnOffText(SafeRead(SettingsSearchAiMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
+            pref: g.SettingsSearchAi, groupName: "ai_settingssearch",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "ai.settingssearch"));
+
+        WindowsAiRowsCollection.Add(new GlobalToggleRow(
+            name: "Windows AI Actions (right-click rewrite / summarize)",
+            description: "Disables Windows' shell-level AI Actions surface via the FeatureManagement override hive.",
+            currentText: $"Current: {OnOffText(SafeRead(AiActionsMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
+            pref: g.AiActions, groupName: "ai_actions",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "ai.actions"));
+
+        WindowsAiRowsCollection.Add(new GlobalToggleRow(
+            name: "Typing / input insights data collection",
+            description: "HKCU opt-out of Windows' typing-data harvesting. Personalized suggestions degrade slightly; everything else works normally.",
+            currentText: $"Current: {OnOffText(SafeRead(InputInsightsMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
+            pref: g.InputInsights, groupName: "ai_inputinsights",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "ai.inputinsights"));
+
+        WindowsAiRowsCollection.Add(new GlobalToggleRow(
+            name: "Microsoft 365 Copilot in Word / Excel / OneNote",
+            description: "Disables the Copilot ribbon entries in the desktop Office apps + opts out of MS AI model training on document contents. No-op if Office isn't installed.",
+            currentText: $"Current: {OnOffText(SafeRead(OfficeCopilotMonitor.ReadCurrent))}",
+            defaultText: "Default: On",
+            onLabel: "On", offLabel: "Off",
+            pref: g.OfficeCopilot, groupName: "ai_office",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "ai.office"));
+
         // UWP packages
         WindowsAiAppRowsCollection.Clear();
         foreach (var def in WindowsAiAppCatalog.All)
@@ -897,6 +937,58 @@ public partial class SettingsWindow : FluentWindow
         ChangeLogger.LogPreferenceChange(settingName, field, before, after);
         _pendingCount++;
         UpdatePendingStatus();
+    }
+
+    /// <summary>
+    /// One-click "use the gaming preset" button. Mutates the draft (not the
+    /// live config) via <see cref="RecommendedPreset.ApplyToDraft"/>, bumps
+    /// the pending count by the number of settings actually changed (so
+    /// Save&amp;close knows there's work and doesn't short-circuit), rebuilds
+    /// the row collections so the UI reflects the new draft, and pops a
+    /// summary dialog telling the user what just got staged.
+    ///
+    /// <para>Idempotent: running it a second time when everything's already
+    /// in the recommended state stages zero changes and shows the
+    /// "already correct" message. Designed so a future GamerGuardian release
+    /// that adds new settings to the preset can be picked up by the user
+    /// re-clicking this button -- only the new deltas land.</para>
+    /// </summary>
+    private void ApplyRecommendedPresetButton_Click(object sender, RoutedEventArgs e)
+    {
+        RecommendedPreset.Result result;
+        try { result = RecommendedPreset.ApplyToDraft(_draft); }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(this, "Recommended preset failed: " + ex.Message,
+                "GamerGuardian", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            return;
+        }
+
+        _pendingCount += result.SettingsChanged;
+        UpdatePendingStatus();
+
+        // Rebuild every row collection so the UI reflects the mutated draft.
+        // (Row setters short-circuit on equality so this rebinds cleanly
+        // without firing per-row PREF-STAGE events -- those would double-log.)
+        LoadGlobals();
+        LoadDisplays();
+        LoadServices();
+        LoadWindowsAi();
+
+        if (RecommendedStatusText is not null)
+        {
+            RecommendedStatusText.Text = result.SettingsChanged == 0
+                ? $"All {result.SettingsAlreadyCorrect} preset-managed setting(s) already in the recommended state. Nothing to do."
+                : $"Staged {result.SettingsChanged} setting(s); {result.SettingsAlreadyCorrect} already correct. Click Apply or Save & close to commit.";
+        }
+
+        var dialogMsg = result.SettingsChanged == 0
+            ? $"Your draft already matches the Recommended preset across all {result.SettingsAlreadyCorrect} preset-managed setting(s). Nothing to do."
+            : $"Staged {result.SettingsChanged} change(s) to the Recommended preset. {result.SettingsAlreadyCorrect} setting(s) were already correct and skipped."
+              + "\n\nReview the per-tab changes if you want. Click Apply (stay in Settings) or Save & close to commit the apply pass. Click Cancel to discard.";
+
+        System.Windows.MessageBox.Show(this, dialogMsg, "GamerGuardian -- Recommended preset",
+            System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
 
     /// <summary>

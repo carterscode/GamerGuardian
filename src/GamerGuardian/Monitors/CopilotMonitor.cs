@@ -5,14 +5,14 @@ using Microsoft.Win32;
 namespace GamerGuardian.Monitors;
 
 /// <summary>
-/// Windows Copilot system-wide policy. When DesiredOn = false we set
-/// <c>TurnOffWindowsCopilot = 1</c> in both HKLM and HKCU Policies hives
-/// and hide the taskbar button. When DesiredOn = true we delete those
-/// values to restore the Windows default.
+/// Windows Copilot system-wide policy. Off writes the disable policy in
+/// HKLM + HKCU, hides the taskbar button, blanks the Copilot launch alias
+/// (so Win+C does nothing), and marks the Copilot UWP as "DisabledByUser"
+/// so it can't background-launch. On deletes everything we wrote.
 ///
-/// <para>One of the registry-policy lockdowns inspired by
-/// github.com/zoicware/RemoveWindowsAI; staying in the safe policy-toggle
-/// lane because every value here is undone by a plain registry delete.</para>
+/// <para>v0.1.39 extended the off-state with the BrandedKey AppAumid blank
+/// + BackgroundAccessApplications DisabledByUser flag (per zoicware/RemoveWindowsAI)
+/// so Copilot is fully gagged, not just hidden.</para>
 /// </summary>
 public sealed class CopilotMonitor : IMonitoredSetting
 {
@@ -23,6 +23,10 @@ public sealed class CopilotMonitor : IMonitoredSetting
     private const string ValueName = "TurnOffWindowsCopilot";
     private const string ExplorerKey   = @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced";
     private const string ExplorerValue = "ShowCopilotButton";
+    private const string BrandedKey  = @"Software\Microsoft\Windows\Shell\BrandedKey";
+    private const string BrandedVal  = "AppAumid";
+    private const string BgAccessKey = @"Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications\Microsoft.Copilot_8wekyb3d8bbwe";
+    private const string BgAccessVal = "DisabledByUser";
 
     public IEnumerable<DriftItem> CheckDrift(AppConfig config)
     {
@@ -38,26 +42,28 @@ public sealed class CopilotMonitor : IMonitoredSetting
             DisplayLabel: "Windows AI",
             Description: desired
                 ? "Windows Copilot -- remove disable policy"
-                : "Windows Copilot -- disable system-wide via policy",
+                : "Windows Copilot -- disable system-wide via policy + blank launch alias",
             CurrentValue: current.Value ? "On" : "Off (policy)",
             DesiredValue: desired ? "On" : "Off (policy)",
             AutoApply: pref.AutoApply,
             Apply: () => Task.Run(() => Apply(desired)),
             IsMonitored: pref.Monitor,
-            RawBefore:  current.Value ? "(no policy / =0)" : "TurnOffWindowsCopilot=1",
-            RawDesired: desired ? "(deleted)" : "TurnOffWindowsCopilot=1");
+            RawBefore:  current.Value ? "(no policy / =0)" : "TurnOffWindowsCopilot=1, BrandedKey blanked, BgAccess=1",
+            RawDesired: desired ? "(deleted)" : "TurnOffWindowsCopilot=1, BrandedKey blanked, BgAccess=1");
     }
 
     /// <summary>
-    /// True when Copilot is allowed (no off-policy is set). False when ANY of
-    /// the HKLM/HKCU policy keys explicitly turns it off. Null if neither key
-    /// is readable (no Policies subkey at all -- treat as default/on).
+    /// True when Copilot is allowed (none of our disabling values are set).
+    /// False when ANY disabling value is set. We treat the union of disablers
+    /// as "off" so the user gets drift if any one was reverted.
     /// </summary>
     public static bool? ReadCurrent()
     {
         var hklm = ReadDword(Registry.LocalMachine, HklmKey, ValueName);
         var hkcu = ReadDword(Registry.CurrentUser, HkcuKey, ValueName);
-        bool offByPolicy = hklm == 1 || hkcu == 1;
+        var bgAccess = ReadDword(Registry.CurrentUser, BgAccessKey, BgAccessVal);
+        var aumid = ReadString(Registry.CurrentUser, BrandedKey, BrandedVal);
+        bool offByPolicy = hklm == 1 || hkcu == 1 || bgAccess == 1 || (aumid is not null && string.IsNullOrWhiteSpace(aumid));
         return !offByPolicy;
     }
 
@@ -65,21 +71,23 @@ public sealed class CopilotMonitor : IMonitoredSetting
     {
         if (on)
         {
-            // Restore default: drop both policy values + restore the taskbar button.
             ElevatedRegistry.DeleteHklmValue(HklmKey, ValueName);
             DeleteHkcuValue(HkcuKey, ValueName);
-            using var k = Registry.CurrentUser.CreateSubKey(ExplorerKey, writable: true)!;
-            k.DeleteValue(ExplorerValue, throwOnMissingValue: false);
+            DeleteHkcuValue(ExplorerKey, ExplorerValue);
+            DeleteHkcuValue(BrandedKey, BrandedVal);
+            DeleteHkcuValue(BgAccessKey, BgAccessVal);
         }
         else
         {
-            // Off via policy in both hives + hide the taskbar button so the
-            // user doesn't see a button that fails to launch anything.
             ElevatedRegistry.SetHklmDword(HklmKey, ValueName, 1);
             using (var k = Registry.CurrentUser.CreateSubKey(HkcuKey, writable: true)!)
                 k.SetValue(ValueName, 1, RegistryValueKind.DWord);
             using (var k = Registry.CurrentUser.CreateSubKey(ExplorerKey, writable: true)!)
                 k.SetValue(ExplorerValue, 0, RegistryValueKind.DWord);
+            using (var k = Registry.CurrentUser.CreateSubKey(BrandedKey, writable: true)!)
+                k.SetValue(BrandedVal, " ", RegistryValueKind.String);
+            using (var k = Registry.CurrentUser.CreateSubKey(BgAccessKey, writable: true)!)
+                k.SetValue(BgAccessVal, 1, RegistryValueKind.DWord);
         }
     }
 
@@ -89,6 +97,16 @@ public sealed class CopilotMonitor : IMonitoredSetting
         {
             using var k = hive.OpenSubKey(subkey, writable: false);
             return k?.GetValue(name) as int?;
+        }
+        catch { return null; }
+    }
+
+    private static string? ReadString(RegistryKey hive, string subkey, string name)
+    {
+        try
+        {
+            using var k = hive.OpenSubKey(subkey, writable: false);
+            return k?.GetValue(name) as string;
         }
         catch { return null; }
     }

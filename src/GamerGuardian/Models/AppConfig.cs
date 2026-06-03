@@ -96,6 +96,11 @@ public sealed class GlobalPreferences
     public ToggleSettingPref ClickToDo { get; set; } = new() { DesiredOn = true };
     public ToggleSettingPref EdgeAi { get; set; } = new() { DesiredOn = true };
     public ToggleSettingPref NotepadPaintAi { get; set; } = new() { DesiredOn = true };
+    // v0.1.39 additions for closer parity with zoicware/RemoveWindowsAI:
+    public ToggleSettingPref SettingsSearchAi { get; set; } = new() { DesiredOn = true };
+    public ToggleSettingPref AiActions { get; set; } = new() { DesiredOn = true };
+    public ToggleSettingPref InputInsights { get; set; } = new() { DesiredOn = true };
+    public ToggleSettingPref OfficeCopilot { get; set; } = new() { DesiredOn = true };
 }
 
 public sealed class ToggleSettingPref

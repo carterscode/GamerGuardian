@@ -110,6 +110,11 @@ public partial class App : WpfApplication
             new ClickToDoMonitor(),
             new EdgeAiMonitor(),
             new NotepadPaintAiMonitor(),
+            // v0.1.39 additions for closer parity with zoicware/RemoveWindowsAI:
+            new SettingsSearchAiMonitor(),
+            new AiActionsMonitor(),
+            new InputInsightsMonitor(),
+            new OfficeCopilotMonitor(),
         };
         var serviceMonitors = GamerGuardian.Services.ServiceCatalog.All
             .Select(d => (IMonitoredSetting)new WindowsServiceMonitor(d));

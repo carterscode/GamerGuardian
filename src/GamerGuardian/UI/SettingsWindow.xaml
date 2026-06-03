@@ -64,6 +64,32 @@
                          VerticalContentAlignment="Stretch">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,8,8,0">
                         <StackPanel>
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <TextBlock Text="One-click Recommended setup" FontWeight="SemiBold"/>
+                                        <TextBlock TextWrapping="Wrap" Margin="0,4,0,0"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   FontSize="12"
+                                                   Text="Applies GamerGuardian's gaming-recommended preset to every setting it knows about: sets the recommended Want value, turns Monitor on, and turns Auto-apply silently on. Skips Memory Integrity / VBS (security tradeoff) and the optional UWP AI app removals (irreversible). Idempotent -- only mutates settings that aren't already in the recommended state, so re-running it after a future update picks up only the new settings."/>
+                                        <TextBlock x:Name="RecommendedStatusText"
+                                                   Margin="0,8,0,0"
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ui:Button Grid.Column="1" Content="Apply recommended"
+                                               Appearance="Primary" MinWidth="150"
+                                               VerticalAlignment="Center"
+                                               Click="ApplyRecommendedPresetButton_Click"
+                                               ToolTip="Stages the recommended preset to your draft. Review the per-tab changes, then click Apply / Save &amp; close to commit."/>
+                                </Grid>
+                            </ui:Card>
+
                             <ui:Card Padding="16" Margin="0,0,0,8">
                                 <StackPanel>
                                 <Grid Margin="0,0,0,8">

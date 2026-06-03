@@ -40,11 +40,15 @@ public static class SettingDocs
             "usbsuspend" => @"HKLM\SYSTEM\CurrentControlSet\Services\USB\DisableSelectiveSuspend (DWORD)",
             "gamestask" => @"HKLM\SOFTWARE\...\Multimedia\SystemProfile\Tasks\Games (Priority + Scheduling Category + SFIO Priority)",
             "powerplan" => @"powrprof.dll PowerSetActiveScheme  (verifiable via 'powercfg /getactivescheme')",
-            "ai.copilot" => @"HKLM + HKCU\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot\TurnOffWindowsCopilot  +  HKCU\...\Explorer\Advanced\ShowCopilotButton",
-            "ai.recall" => @"HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI\{AllowRecallEnablement, DisableAIDataAnalysis}",
+            "ai.copilot" => @"HKLM + HKCU\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot\TurnOffWindowsCopilot  +  HKCU\...\Explorer\Advanced\ShowCopilotButton  +  HKCU\...\Shell\BrandedKey\AppAumid  +  HKCU\...\BackgroundAccessApplications\Microsoft.Copilot_8wekyb3d8bbwe\DisabledByUser",
+            "ai.recall" => @"HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI\{AllowRecallEnablement, DisableAIDataAnalysis, TurnOffSavingSnapshots}",
             "ai.clicktodo" => @"HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI\DisableClickToDo  +  HKCU\Software\Microsoft\Windows\Shell\ClickToDo\DisableClickToDo",
-            "ai.edge" => @"HKLM\SOFTWARE\Policies\Microsoft\Edge\{HubsSidebarEnabled, CopilotPageContext, GenAILocalFoundationalModelSettings}",
-            "ai.notepadpaint" => @"HKCU\Software\Microsoft\Notepad\RewriteEnabled  +  HKCU\...\Paint\{DisableCocreator, DisableImageCreator, DisableGenerativeErase}",
+            "ai.edge" => @"HKLM\SOFTWARE\Policies\Microsoft\Edge\{HubsSidebarEnabled, CopilotPageContext, GenAILocalFoundationalModelSettings, ComposeInlineEnabled, AllowBrowsingWithCopilot}",
+            "ai.notepadpaint" => @"HKCU\Software\Microsoft\Notepad\RewriteEnabled  +  HKCU\...\Paint\{DisableCocreator, DisableImageCreator, DisableGenerativeErase}  +  HKCU\...\Applets\Paint\View\IsSignedUpForTargetingService  +  HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Paint\DisableImageCreator",
+            "ai.settingssearch" => @"HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer\DisableSearchBoxSuggestions  +  HKCU\...\Explorer\Advanced\TaskbarCompanion",
+            "ai.actions" => @"HKLM\SYSTEM\ControlSet001\Control\FeatureManagement\Overrides\8\{1853569164, 4098520719}\EnabledState (DWORD; 1 = force-disabled, 2 = force-enabled, absent = server default)",
+            "ai.inputinsights" => @"HKCU\Software\Microsoft\InputPersonalization\RestrictImplicitTextCollection  +  HKCU\Software\Microsoft\input\Settings\InsightsEnabled",
+            "ai.office" => @"HKCU\Software\Microsoft\Office\16.0\{Word\Options\EnableCopilot, Excel\Options\EnableCopilot, OneNote\Options\Copilot\CopilotEnabled}  +  HKLM\SOFTWARE\Policies\Microsoft\office\16.0\common\ai\training\general\disabletraining",
             _ => "(unknown)",
         };
     }
@@ -128,7 +132,24 @@ public static class SettingDocs
                                 @"$pt='HKCU:\Software\Microsoft\Windows\CurrentVersion\Paint'; New-Item $pt -Force | Out-Null; " +
                                 @"Set-ItemProperty $pt -Name DisableCocreator -Value 1 -Type DWord; " +
                                 @"Set-ItemProperty $pt -Name DisableImageCreator -Value 1 -Type DWord; " +
-                                @"Set-ItemProperty $pt -Name DisableGenerativeErase -Value 1 -Type DWord",
+                                @"Set-ItemProperty $pt -Name DisableGenerativeErase -Value 1 -Type DWord; " +
+                                @"$pv='HKCU:\Software\Microsoft\Windows\CurrentVersion\Applets\Paint\View'; New-Item $pv -Force | Out-Null; " +
+                                @"Set-ItemProperty $pv -Name IsSignedUpForTargetingService -Value 0 -Type DWord; " +
+                                @"$hk='HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Paint'; New-Item $hk -Force | Out-Null; " +
+                                @"Set-ItemProperty $hk -Name DisableImageCreator -Value 1 -Type DWord",
+            "ai.settingssearch" => @"Set-ItemProperty 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name DisableSearchBoxSuggestions -Value 1 -Type DWord; " +
+                                  @"Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name TaskbarCompanion -Value 0 -Type DWord",
+            "ai.actions" => @"$r='HKLM:\SYSTEM\ControlSet001\Control\FeatureManagement\Overrides\8'; " +
+                           @"foreach($id in 1853569164, 4098520719) { New-Item -Path ""$r\$id"" -Force | Out-Null; " +
+                           @"Set-ItemProperty -Path ""$r\$id"" -Name EnabledState -Value 1 -Type DWord }",
+            "ai.inputinsights" => @"Set-ItemProperty 'HKCU:\Software\Microsoft\InputPersonalization' -Name RestrictImplicitTextCollection -Value 1 -Type DWord; " +
+                                 @"Set-ItemProperty 'HKCU:\Software\Microsoft\input\Settings' -Name InsightsEnabled -Value 0 -Type DWord",
+            "ai.office" => @"Set-ItemProperty 'HKCU:\Software\Microsoft\Office\16.0\Word\Options' -Name EnableCopilot -Value 0 -Type DWord; " +
+                          @"Set-ItemProperty 'HKCU:\Software\Microsoft\Office\16.0\Excel\Options' -Name EnableCopilot -Value 0 -Type DWord; " +
+                          @"$on='HKCU:\Software\Microsoft\Office\16.0\OneNote\Options\Copilot'; New-Item $on -Force | Out-Null; " +
+                          @"Set-ItemProperty $on -Name CopilotEnabled -Value 0 -Type DWord; " +
+                          @"$tr='HKLM:\SOFTWARE\Policies\Microsoft\office\16.0\common\ai\training\general'; New-Item $tr -Force | Out-Null; " +
+                          @"Set-ItemProperty $tr -Name disabletraining -Value 1 -Type DWord",
             _ => "",
         };
     }
@@ -169,10 +190,14 @@ public static class SettingDocs
             "gamestask" => @"Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games'",
             "powerplan" => @"powercfg /getactivescheme",
             "ai.copilot" => @"(Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot' -Name TurnOffWindowsCopilot -EA SilentlyContinue).TurnOffWindowsCopilot",
-            "ai.recall" => @"$k='HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI'; @{Allow=(Get-ItemProperty $k -Name AllowRecallEnablement -EA SilentlyContinue).AllowRecallEnablement; Disable=(Get-ItemProperty $k -Name DisableAIDataAnalysis -EA SilentlyContinue).DisableAIDataAnalysis}",
+            "ai.recall" => @"$k='HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI'; @{Allow=(Get-ItemProperty $k -Name AllowRecallEnablement -EA SilentlyContinue).AllowRecallEnablement; Disable=(Get-ItemProperty $k -Name DisableAIDataAnalysis -EA SilentlyContinue).DisableAIDataAnalysis; Snap=(Get-ItemProperty $k -Name TurnOffSavingSnapshots -EA SilentlyContinue).TurnOffSavingSnapshots}",
             "ai.clicktodo" => @"(Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name DisableClickToDo -EA SilentlyContinue).DisableClickToDo",
-            "ai.edge" => @"$k='HKLM:\SOFTWARE\Policies\Microsoft\Edge'; @{Hubs=(Get-ItemProperty $k -Name HubsSidebarEnabled -EA SilentlyContinue).HubsSidebarEnabled; Ctx=(Get-ItemProperty $k -Name CopilotPageContext -EA SilentlyContinue).CopilotPageContext; Gen=(Get-ItemProperty $k -Name GenAILocalFoundationalModelSettings -EA SilentlyContinue).GenAILocalFoundationalModelSettings}",
+            "ai.edge" => @"$k='HKLM:\SOFTWARE\Policies\Microsoft\Edge'; @{Hubs=(Get-ItemProperty $k -Name HubsSidebarEnabled -EA SilentlyContinue).HubsSidebarEnabled; Ctx=(Get-ItemProperty $k -Name CopilotPageContext -EA SilentlyContinue).CopilotPageContext; Gen=(Get-ItemProperty $k -Name GenAILocalFoundationalModelSettings -EA SilentlyContinue).GenAILocalFoundationalModelSettings; Compose=(Get-ItemProperty $k -Name ComposeInlineEnabled -EA SilentlyContinue).ComposeInlineEnabled; Browse=(Get-ItemProperty $k -Name AllowBrowsingWithCopilot -EA SilentlyContinue).AllowBrowsingWithCopilot}",
             "ai.notepadpaint" => @"$np='HKCU:\Software\Microsoft\Notepad'; $pt='HKCU:\Software\Microsoft\Windows\CurrentVersion\Paint'; @{Rewrite=(Get-ItemProperty $np -Name RewriteEnabled -EA SilentlyContinue).RewriteEnabled; Cocreator=(Get-ItemProperty $pt -Name DisableCocreator -EA SilentlyContinue).DisableCocreator}",
+            "ai.settingssearch" => @"@{Disable=(Get-ItemProperty 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name DisableSearchBoxSuggestions -EA SilentlyContinue).DisableSearchBoxSuggestions; Companion=(Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name TaskbarCompanion -EA SilentlyContinue).TaskbarCompanion}",
+            "ai.actions" => @"$r='HKLM:\SYSTEM\ControlSet001\Control\FeatureManagement\Overrides\8'; @{A=(Get-ItemProperty $r\1853569164 -Name EnabledState -EA SilentlyContinue).EnabledState; B=(Get-ItemProperty $r\4098520719 -Name EnabledState -EA SilentlyContinue).EnabledState}",
+            "ai.inputinsights" => @"@{Restrict=(Get-ItemProperty 'HKCU:\Software\Microsoft\InputPersonalization' -Name RestrictImplicitTextCollection -EA SilentlyContinue).RestrictImplicitTextCollection; Insights=(Get-ItemProperty 'HKCU:\Software\Microsoft\input\Settings' -Name InsightsEnabled -EA SilentlyContinue).InsightsEnabled}",
+            "ai.office" => @"@{Word=(Get-ItemProperty 'HKCU:\Software\Microsoft\Office\16.0\Word\Options' -Name EnableCopilot -EA SilentlyContinue).EnableCopilot; Excel=(Get-ItemProperty 'HKCU:\Software\Microsoft\Office\16.0\Excel\Options' -Name EnableCopilot -EA SilentlyContinue).EnableCopilot; OneNote=(Get-ItemProperty 'HKCU:\Software\Microsoft\Office\16.0\OneNote\Options\Copilot' -Name CopilotEnabled -EA SilentlyContinue).CopilotEnabled; Training=(Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\office\16.0\common\ai\training\general' -Name disabletraining -EA SilentlyContinue).disabletraining}",
             _ => "",
         };
     }
