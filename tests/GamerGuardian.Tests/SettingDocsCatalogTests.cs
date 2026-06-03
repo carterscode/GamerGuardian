@@ -21,6 +21,7 @@ public class SettingDocsCatalogTests
     [InlineData("fso")]
     [InlineData("vrr")]
     [InlineData("powerplan")]
+    [InlineData("cpuplan")]
     [InlineData("ai.copilot")]
     [InlineData("ai.recall")]
     [InlineData("ai.clicktodo")]
@@ -60,6 +61,14 @@ public class SettingDocsCatalogTests
         var d = SettingDocsCatalog.Get("ai.app:Microsoft.Copilot");
         Assert.NotNull(d);
         Assert.Contains("Copilot", d!.DisplayName);
+    }
+
+    [Fact]
+    public void CpuPlan_HasMechanismApplyAndVerifyCommands()
+    {
+        Assert.Contains("PowerDuplicateScheme", SettingDocs.MechanismFor("cpuplan"));
+        Assert.Contains("powercfg", SettingDocs.ApplyCommandFor("cpuplan"));
+        Assert.Contains("getactivescheme", SettingDocs.VerifyCommandFor("cpuplan"));
     }
 
     [Fact]

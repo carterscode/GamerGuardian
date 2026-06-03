@@ -276,6 +276,21 @@ public static class SettingDocsCatalog
             Risks: "Higher idle power draw -- typically 10-30 W on desktop, more on high-end. Components run a few degrees warmer. Fan noise slightly higher. On laptops on battery: noticeably worse battery life.",
             ReversibleVia: "powercfg /setactive SCHEME_BALANCED (or pick another plan from Settings > System > Power)."),
 
+        ["cpuplan"] = new(
+            SettingId: "cpuplan",
+            DisplayName: "CPU-optimized gaming power plan",
+            What: "A GamerGuardian-authored power plan, built by cloning Balanced and writing a small set of processor overrides tuned for your detected CPU. The app detects the CPU at startup and offers either the best-matching prebuilt Windows plan or this custom optimized plan. The optimized recipe is tiered: an exact model match uses a precise recipe, a recognized family uses a family recipe, and an unknown CPU gets a safe generic tune (clearly labeled).",
+            Why: "The right gaming power plan is CPU-dependent. Single-CCD X3D wants core parking OFF; asymmetric dual-CCD X3D (e.g. 9950X3D) wants the frequency CCD PARKED so games stay on the cache CCD; symmetric and non-X3D parts want no parking. High Performance is wrong in both directions for these chips -- it pins clocks and disables the parking modern schedulers rely on. The optimized plan is always a Balanced clone (never a High Performance personality) with aggressive boost.",
+            HowItHelps: "Aggressive boost lets the CPU reach and hold its gaming clocks; correct parking keeps game threads on the right cores; faster ramp thresholds reduce clock-up latency. All without the heat/boost-headroom cost of High Performance.",
+            Scenarios: Scenarios(
+                ("Single-CCD X3D (9850X3D / 9800X3D / 7800X3D)", "Build optimized -- no parking, aggressive boost"),
+                ("Asymmetric dual-CCD X3D (9950X3D / 7950X3D)", "Build optimized -- parks frequency CCD; also verify BIOS CPPC=Driver + AMD V-Cache service + Game Bar"),
+                ("Non-X3D / Intel hybrid", "Build optimized (no parking / leave Thread Director) or suggest Balanced"),
+                ("Unknown CPU", "Build optimized uses a labeled generic tune, or suggest the best prebuilt plan")),
+            Recommended: "Build optimized for your CPU (or suggest Balanced)",
+            Risks: "Low. The plan is additive -- your existing Windows plans are never modified or deleted, and you can switch back at any time. For asymmetric dual-CCD X3D the power plan alone is not sufficient: it depends on the AMD CCD-routing stack (BIOS CPPC=Driver, the 3D V-Cache Optimizer service, and Xbox Game Bar), which the app surfaces but cannot set.",
+            ReversibleVia: "Switch the active plan back via Settings > System > Power, or 'powercfg /setactive SCHEME_BALANCED'. The GamerGuardian plan can be deleted from the legacy Power control panel if you no longer want it."),
+
         // ---- Windows AI ---------------------------------------------------
 
         ["ai.copilot"] = new(

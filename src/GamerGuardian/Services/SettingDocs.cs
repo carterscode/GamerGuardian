@@ -40,6 +40,7 @@ public static class SettingDocs
             "usbsuspend" => @"HKLM\SYSTEM\CurrentControlSet\Services\USB\DisableSelectiveSuspend (DWORD)",
             "gamestask" => @"HKLM\SOFTWARE\...\Multimedia\SystemProfile\Tasks\Games (Priority + Scheduling Category + SFIO Priority)",
             "powerplan" => @"powrprof.dll PowerSetActiveScheme  (verifiable via 'powercfg /getactivescheme')",
+            "cpuplan" => @"powrprof.dll PowerDuplicateScheme + PowerWriteAC/DCValueIndex (build a Balanced-clone tuned plan) + PowerSetActiveScheme  (verifiable via 'powercfg /query <guid> SUB_PROCESSOR')",
             "ai.copilot" => @"HKLM + HKCU\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot\TurnOffWindowsCopilot  +  HKCU\...\Explorer\Advanced\ShowCopilotButton  +  HKCU\...\Shell\BrandedKey\AppAumid  +  HKCU\...\BackgroundAccessApplications\Microsoft.Copilot_8wekyb3d8bbwe\DisabledByUser",
             "ai.recall" => @"HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI\{AllowRecallEnablement, DisableAIDataAnalysis, TurnOffSavingSnapshots}",
             "ai.clicktodo" => @"HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI\DisableClickToDo  +  HKCU\Software\Microsoft\Windows\Shell\ClickToDo\DisableClickToDo",
@@ -115,6 +116,12 @@ public static class SettingDocs
             "usbsuspend" => $@"Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\USB' -Name DisableSelectiveSuspend -Value {OrDefault(rawDesired, "1")} -Type DWord",
             "gamestask" => @"# Apply the Games multimedia task profile (Priority/Scheduling Category/SFIO Priority). The app writes 4 DWORDs under HKLM\...\Tasks\Games -- see SettingDocs.MechanismFor for the path.",
             "powerplan" => $"powercfg /setactive {OrDefault(rawDesired, "(plan-guid)")}",
+            // Template: the actual GUIDs/values are runtime-resolved and shown in
+            // changes.log / the Apply Results window. The exact-overrides docs
+            // obligation is met by SettingDocsCatalog and docs/CPU-AWARE-POWER-PLANS.md.
+            "cpuplan" => "powercfg -duplicatescheme SCHEME_BALANCED  # -> <new-guid>; " +
+                         "powercfg -setacvalueindex <new-guid> SUB_PROCESSOR <setting-guid> <value>  (repeat per override; actual GUIDs/values in changes.log); " +
+                         "powercfg -setactive <new-guid>",
             "ai.copilot" => @"# Disable Windows Copilot:" + "\n" +
                            @"Set-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot' -Name TurnOffWindowsCopilot -Value 1 -Type DWord; " +
                            @"Set-ItemProperty 'HKCU:\Software\Policies\Microsoft\Windows\WindowsCopilot' -Name TurnOffWindowsCopilot -Value 1 -Type DWord; " +
@@ -189,6 +196,7 @@ public static class SettingDocs
             "usbsuspend" => @"(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\USB' -Name DisableSelectiveSuspend).DisableSelectiveSuspend",
             "gamestask" => @"Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games'",
             "powerplan" => @"powercfg /getactivescheme",
+            "cpuplan" => @"powercfg /getactivescheme; powercfg /query SCHEME_CURRENT SUB_PROCESSOR",
             "ai.copilot" => @"(Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot' -Name TurnOffWindowsCopilot -EA SilentlyContinue).TurnOffWindowsCopilot",
             "ai.recall" => @"$k='HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI'; @{Allow=(Get-ItemProperty $k -Name AllowRecallEnablement -EA SilentlyContinue).AllowRecallEnablement; Disable=(Get-ItemProperty $k -Name DisableAIDataAnalysis -EA SilentlyContinue).DisableAIDataAnalysis; Snap=(Get-ItemProperty $k -Name TurnOffSavingSnapshots -EA SilentlyContinue).TurnOffSavingSnapshots}",
             "ai.clicktodo" => @"(Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name DisableClickToDo -EA SilentlyContinue).DisableClickToDo",
