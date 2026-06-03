@@ -87,6 +87,10 @@ public sealed class GlobalPreferences
     public ToggleSettingPref UsbSelectiveSuspend { get; set; } = new() { DesiredOn = true };
     public ToggleSettingPref GamesTaskProfile { get; set; } = new() { DesiredOn = true };
     public PowerPlanPref PowerPlan { get; set; } = new();
+    /// <summary>Identity of the GamerGuardian-authored CPU-optimized power plan,
+    /// for idempotent rebuild/re-tune. Nested under Global so it rides the
+    /// existing config clone.</summary>
+    public CpuPlanPref CpuPlan { get; set; } = new();
 
     // ---- Windows AI lockdown toggles (DesiredOn = true keeps Windows defaults) ----
     // Default DesiredOn=true + Monitor=false: zero behavior change for existing users
@@ -108,6 +112,24 @@ public sealed class ToggleSettingPref
     public bool Monitor { get; set; } = false;
     public bool DesiredOn { get; set; } = true;
     public bool AutoApply { get; set; } = false;
+}
+
+/// <summary>
+/// Identity of the GamerGuardian-authored CPU-optimized scheme so a rebuild can
+/// reuse / re-tune it instead of stacking duplicates. Power-scheme GUIDs are
+/// machine-local, so the machine token guards against a roamed config deleting a
+/// foreign machine's plan.
+/// </summary>
+public sealed class CpuPlanPref
+{
+    /// <summary>GUID of the GG-authored scheme this app built, if any.</summary>
+    public string? BuiltSchemeGuid { get; set; }
+    /// <summary>Content hash of the override set the scheme was tuned to.</summary>
+    public string? ContentHash { get; set; }
+    /// <summary>Machine identity the scheme was built on (MachineGuid).</summary>
+    public string? MachineToken { get; set; }
+    /// <summary>CPU model the scheme was built for (display + sanity).</summary>
+    public string? CpuModel { get; set; }
 }
 
 public sealed class PowerPlanPref
