@@ -49,8 +49,14 @@ public static class SettingDocsCatalog
     /// <summary>
     /// Plain-text rendering of a SettingDetails suitable for the in-app
     /// "Learn more" expander. Same content as the markdown reference but
-    /// without markdown markers so a single &lt;TextBlock TextWrapping="Wrap"/&gt;
-    /// can render it. Returns empty string for null input (UI hides the expander).
+    /// without markdown markers so a single read-only TextBox can render
+    /// and let the user select/copy any sub-range. Returns empty string for
+    /// null input (UI hides the expander).
+    ///
+    /// <para>Appends a "PowerShell" block at the end with the apply / verify
+    /// / reverse commands and the registry/API location, all sourced from
+    /// <see cref="SettingDocs"/>. Users who want to apply, audit, or roll
+    /// back a setting outside the app can copy-paste straight from here.</para>
     /// </summary>
     public static string FormatForExpander(string settingId)
     {
@@ -76,8 +82,43 @@ public static class SettingDocsCatalog
         sb.AppendLine(d.Risks);
         sb.AppendLine();
         sb.AppendLine("Reversible via");
-        sb.Append(d.ReversibleVia);
-        return sb.ToString();
+        sb.AppendLine(d.ReversibleVia);
+
+        // ---- PowerShell ----
+        // All three are sourced from SettingDocs (the same place the change
+        // log pulls them from), so what users see here matches what they
+        // see in changes.log -- no two-source-of-truth drift.
+        var mechanism = SettingDocs.MechanismFor(settingId);
+        var apply = SettingDocs.ApplyCommandFor(settingId);
+        var verify = SettingDocs.VerifyCommandFor(settingId);
+        bool anyPs = !string.IsNullOrWhiteSpace(mechanism)
+                     || !string.IsNullOrWhiteSpace(apply)
+                     || !string.IsNullOrWhiteSpace(verify);
+        if (anyPs)
+        {
+            sb.AppendLine();
+            sb.AppendLine("PowerShell (selectable -- highlight and Ctrl+C)");
+            if (!string.IsNullOrWhiteSpace(mechanism))
+            {
+                sb.AppendLine();
+                sb.AppendLine("  Location / mechanism:");
+                sb.AppendLine($"    {mechanism}");
+            }
+            if (!string.IsNullOrWhiteSpace(apply))
+            {
+                sb.AppendLine();
+                sb.AppendLine("  Apply / disable:");
+                sb.AppendLine($"    {apply}");
+            }
+            if (!string.IsNullOrWhiteSpace(verify))
+            {
+                sb.AppendLine();
+                sb.AppendLine("  Verify current value:");
+                sb.AppendLine($"    {verify}");
+            }
+        }
+
+        return sb.ToString().TrimEnd();
     }
 
     // ---- Helpers ----------------------------------------------------------
@@ -264,17 +305,19 @@ public static class SettingDocsCatalog
             SettingId: "powerplan",
             DisplayName: "Active Windows power plan",
             What: "The active Windows power scheme. Controls CPU throttling thresholds, sleep timers, hard-drive spindown, USB selective suspend, and dozens of other power-related defaults.",
-            Why: "Balanced (the default) lets the OS dynamically scale CPU clocks to save power, which costs you a few ms of latency at the start of any CPU-bound burst. High Performance / Ultimate Performance keeps CPU clocks pegged at the top of the curve for predictable response.",
-            HowItHelps: "Eliminates CPU clock-ramp latency. First-frame and first-input responses feel snappier. Background tasks finish faster.",
+            Why: "Balanced (the default) lets the OS dynamically scale CPU clocks to save power -- on most CPUs that costs a few ms of latency at the start of CPU-bound bursts but is otherwise fine. High Performance pegs clocks at the top of the curve for predictable response. AMD X3D chips are a documented exception: their V-Cache CCD has a lower max clock, and pegging the non-X3D CCD via High Performance can starve games of the V-Cache CCD's huge latency advantage. AMD officially recommends Balanced for X3D.",
+            HowItHelps: "On non-X3D CPUs: High Performance eliminates clock-ramp latency for snappier first-frame and first-input response. On X3D CPUs: Balanced lets AMD's CPPC scheduling park games on the V-Cache CCD where they belong.",
             Scenarios: Scenarios(
-                ("Competitive FPS / Streaming", "High Performance or a tuned custom plan"),
-                ("Casual single-player on a desktop", "High Performance"),
+                ("AMD X3D CPU (any 5800X3D / 7x00X3D / 9x00X3D)", "Balanced -- AMD's documented recommendation"),
+                ("Non-X3D AMD or Intel desktop, gaming", "High Performance"),
+                ("Streaming + game", "High Performance (non-X3D) or Balanced (X3D)"),
+                ("Casual single-player on a desktop", "High Performance (non-X3D) or Balanced (X3D)"),
                 ("Laptop on battery", "Balanced (saves power)"),
-                ("Laptop plugged in", "High Performance"),
+                ("Laptop plugged in", "High Performance (non-X3D) or Balanced (X3D)"),
                 ("Idle workstation", "Balanced (drops back to power-saving when idle)")),
-            Recommended: "High Performance",
-            Risks: "Higher idle power draw -- typically 10-30 W on desktop, more on high-end. Components run a few degrees warmer. Fan noise slightly higher. On laptops on battery: noticeably worse battery life.",
-            ReversibleVia: "powercfg /setactive SCHEME_BALANCED (or pick another plan from Settings > System > Power)."),
+            Recommended: "CPU-aware: Balanced for AMD X3D, High Performance for everything else. The Recommended preset reads HKLM\\HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0\\ProcessorNameString and picks based on the X3D marker.",
+            Risks: "High Performance: higher idle power draw (~10-30 W on desktop), components run a few degrees warmer, fan noise slightly up, laptop battery life noticeably worse. On X3D CPUs: setting High Performance can actively hurt game performance because the OS scheduler ignores the V-Cache CCD's advantage and pegs clocks on the wrong CCD.",
+            ReversibleVia: "powercfg /setactive SCHEME_BALANCED (or pick another plan from Settings > System > Power & battery > Power mode)."),
 
         // ---- Windows AI ---------------------------------------------------
 

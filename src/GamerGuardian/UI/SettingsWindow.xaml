@@ -7,7 +7,7 @@
         Width="820" Height="720"
         MinWidth="680" MinHeight="500"
         WindowStartupLocation="CenterScreen"
-        WindowBackdropType="Mica"
+        WindowBackdropType="None"
         ExtendsContentIntoTitleBar="True"
         WindowCornerPreference="Round">
     <Grid>
@@ -204,10 +204,23 @@
                                                 </Grid>
                                                 <Expander Header="Learn more" Margin="0,8,0,0"
                                                           Visibility="{Binding LearnMoreVisibility}">
-                                                    <TextBlock Text="{Binding LearnMoreContent}"
-                                                               TextWrapping="Wrap" FontSize="12"
-                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                               Margin="8,8,8,8"/>
+                                                    <!-- Read-only TextBox styled to look like a TextBlock so the
+                                                         text is selectable + Ctrl+C-copyable. WPF's TextBlock
+                                                         doesn't support text selection; switching to a TextBox
+                                                         is the canonical workaround. -->
+                                                    <TextBox Text="{Binding LearnMoreContent, Mode=OneWay}"
+                                                             IsReadOnly="True"
+                                                             IsReadOnlyCaretVisible="False"
+                                                             BorderThickness="0"
+                                                             Background="Transparent"
+                                                             TextWrapping="Wrap"
+                                                             AcceptsReturn="True"
+                                                             VerticalScrollBarVisibility="Disabled"
+                                                             HorizontalScrollBarVisibility="Disabled"
+                                                             Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                             FontSize="12"
+                                                             Padding="0"
+                                                             Margin="8,8,8,8"/>
                                                 </Expander>
                                             </StackPanel>
                                         </ui:Card>
@@ -347,10 +360,23 @@
                                             </Grid>
                                                 <Expander Header="Learn more" Margin="0,8,0,0"
                                                           Visibility="{Binding LearnMoreVisibility}">
-                                                    <TextBlock Text="{Binding LearnMoreContent}"
-                                                               TextWrapping="Wrap" FontSize="12"
-                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                               Margin="8,8,8,8"/>
+                                                    <!-- Read-only TextBox styled to look like a TextBlock so the
+                                                         text is selectable + Ctrl+C-copyable. WPF's TextBlock
+                                                         doesn't support text selection; switching to a TextBox
+                                                         is the canonical workaround. -->
+                                                    <TextBox Text="{Binding LearnMoreContent, Mode=OneWay}"
+                                                             IsReadOnly="True"
+                                                             IsReadOnlyCaretVisible="False"
+                                                             BorderThickness="0"
+                                                             Background="Transparent"
+                                                             TextWrapping="Wrap"
+                                                             AcceptsReturn="True"
+                                                             VerticalScrollBarVisibility="Disabled"
+                                                             HorizontalScrollBarVisibility="Disabled"
+                                                             Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                             FontSize="12"
+                                                             Padding="0"
+                                                             Margin="8,8,8,8"/>
                                                 </Expander>
                                             </StackPanel>
                                         </ui:Card>
@@ -423,10 +449,23 @@
                                                 </Grid>
                                                 <Expander Header="Learn more" Margin="0,8,0,0"
                                                           Visibility="{Binding LearnMoreVisibility}">
-                                                    <TextBlock Text="{Binding LearnMoreContent}"
-                                                               TextWrapping="Wrap" FontSize="12"
-                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                               Margin="8,8,8,8"/>
+                                                    <!-- Read-only TextBox styled to look like a TextBlock so the
+                                                         text is selectable + Ctrl+C-copyable. WPF's TextBlock
+                                                         doesn't support text selection; switching to a TextBox
+                                                         is the canonical workaround. -->
+                                                    <TextBox Text="{Binding LearnMoreContent, Mode=OneWay}"
+                                                             IsReadOnly="True"
+                                                             IsReadOnlyCaretVisible="False"
+                                                             BorderThickness="0"
+                                                             Background="Transparent"
+                                                             TextWrapping="Wrap"
+                                                             AcceptsReturn="True"
+                                                             VerticalScrollBarVisibility="Disabled"
+                                                             HorizontalScrollBarVisibility="Disabled"
+                                                             Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                             FontSize="12"
+                                                             Padding="0"
+                                                             Margin="8,8,8,8"/>
                                                 </Expander>
                                             </StackPanel>
                                         </ui:Card>
@@ -475,10 +514,23 @@
                                             </Grid>
                                                 <Expander Header="Learn more" Margin="0,8,0,0"
                                                           Visibility="{Binding LearnMoreVisibility}">
-                                                    <TextBlock Text="{Binding LearnMoreContent}"
-                                                               TextWrapping="Wrap" FontSize="12"
-                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                               Margin="8,8,8,8"/>
+                                                    <!-- Read-only TextBox styled to look like a TextBlock so the
+                                                         text is selectable + Ctrl+C-copyable. WPF's TextBlock
+                                                         doesn't support text selection; switching to a TextBox
+                                                         is the canonical workaround. -->
+                                                    <TextBox Text="{Binding LearnMoreContent, Mode=OneWay}"
+                                                             IsReadOnly="True"
+                                                             IsReadOnlyCaretVisible="False"
+                                                             BorderThickness="0"
+                                                             Background="Transparent"
+                                                             TextWrapping="Wrap"
+                                                             AcceptsReturn="True"
+                                                             VerticalScrollBarVisibility="Disabled"
+                                                             HorizontalScrollBarVisibility="Disabled"
+                                                             Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                             FontSize="12"
+                                                             Padding="0"
+                                                             Margin="8,8,8,8"/>
                                                 </Expander>
                                             </StackPanel>
                                         </ui:Card>

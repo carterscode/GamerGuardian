@@ -21,6 +21,21 @@ public partial class App : WpfApplication
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // Force software rendering process-wide BEFORE any WPF window is
+        // created. WPF's default GPU-accelerated rendering pulls in the
+        // local display driver's D3D11 user-mode component (typically
+        // 100-150 MB of mapped pages -- nvgpucomp64.dll + nvd3dumx.dll on
+        // NVIDIA; similar on AMD/Intel). Those pages sit in our address
+        // space for the entire app lifetime even though the Settings
+        // window is only opened occasionally. Software rendering uses CPU
+        // for the rare paint, which is invisibly cheap for a settings UI
+        // -- and saves ~130 MB at idle, our single biggest footprint win.
+        //
+        // Must be set before any Window / Dispatcher work touches WPF
+        // rendering; setting it after a window is loaded throws.
+        System.Windows.Media.RenderOptions.ProcessRenderMode =
+            System.Windows.Interop.RenderMode.SoftwareOnly;
+
         AppDomain.CurrentDomain.UnhandledException += (_, ex) =>
             LogException("unhandled", ex.ExceptionObject as Exception);
         DispatcherUnhandledException += (_, ex) =>

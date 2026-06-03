@@ -1,6 +1,6 @@
 # Staged Apply + Verbose Logging Architecture
 
-This document describes the architecture introduced in v0.1.38 that fixed the "every click immediately writes to disk and triggers a UAC prompt" bug from v0.1.37. The key idea: the Settings UI mutates a **draft copy** of `AppConfig`; the live config and `config.json` are untouched until the user explicitly clicks **Apply** or **Save & close**. Cancel (and closing the window without Save) discards the draft.
+This document describes the architecture introduced in v0.1.38 that fixed the "every click immediately writes to disk and triggers a UAC prompt" bug from v0.1.37, plus the v0.1.39 additions (Windows AI parity, Recommended preset, CPU-aware power plan, software rendering, NotificationHeader, ReadCurrent semantics fix). The key idea: the Settings UI mutates a **draft copy** of `AppConfig`; the live config and `config.json` are untouched until the user explicitly clicks **Apply** or **Save & close**. Cancel (and closing the window without Save) discards the draft.
 
 ## Diagram
 
@@ -84,6 +84,28 @@ The verbose record per applied change. Fields the log writes: `SettingId`, `Desc
 
 Long-form documentation per setting. Populated in `Services/SettingDocsCatalog`. Rendered to `docs/SETTINGS-REFERENCE.md` by `Services/SettingsReferenceGen` and surfaced in the UI's "Learn more" expander.
 
+The expander content (`SettingDocsCatalog.FormatForExpander`) appends a `PowerShell` block at the end with three things sourced from `SettingDocs`: the **location / mechanism** (registry path or API name), the **apply** command, and the **verify** command. Same data the change log emits per applied change, so the in-app docs and the log can't drift. The Learn more `TextBox` is read-only but selectable -- highlight + Ctrl+C copies any sub-range, including the PowerShell snippets.
+
+### `RecommendedPreset` (`Services/RecommendedPreset.cs`)
+
+One-click "gaming-optimized configuration" preset. Mutates the draft (not the live config) so the existing Apply / Cancel / Save & close flow still applies. Per-setting helper methods (`SetToggle`, `SetService`, `SetHdr`, `SetRefresh`, `SetPowerPlan`) compare current vs recommended and only mutate fields that differ -- the preset is **idempotent**, so re-running after a future update with new preset-managed settings only stages the deltas.
+
+The preset is CPU-aware in one place: `SetPowerPlan` reads the CPU name via `CpuInfo.GetName()` (the `HKLM\HARDWARE\DESCRIPTION\System\CentralProcessor\0\ProcessorNameString` registry value) and picks Balanced for AMD X3D chips (per AMD's documented guidance) or High Performance for everything else. If the recommended plan isn't installed locally, the preset leaves the power plan alone -- it doesn't second-guess a custom plan.
+
+Memory Integrity / VBS and UWP AI app removal are deliberately not in the preset: the first because flipping security in a one-click button would surprise users; the second because UWP removal is irreversible without the Microsoft Store.
+
+### `CpuInfo` (`Services/CpuInfo.cs`)
+
+Two-method helper for CPU-aware defaults: `GetName()` returns the registry's ProcessorNameString, and `IsAmdX3D(name)` matches the `X3D` substring. Fast (microseconds), no WMI, no admin. Used by `RecommendedPreset` today; available for any future CPU-aware logic.
+
+### `NotificationHeader` (`Services/NotificationHeader.cs`)
+
+Picks the drift-notification window's header text based on the report's contents. Replaces the v0.1.37-era hardcoded "Display settings have drifted" string that appeared even for AI-policy or service drifts. Single-category reports get a category-specific noun ("Windows AI setting", "Windows service", "Display setting", "Global gaming setting"); mixed reports get a count-based "N monitored settings have drifted." Extracted into a separate static so it's unit-testable without standing up a WPF window.
+
+### Software rendering (`App.OnStartup`)
+
+`RenderOptions.ProcessRenderMode = SoftwareOnly` is set at the very top of `App.OnStartup`, before any window creation. WPF renders with the CPU instead of the GPU. For a tray app where the Settings window is opened occasionally, the per-paint CPU cost is invisible -- and skipping the GPU pipeline means the GPU's user-mode D3D driver (~100-150 MB of mapped pages on NVIDIA / AMD) never enters our address space for the tray-only case. After Settings is opened once, WPF still lazy-loads some D3D bits (DirectWrite text rendering pulls in D3D regardless), so the savings are biggest for users who configure once and never reopen Settings. All five `FluentWindow` XAMLs are set to `WindowBackdropType="None"` instead of `"Mica"` to avoid the Mica compositor pulling in DirectComposition.
+
 ## Lifecycle traces
 
 ### User opens Settings, toggles a service to Disabled, clicks Apply
@@ -122,7 +144,8 @@ Long-form documentation per setting. Populated in `Services/SettingDocsCatalog`.
 | Marker | Written by | Meaning |
 |---|---|---|
 | `[SESSION   ]` | `ChangeLogger.LogSessionStart` | App started. Includes version, OS, CLR, machine, user (elevated y/n), PID, config path. |
-| `[PREF-STAGE]` | `OnRowPrefChanged` | User toggled a draft preference. Not applied yet. |
+| `[SNAPSHOT  ]` | `ChangeLogger.LogStateSnapshot` | Baseline snapshot of every monitored setting's current vs desired. Written on session start and on every click of the Settings footer's **Verify all** button. |
+| `[PREF-STAGE]` | `OnRowPrefChanged` | User toggled a draft preference. Not applied yet. Recommended preset emits these for every field it touched with source `preset`. |
 | `[APPLY-START]` | `LogApplyResults` | A batch of changes is about to apply. Includes session id, source, count. |
 | `[manual    ]` etc. per-record | `LogApplyResults` | One verbose entry per change. Multi-line: settingId, location, before/desired/after, applyCmd, verifyCmd, elapsedMs, status. |
 | `[APPLY-END  ]` | `LogApplyResults` | Same session id. Includes `verified=N/M` summary and total elapsed ms. |
@@ -135,6 +158,7 @@ Source tags on per-change records:
 | Source | Origin |
 |---|---|
 | `manual` | User clicked Apply or Save & close. |
+| `preset` | User clicked Apply Recommended on the General tab. Logged on the PREF-STAGE line for each field the preset touched. |
 | `auto` | Background MonitorService tick auto-applied a setting that had drifted and had no prior verified state (i.e. first time we've seen it drift). |
 | `auto-revert` | Background tick auto-applied a setting Windows had externally reset (an EXTRESET line was logged immediately before). |
 
@@ -157,9 +181,14 @@ A unit test in `tests/GamerGuardian.Tests/SettingsReferenceGenTests.cs` asserts 
 | Per-setting docs (data) | `Models/SettingDetails.cs` |
 | Per-setting docs (content) | `Services/SettingDocsCatalog.cs` |
 | Markdown rendering | `Services/SettingsReferenceGen.cs` |
-| Apply orchestration | `Services/ChangeApplier.cs` |
+| Apply orchestration + retry-with-backoff verify | `Services/ChangeApplier.cs` |
 | Verbose logger | `Services/ChangeLogger.cs` |
 | Background monitor + external-reset detection | `Services/MonitorService.cs` |
 | One-line mechanism / verify / apply PowerShell | `Services/SettingDocs.cs` |
-| Draft UI + Apply/Save&close/Cancel | `UI/SettingsWindow.xaml.cs` |
+| One-click Recommended preset (CPU-aware) | `Services/RecommendedPreset.cs` |
+| CPU detection (registry-backed, no WMI) | `Services/CpuInfo.cs` |
+| Category-aware notification header | `Services/NotificationHeader.cs` |
+| Draft UI + Apply/Save&close/Cancel + Verify all + Recommended button | `UI/SettingsWindow.xaml.cs` |
 | Verbose per-change result UI | `UI/ApplyResultsWindow.xaml.cs` |
+| Drift popup with per-category header | `UI/NotificationWindow.xaml.cs` |
+| Software-rendering bootstrap | `App.xaml.cs` (`OnStartup`) |
