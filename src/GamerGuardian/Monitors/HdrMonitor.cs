@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using GamerGuardian.Models;
 using GamerGuardian.Native;
+using GamerGuardian.Services;
 
 namespace GamerGuardian.Monitors;
 
@@ -10,9 +11,10 @@ public sealed class HdrMonitor : IMonitoredSetting
 
     public IEnumerable<DriftItem> CheckDrift(AppConfig config)
     {
-        foreach (var display in DisplayHelper.EnumerateActiveDisplays())
+        var active = DisplayHelper.EnumerateActiveDisplays();
+        foreach (var display in active)
         {
-            var pref = GetOrCreatePref(config, display);
+            var pref = DisplayPreferenceResolver.Resolve(config, display, active);
 
             var state = ReadHdrState(display);
             if (state is null) continue;
@@ -35,20 +37,6 @@ public sealed class HdrMonitor : IMonitoredSetting
                 RawBefore: $"advancedColorEnabled={(current ? 1 : 0)}",
                 RawDesired: $"advancedColorEnabled={(desired ? 1 : 0)}");
         }
-    }
-
-    private static DisplayPreference GetOrCreatePref(AppConfig config, DisplayInfo display)
-    {
-        if (!config.Displays.TryGetValue(display.StableKey, out var pref))
-        {
-            pref = new DisplayPreference { DisplayLabel = display.DisplayLabel };
-            config.Displays[display.StableKey] = pref;
-        }
-        else if (string.IsNullOrEmpty(pref.DisplayLabel))
-        {
-            pref.DisplayLabel = display.DisplayLabel;
-        }
-        return pref;
     }
 
     public static (bool Supported, bool Enabled)? ReadHdrState(DisplayInfo display)

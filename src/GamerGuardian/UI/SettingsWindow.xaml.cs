@@ -526,17 +526,24 @@ public partial class SettingsWindow : FluentWindow
     private void LoadDisplays()
     {
         DisplayRows.Clear();
-        foreach (var d in DisplayHelper.EnumerateActiveDisplays())
+        var active = DisplayHelper.EnumerateActiveDisplays();
+        foreach (var d in active)
         {
-            if (!_draft.Displays.TryGetValue(d.StableKey, out var pref))
-            {
-                pref = new DisplayPreference { DisplayLabel = d.DisplayLabel };
-                _draft.Displays[d.StableKey] = pref;
-            }
+            var pref = DisplayPreferenceResolver.Resolve(_draft, d, active);
             var hdr = SafeRead(() => HdrMonitor.ReadHdrState(d) is { } s ? (bool?)(s.Supported && s.Enabled) : null);
             var refresh = string.IsNullOrEmpty(d.GdiDeviceName) ? null : RefreshRateMonitor.GetCurrentRefresh(d.GdiDeviceName);
             uint maxHz = refresh is null ? 0 : RefreshRateMonitor.GetMaxSupportedRefresh(d.GdiDeviceName, refresh.Value.Width, refresh.Value.Height);
-            var rates = refresh is null ? Array.Empty<uint>() : RefreshRateMonitor.GetSupportedRefreshRates(d.GdiDeviceName, refresh.Value.Width, refresh.Value.Height);
+            var rates = refresh is null
+                ? new List<uint>()
+                : RefreshRateMonitor.GetSupportedRefreshRates(d.GdiDeviceName, refresh.Value.Width, refresh.Value.Height).ToList();
+            // Keep the saved Fixed target selectable even if the panel is
+            // momentarily capped low (e.g. a flaky driver only offering 64 Hz),
+            // so opening Settings during a glitch can't silently drop it.
+            if (pref.RefreshRate.FixedHz is { } fixedHz && fixedHz > 0 && !rates.Contains(fixedHz))
+            {
+                rates.Add(fixedHz);
+                rates.Sort();
+            }
             var resolutions = string.IsNullOrEmpty(d.GdiDeviceName) ? Array.Empty<(uint, uint)>() : ResolutionMonitor.ListSupported(d.GdiDeviceName);
             var resStrings = resolutions.Select(r => $"{r.Item1}x{r.Item2}").ToList();
             var current = ResolutionMonitor.GetCurrent(d.GdiDeviceName);
