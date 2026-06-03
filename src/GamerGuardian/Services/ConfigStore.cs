@@ -29,7 +29,11 @@ public sealed class ConfigStore
         {
             if (!File.Exists(ConfigPath)) return new AppConfig();
             var json = File.ReadAllText(ConfigPath);
-            return JsonSerializer.Deserialize<AppConfig>(json, JsonOptions) ?? new AppConfig();
+            var config = JsonSerializer.Deserialize<AppConfig>(json, JsonOptions) ?? new AppConfig();
+            // Collapse duplicate per-display entries left behind by older,
+            // key-unstable versions so saved settings stop "resetting".
+            DisplayPreferenceResolver.DedupeDisplays(config);
+            return config;
         }
         catch
         {

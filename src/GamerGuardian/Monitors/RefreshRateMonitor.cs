@@ -1,5 +1,6 @@
 using GamerGuardian.Models;
 using GamerGuardian.Native;
+using GamerGuardian.Services;
 
 namespace GamerGuardian.Monitors;
 
@@ -9,13 +10,10 @@ public sealed class RefreshRateMonitor : IMonitoredSetting
 
     public IEnumerable<DriftItem> CheckDrift(AppConfig config)
     {
-        foreach (var display in DisplayHelper.EnumerateActiveDisplays())
+        var active = DisplayHelper.EnumerateActiveDisplays();
+        foreach (var display in active)
         {
-            if (!config.Displays.TryGetValue(display.StableKey, out var pref))
-            {
-                pref = new DisplayPreference { DisplayLabel = display.DisplayLabel };
-                config.Displays[display.StableKey] = pref;
-            }
+            var pref = DisplayPreferenceResolver.Resolve(config, display, active);
             if (string.IsNullOrEmpty(display.GdiDeviceName)) continue;
 
             var current = GetCurrentRefresh(display.GdiDeviceName);
