@@ -42,7 +42,10 @@ public static class CpuPlanBuilder
 
         // 2. Adopt an orphaned GG plan with the same name rather than stacking a
         //    duplicate (the root cause of the two identical plans observed live).
+        //    Never adopt a well-known Microsoft plan even if a user renamed it to
+        //    the GG format -- re-tuning it would mutate a built-in.
         var orphan = installed.FirstOrDefault(p =>
+            !IsWellKnownMicrosoft(p.Guid) &&
             string.Equals(p.Name, recipe.PlanName, StringComparison.OrdinalIgnoreCase));
         if (orphan is not null)
             return new BuildPlan(BuildDecision.ReTune, orphan.Guid);
@@ -151,11 +154,20 @@ public static class CpuPlanBuilder
                 break;
         }
 
+        // Identity is persisted by the caller only after activation + verify
+        // succeed (see CpuPlanApply.BuildAndVerify) so a verify failure never
+        // leaves config pointing at an unverified plan.
+        return target;
+    }
+
+    /// <summary>Persist the GG plan identity into the pref. Called by the apply
+    /// step only after activation and read-back verification succeed.</summary>
+    public static void PersistIdentity(CpuPlanPref pref, CpuTuneResult recipe, Guid target, string machineToken)
+    {
         pref.BuiltSchemeGuid = target.ToString();
         pref.ContentHash = recipe.ContentHash;
         pref.MachineToken = machineToken;
         pref.CpuModel = recipe.Cpu.Model;
-        return target;
     }
 
     private static void ApplyOverrides(Guid scheme, CpuTuneResult recipe)

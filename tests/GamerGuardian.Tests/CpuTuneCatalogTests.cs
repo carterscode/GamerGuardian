@@ -134,9 +134,46 @@ public class CpuTuneCatalogTests
     }
 
     [Fact]
-    public void NoEntry_RecommendsHighPerformance()
+    public void AllEntries_RecommendBalanced_NotHighPerformance()
     {
         Assert.All(CpuTuneCatalog.All, d => Assert.Equal(PowerPlanChoice.Balanced, d.RecommendedPrebuilt));
+    }
+
+    [Fact]
+    public void ExactEntry_WinsOverFamily_ForListedSingleCcdModel()
+    {
+        // Pins the catalog ordering: 9850X3D must resolve via the exact entry,
+        // not the broadened single-CCD family entry.
+        Assert.Equal("amd-single-x3d-exact", CpuTuneCatalog.Resolve(Amd("9850X3D")).Definition.Key);
+    }
+
+    [Fact]
+    public void UnlistedX3d_ResolvesViaSingleCcdFamily_NoParking()
+    {
+        // An X3D model in no exact/park set defaults to the single-CCD recipe.
+        var r = CpuTuneCatalog.Resolve(Amd("8800X3D"));
+        Assert.Equal(TuneTier.Family, r.Definition.Tier);
+        Assert.Equal(ParkingStrategy.NoParking, r.Parking);
+        Assert.Equal(100u, MinCores(r));
+    }
+
+    [Fact]
+    public void OlderIntel_ResolvesToGeneric()
+    {
+        var r = CpuTuneCatalog.Resolve(Intel("Intel(R) Core(TM) i7-7700K CPU @ 4.20GHz"));
+        Assert.True(r.IsGeneric);
+        Assert.False(HasParkOverride(r));
+    }
+
+    [Fact]
+    public void ComputeHash_ValueSensitive_SingleValueChange()
+    {
+        var sub = Guid.NewGuid();
+        var setting = Guid.NewGuid();
+        var a = new[] { new PowerOverride(sub, setting, 50u, "x") };
+        var b = new[] { new PowerOverride(sub, setting, 100u, "x") };
+        Assert.NotEqual(CpuTuneResult.ComputeHash(a), CpuTuneResult.ComputeHash(b));
+        Assert.Equal(CpuTuneResult.ComputeHash(a), CpuTuneResult.ComputeHash(a.ToArray()));
     }
 
     [Fact]

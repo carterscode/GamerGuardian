@@ -128,9 +128,15 @@ public static class CpuTuneCatalog
                 CcdTopology.Dual, ParkingStrategy.ParkFrequencyCcd,
                 AsymmetricDualRecipe(), PowerPlanChoice.Balanced, false, BiosAmdDualCcd()),
 
-            // Family, single-CCD X3D (7800X3D and any other single-CCD X3D).
+            // Family, single-CCD X3D. Catches any X3D that is NOT a known
+            // asymmetric-dual model and NOT the dual-V-cache X3D2 -- i.e. an
+            // unlisted/future X3D defaults to the single-CCD (no-parking) recipe,
+            // the safe assumption for the common 8-core X3D shape. (Listed exact
+            // models still win via the earlier exact entry.)
             new("amd-single-x3d-family", TuneTier.Family,
-                c => c.Vendor == CpuVendor.Amd && IsSingleCcdX3d(c),
+                c => c.Vendor == CpuVendor.Amd && IsX3d(c)
+                     && !c.Model.EndsWith("X3D2", StringComparison.OrdinalIgnoreCase)
+                     && !ParkFrequencyCcdModels.Contains(c.Model),
                 CcdTopology.Single, ParkingStrategy.NoParking,
                 SingleCcdRecipe(), PowerPlanChoice.Balanced, false, BiosAmdSingle()),
 
@@ -160,9 +166,6 @@ public static class CpuTuneCatalog
 
     private static bool IsX3d(CpuInfo c) =>
         c.Model.Contains("X3D", StringComparison.OrdinalIgnoreCase);
-
-    private static bool IsSingleCcdX3d(CpuInfo c) =>
-        SingleCcdX3dModels.Contains(c.Model);
 
     /// <summary>Resolve the tune for a detected CPU: exact -> family -> generic.</summary>
     public static CpuTuneResult Resolve(CpuInfo cpu)

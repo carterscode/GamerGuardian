@@ -1201,7 +1201,7 @@ public partial class SettingsWindow : FluentWindow
             {
                 var win = new ApplyResultsWindow(results) { Owner = this };
                 win.Show();
-                if (!results[0].Verified)
+                if (results.Any(r => !r.Verified))
                 {
                     System.Windows.MessageBox.Show(this,
                         "The power plan action did not verify. If a UAC prompt was declined, the Balanced base was missing, " +

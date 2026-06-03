@@ -1,4 +1,5 @@
 using GamerGuardian.Models;
+using GamerGuardian.Monitors;
 using GamerGuardian.Services;
 using Xunit;
 
@@ -146,16 +147,31 @@ public class RecommendedPresetTests
     private static CpuTuneResult SingleCcd() =>
         CpuTuneCatalog.Resolve(CpuDetector.Parse("AMD Ryzen 7 9800X3D 8-Core Processor", "AuthenticAMD", ""));
 
+    private static Dictionary<Guid, string> PlansWithBalanced() =>
+        new() { [PowerPlanMonitor.Balanced] = "Balanced" };
+
     [Fact]
     public void Apply_PowerPlan_IsCpuAware_RecommendsBalanced_NotHighPerformance()
     {
         var cfg = new AppConfig();
-        RecommendedPreset.ApplyToDraft(cfg, DualCcd());
+        // Inject an installed-plans set so the test doesn't depend on a live OS
+        // power-scheme enumeration (deterministic in CI).
+        RecommendedPreset.ApplyToDraft(cfg, DualCcd(), PlansWithBalanced());
 
-        // Balanced is installed on any Windows machine; the CPU-aware
-        // recommendation is the prebuilt Balanced -- never High Performance.
         Assert.Equal(PowerPlanChoice.Balanced, cfg.Global.PowerPlan.Desired);
         Assert.NotEqual(PowerPlanChoice.HighPerformance, cfg.Global.PowerPlan.Desired);
+    }
+
+    [Fact]
+    public void Apply_PowerPlan_NotInstalled_LeavesPlanAlone()
+    {
+        var cfg = new AppConfig();
+        var before = cfg.Global.PowerPlan.Desired;
+        // Recommended Balanced is not in the (empty) installed set.
+        RecommendedPreset.ApplyToDraft(cfg, DualCcd(), new Dictionary<Guid, string>());
+
+        Assert.Equal(before, cfg.Global.PowerPlan.Desired); // unchanged
+        Assert.Null(cfg.Global.PowerPlan.DesiredGuid);
     }
 
     [Fact]

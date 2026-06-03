@@ -34,6 +34,18 @@ public class PowerPlanMonitorTests
     }
 
     [Fact]
+    public void ToGuid_HighPerformance_Unchanged()
+    {
+        Assert.Equal(PowerPlanMonitor.HighPerformance, PowerPlanMonitor.ToGuid(PowerPlanChoice.HighPerformance));
+    }
+
+    [Fact]
+    public void ToGuid_UltimatePerformance_Unchanged()
+    {
+        Assert.Equal(PowerPlanMonitor.UltimatePerformance, PowerPlanMonitor.ToGuid(PowerPlanChoice.UltimatePerformance));
+    }
+
+    [Fact]
     public void ResolveInstalledScheme_PrefersExactGuidMatch()
     {
         var balanced = PowerPlanMonitor.Balanced;

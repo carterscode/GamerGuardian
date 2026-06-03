@@ -15,6 +15,8 @@ public class CpuDetectorTests
     [InlineData("AMD Ryzen 7 9700X 8-Core Processor", "9700X", "Zen5")]
     [InlineData("AMD Ryzen 9 7950X 16-Core Processor", "7950X", "Zen4")]
     [InlineData("AMD Ryzen 5 7600 6-Core Processor", "7600", "Zen4")]
+    [InlineData("AMD Ryzen 7 5800X3D 8-Core Processor", "5800X3D", "Zen3")]
+    [InlineData("AMD Ryzen 5 5600X 6-Core Processor", "5600X", "Zen3")]
     public void Parse_Amd_ModelAndFamily(string name, string expectedModel, string expectedFamily)
     {
         var info = CpuDetector.Parse(name, "AuthenticAMD", "");
@@ -47,11 +49,22 @@ public class CpuDetectorTests
     }
 
     [Fact]
-    public void Parse_OlderIntel_NotHybrid()
+    public void Parse_OlderIntel_NotHybrid_ExtractsModelNotFrequency()
     {
         var info = CpuDetector.Parse("Intel(R) Core(TM) i7-7700K CPU @ 4.20GHz", "GenuineIntel", "");
         Assert.Equal(CpuVendor.Intel, info.Vendor);
         Assert.Equal("IntelOther", info.Family);
+        Assert.Equal("7700K", info.Model); // the i-series SKU, not "4200"/bus numbers
+    }
+
+    [Fact]
+    public void Parse_NonCoreIntel_NoNoiseModel()
+    {
+        // Xeon/Pentium aren't i-series; we extract no model token (stable generic
+        // identity) rather than grabbing a frequency/bus number.
+        var info = CpuDetector.Parse("Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz", "GenuineIntel", "");
+        Assert.Equal(CpuVendor.Intel, info.Vendor);
+        Assert.Equal(string.Empty, info.Model);
     }
 
     [Theory]

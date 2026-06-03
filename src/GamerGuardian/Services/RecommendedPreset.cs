@@ -46,7 +46,12 @@ public static class RecommendedPreset
     public static Result ApplyToDraft(AppConfig draft) =>
         ApplyToDraft(draft, CpuTuneCatalog.Resolve(CpuDetector.Current));
 
-    public static Result ApplyToDraft(AppConfig draft, CpuTuneResult recipe)
+    public static Result ApplyToDraft(AppConfig draft, CpuTuneResult recipe) =>
+        ApplyToDraft(draft, recipe, SafeListPlans());
+
+    // installedPlans is injectable so the power-plan step is testable without a
+    // live OS power-scheme enumeration.
+    public static Result ApplyToDraft(AppConfig draft, CpuTuneResult recipe, IDictionary<Guid, string> installedPlans)
     {
         if (draft is null) throw new ArgumentNullException(nameof(draft));
 
@@ -80,7 +85,7 @@ public static class RecommendedPreset
         Count(SetToggle(g.OfficeCopilot,   "Office 365 Copilot",             desiredOn: false, changes));
 
         // ---- Power plan: CPU-aware recommended prebuilt (Balanced for modern) ----
-        Count(SetPowerPlan(g.PowerPlan, recipe, changes));
+        Count(SetPowerPlan(g.PowerPlan, recipe, installedPlans, changes));
 
         // ---- Services with a RecommendedTarget ----
         foreach (var def in ServiceCatalog.All)
@@ -162,7 +167,8 @@ public static class RecommendedPreset
         return true;
     }
 
-    private static bool SetPowerPlan(PowerPlanPref pref, CpuTuneResult recipe, List<string> changes)
+    private static bool SetPowerPlan(PowerPlanPref pref, CpuTuneResult recipe,
+        IDictionary<Guid, string> plans, List<string> changes)
     {
         // CPU-aware: recommend the prebuilt plan the catalog picked (Balanced for
         // modern CPUs) -- never blindly High Performance. Building the custom
@@ -170,7 +176,6 @@ public static class RecommendedPreset
         // recommended plan isn't installed, leave the power plan alone.
         var choice = recipe.RecommendedPrebuilt;
         var targetGuid = PowerPlanMonitor.ToGuid(choice);
-        var plans = SafeListPlans();
         if (!plans.TryGetValue(targetGuid, out var name))
             return false;
 

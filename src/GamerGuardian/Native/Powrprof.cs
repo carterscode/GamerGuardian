@@ -81,6 +81,14 @@ internal static class Powrprof
         ref Guid PowerSettingGuid,
         out uint AcValueIndex);
 
+    [DllImport("powrprof.dll")]
+    public static extern uint PowerReadDCValueIndex(
+        IntPtr RootPowerKey,
+        ref Guid SchemeGuid,
+        ref Guid SubGroupOfPowerSettingsGuid,
+        ref Guid PowerSettingGuid,
+        out uint DcValueIndex);
+
     // Buffer is a Unicode, null-terminated byte buffer plus its byte count — NOT
     // a marshalled string. Sub/Setting are NULL (IntPtr.Zero) to name a scheme.
     [DllImport("powrprof.dll")]
@@ -172,6 +180,15 @@ internal static class Powrprof
     public static uint? ReadAcValue(Guid scheme, Guid subgroup, Guid setting)
     {
         if (PowerReadACValueIndex(IntPtr.Zero, ref scheme, ref subgroup, ref setting, out var value) != ERROR_SUCCESS)
+            return null;
+        return value;
+    }
+
+    /// <summary>Read the DC value of a processor power setting. Returns null if
+    /// the read fails.</summary>
+    public static uint? ReadDcValue(Guid scheme, Guid subgroup, Guid setting)
+    {
+        if (PowerReadDCValueIndex(IntPtr.Zero, ref scheme, ref subgroup, ref setting, out var value) != ERROR_SUCCESS)
             return null;
         return value;
     }

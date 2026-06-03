@@ -68,18 +68,22 @@ public static class CpuPlanApply
         if (!Powrprof.SetActiveScheme(target))
             throw new InvalidOperationException("Built the optimized plan but could not set it active.");
 
-        // Self-verify: active scheme matches AND every override actually applied.
+        // Self-verify: active scheme matches AND every override actually applied
+        // on BOTH rails (we write AC and DC).
         if (Powrprof.GetActiveScheme() != target)
             throw new InvalidOperationException("Active scheme does not match the built plan after apply.");
         foreach (var o in recipe.Overrides)
         {
-            var actual = Powrprof.ReadAcValue(target, o.Subgroup, o.Setting);
-            if (actual != o.Value)
+            var ac = Powrprof.ReadAcValue(target, o.Subgroup, o.Setting);
+            var dc = Powrprof.ReadDcValue(target, o.Subgroup, o.Setting);
+            if (ac != o.Value || dc != o.Value)
                 throw new InvalidOperationException(
-                    $"Verification failed: '{o.Label}' read back as {(actual?.ToString() ?? "unset")}.");
+                    $"Verification failed: '{o.Label}' read back as AC={(ac?.ToString() ?? "unset")}, DC={(dc?.ToString() ?? "unset")}.");
         }
 
-        // Only on success: pin the existing PowerPlanMonitor to this plan (R17).
+        // Only on success: persist the GG plan identity (idempotency) and pin the
+        // existing PowerPlanMonitor to this plan (R17).
+        CpuPlanBuilder.PersistIdentity(config.Global.CpuPlan, recipe, target, machineToken);
         config.Global.PowerPlan.DesiredGuid = target.ToString();
         config.Global.PowerPlan.DesiredName = recipe.PlanName;
     }
@@ -101,6 +105,8 @@ public static class CpuPlanApply
     private static (string name, Guid guid) ActivePlan()
     {
         var guid = Powrprof.GetActiveScheme();
+        if (guid == Guid.Empty)
+            return ("(unknown -- could not read the active plan)", Guid.Empty);
         var name = Powrprof.ReadFriendlyName(guid) ?? guid.ToString();
         return (name, guid);
     }

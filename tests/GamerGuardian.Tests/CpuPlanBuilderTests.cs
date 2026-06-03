@@ -141,10 +141,74 @@ public class CpuPlanBuilderTests
         };
 
         Assert.True(CpuPlanBuilder.MaySafelyDelete(gg, installed));
-        Assert.False(CpuPlanBuilder.MaySafelyDelete(PowerPlanMonitor.Balanced, installed)); // Microsoft
+        Assert.False(CpuPlanBuilder.MaySafelyDelete(PowerPlanMonitor.Balanced, installed));           // Microsoft
+        Assert.False(CpuPlanBuilder.MaySafelyDelete(PowerPlanMonitor.HighPerformance, installed));    // Microsoft
+        Assert.False(CpuPlanBuilder.MaySafelyDelete(PowerPlanMonitor.PowerSaver, installed));         // Microsoft
+        Assert.False(CpuPlanBuilder.MaySafelyDelete(PowerPlanMonitor.UltimatePerformance, installed));// Microsoft
         Assert.False(CpuPlanBuilder.MaySafelyDelete(renamed, installed));                   // not GG-named
         Assert.False(CpuPlanBuilder.MaySafelyDelete(Guid.NewGuid(), installed));            // not installed
         Assert.False(CpuPlanBuilder.MaySafelyDelete(Guid.Empty, installed));
+    }
+
+    [Fact]
+    public void Decide_NullMachineToken_StoredGuidInstalled_StillReuses()
+    {
+        // Compatibility path: a config from before machine-token binding has a
+        // null token; the foreign-machine guard must be skipped, not block reuse.
+        var recipe = Recipe("9850X3D");
+        var g = Guid.NewGuid();
+        var pref = new CpuPlanPref
+        {
+            BuiltSchemeGuid = g.ToString(),
+            ContentHash = recipe.ContentHash,
+            MachineToken = null,
+        };
+        var installed = new[] { Balanced, new InstalledPlan(g, recipe.PlanName) };
+
+        Assert.Equal(BuildDecision.ReuseExisting,
+            CpuPlanBuilder.Decide(pref, recipe, MachineA, installed).Decision);
+    }
+
+    [Fact]
+    public void Decide_DoesNotAdoptRenamedMicrosoftPlan()
+    {
+        // A user renamed a built-in to the GG format; adoption must refuse it.
+        var recipe = Recipe("9850X3D");
+        var installed = new[] { new InstalledPlan(PowerPlanMonitor.Balanced, recipe.PlanName) };
+
+        var plan = CpuPlanBuilder.Decide(new CpuPlanPref(), recipe, MachineA, installed);
+
+        Assert.Equal(BuildDecision.Create, plan.Decision); // not ReTune against the built-in
+    }
+
+    [Fact]
+    public void Decide_MultipleOrphans_AdoptsOneNotCreate()
+    {
+        var recipe = Recipe("9850X3D");
+        var o1 = Guid.NewGuid();
+        var o2 = Guid.NewGuid();
+        var installed = new[]
+        {
+            Balanced,
+            new InstalledPlan(o1, recipe.PlanName),
+            new InstalledPlan(o2, recipe.PlanName),
+        };
+
+        var plan = CpuPlanBuilder.Decide(new CpuPlanPref(), recipe, MachineA, installed);
+
+        Assert.Equal(BuildDecision.ReTune, plan.Decision);
+        Assert.Contains(plan.ExistingGuid, new[] { (Guid?)o1, o2 });
+    }
+
+    [Fact]
+    public void BestPrebuilt_ReturnsRecommendedWhenInstalled_ElseEmpty()
+    {
+        var recipe = Recipe("9850X3D"); // recommends Balanced
+        var installedWith = new[] { Balanced };
+        var installedWithout = new[] { new InstalledPlan(Guid.NewGuid(), "Something else") };
+
+        Assert.Equal(PowerPlanMonitor.Balanced, CpuPlanBuilder.BestPrebuilt(recipe, installedWith));
+        Assert.Equal(Guid.Empty, CpuPlanBuilder.BestPrebuilt(recipe, installedWithout));
     }
 
     [Fact]

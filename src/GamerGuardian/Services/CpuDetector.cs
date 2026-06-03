@@ -48,6 +48,11 @@ public static class CpuDetector
     private static readonly Regex IntelUltraModel =
         new(@"\bUltra\s+\d\s+(\d{3}[A-Z]{0,2})\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    // Any Intel Core i-series model (e.g. i7-7700K -> 7700K). Anchored to the
+    // i-prefix so it never grabs a frequency/bus number.
+    private static readonly Regex IntelCoreModel =
+        new(@"\bi[3579]-(\d{4,5}[A-Z]{0,2})\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
     public static CpuInfo Parse(string? nameString, string? vendorId, string? identifier)
     {
         nameString ??= string.Empty;
@@ -106,8 +111,11 @@ public static class CpuDetector
         if (hybrid.Success)
             return (hybrid.Groups[1].Value.ToUpperInvariant(), "IntelHybrid");
 
-        // Recognized Intel but not a known hybrid generation.
-        var any = Regex.Match(nameString, @"\b(\d{4,5}[A-Z]{0,2})\b");
-        return (any.Success ? any.Groups[1].Value.ToUpperInvariant() : string.Empty, "IntelOther");
+        // Recognized Intel but not a known hybrid generation. Only extract a
+        // model token when it's a real i-series SKU -- never a bus/frequency
+        // number (which would fragment plan identity). Xeon/Pentium/Celeron fall
+        // through to an empty model -> stable generic identity.
+        var core = IntelCoreModel.Match(nameString);
+        return (core.Success ? core.Groups[1].Value.ToUpperInvariant() : string.Empty, "IntelOther");
     }
 }
