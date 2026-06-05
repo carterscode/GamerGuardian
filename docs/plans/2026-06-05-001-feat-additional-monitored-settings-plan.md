@@ -1,7 +1,7 @@
 ---
 title: "feat: Add 12 additional monitored settings (privacy, network, system)"
 type: feat
-status: active
+status: completed
 date: 2026-06-05
 origin: docs/brainstorms/2026-06-05-additional-settings-requirements.md
 depth: deep
