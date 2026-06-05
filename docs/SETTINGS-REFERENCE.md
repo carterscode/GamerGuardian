@@ -524,7 +524,7 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 
 `ai.settingssearch` &nbsp; **Recommended:** Off
 
-**What it does.** Two HKCU policies: DisableSearchBoxSuggestions (kills the AI/Copilot-flavored web suggestion layer in the Windows search box) and TaskbarCompanion (the floating Copilot widget Windows can dock next to the taskbar). HKCU only -- no UAC.
+**What it does.** Three HKCU values: BingSearchEnabled=0 (the value Windows 11 actually honors for the AI/web suggestion layer in the search box -- this is the authoritative one), IsDynamicSearchBoxEnabled=0 (search highlights / the companion content), and the legacy DisableSearchBoxSuggestions=1 policy (best-effort -- unreliable on Win11). HKCU only -- no UAC.
 
 **Why you'd change it.** The search box's AI suggestion layer calls Microsoft web endpoints to suggest answers as you type. The taskbar companion is a floating overlay some Windows 11 builds enable by default. Both are noise for users who use the search box for files and apps.
 
@@ -540,7 +540,7 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 
 **Risks.** You lose the web-suggestion layer and the taskbar companion. Search itself works exactly as before.
 
-**Reversible via.** Delete DisableSearchBoxSuggestions from HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer and TaskbarCompanion from HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced.
+**Reversible via.** Delete BingSearchEnabled from HKCU\Software\Microsoft\Windows\CurrentVersion\Search, IsDynamicSearchBoxEnabled from HKCU\Software\Microsoft\Windows\CurrentVersion\SearchSettings, and DisableSearchBoxSuggestions from HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer (or set them back to 1 / 1 / absent).
 
 
 ### Typing / input insights data collection
