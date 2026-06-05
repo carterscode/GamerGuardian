@@ -537,6 +537,81 @@
                     </ScrollViewer>
                 </TabItem>
 
+                <TabItem Header="CPU / Power"
+                         HorizontalContentAlignment="Stretch"
+                         VerticalContentAlignment="Stretch">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,8,8,0">
+                        <StackPanel>
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <TextBlock Text="Detected CPU" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="CpuDetectedText" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                    <TextBlock x:Name="CpuTierText" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+                            </ui:Card>
+
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <TextBlock Text="Gaming power plan" FontWeight="SemiBold"/>
+                                        <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   Text="Switch to the best-matching prebuilt Windows plan, or build a GamerGuardian-authored plan tuned for your CPU. Your existing Windows plans are never modified or deleted -- the app only creates or re-tunes its own plan, and you can switch back at any time."/>
+                                        <TextBlock x:Name="CpuPlanStatusText" Margin="0,8,0,0" FontSize="11" TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <ui:Button x:Name="SuggestPrebuiltButton" Content="Suggest best prebuilt"
+                                                   MinWidth="180" Margin="0,0,0,8"
+                                                   Click="SuggestPrebuiltButton_Click"/>
+                                        <ui:Button x:Name="BuildOptimizedButton" Content="Build optimized plan"
+                                                   Appearance="Primary" MinWidth="180"
+                                                   Click="BuildOptimizedButton_Click"/>
+                                    </StackPanel>
+                                </Grid>
+                            </ui:Card>
+
+                            <ui:Card x:Name="CcdDependencyCard" Padding="16" Margin="0,0,0,8" Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBlock Text="Dual-CCD routing dependencies" FontWeight="SemiBold"/>
+                                    <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="On this CPU the power plan is necessary but not sufficient. Game threads only stay on the cache CCD when these are also in place:"/>
+                                    <StackPanel x:Name="CcdDependencyList" Margin="0,8,0,0"/>
+                                    <TextBlock FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"
+                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                               Text="State is read once when this window opens. Restart GamerGuardian to re-check."/>
+                                </StackPanel>
+                            </ui:Card>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <TabItem Header="Recommended BIOS"
+                         HorizontalContentAlignment="Stretch"
+                         VerticalContentAlignment="Stretch">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,8,8,0">
+                        <StackPanel>
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <TextBlock Text="Recommended BIOS settings" FontWeight="SemiBold"/>
+                                    <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="Advisory only -- GamerGuardian cannot read or change BIOS settings. Verify these against your motherboard manual. Recommendations are keyed to your detected CPU."/>
+                                </StackPanel>
+                            </ui:Card>
+                            <ui:Card Padding="16" Margin="0,0,0,8">
+                                <StackPanel x:Name="BiosGuidanceList"/>
+                            </ui:Card>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
             </TabControl>
         </DockPanel>
     </Grid>

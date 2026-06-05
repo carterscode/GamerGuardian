@@ -9,7 +9,10 @@ public sealed class PowerPlanMonitor : IMonitoredSetting
 
     public static readonly Guid Balanced = new("381b4222-f694-41f0-9685-ff5bb260df2e");
     public static readonly Guid HighPerformance = new("8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c");
-    public static readonly Guid PowerSaver = new("a1841308-1541-4fbf-8c20-7b0a7e3e9b8a");
+    // Corrected: the previous value (a1841308-1541-4fbf-...) was wrong (the repo's
+    // documented "hardcoded power-scheme GUIDs lie" gotcha). The real Windows
+    // Power Saver scheme GUID is a1841308-3541-4fab-bc81-f71556f20b4a.
+    public static readonly Guid PowerSaver = new("a1841308-3541-4fab-bc81-f71556f20b4a");
     public static readonly Guid UltimatePerformance = new("e9a42b02-d5df-448d-aa00-03f14749eb61");
 
     public IEnumerable<DriftItem> CheckDrift(AppConfig config)
@@ -76,4 +79,34 @@ public sealed class PowerPlanMonitor : IMonitoredSetting
     }
 
     public static bool SetActivePlan(Guid g) => Powrprof.SetActiveScheme(g);
+
+    /// <summary>
+    /// Resolve a base scheme that is actually installed on this machine. Prefers
+    /// an exact GUID match against the enumerated schemes (honouring the repo rule
+    /// to verify against <see cref="Powrprof.EnumerateSchemes"/> rather than
+    /// trusting a constant blindly), falling back to a friendly-name match.
+    /// Returns <see cref="Guid.Empty"/> when no candidate is installed.
+    /// </summary>
+    public static Guid ResolveInstalledScheme(
+        Guid wellKnownGuid, string friendlyNameContains,
+        IEnumerable<Guid> installed, Func<Guid, string?> nameOf)
+    {
+        Guid nameMatch = Guid.Empty;
+        foreach (var g in installed)
+        {
+            if (g == wellKnownGuid) return g;
+            if (nameMatch == Guid.Empty)
+            {
+                var name = nameOf(g);
+                if (name is not null &&
+                    name.Contains(friendlyNameContains, StringComparison.OrdinalIgnoreCase))
+                    nameMatch = g;
+            }
+        }
+        return nameMatch;
+    }
+
+    /// <summary>Resolve the installed Balanced scheme to use as a clone base.</summary>
+    public static Guid ResolveBalancedBase() =>
+        ResolveInstalledScheme(Balanced, "Balanced", Powrprof.EnumerateSchemes(), Powrprof.ReadFriendlyName);
 }

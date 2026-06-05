@@ -82,6 +82,7 @@ public partial class SettingsWindow : FluentWindow
         LoadDisplays();
         LoadServices();
         LoadWindowsAi();
+        LoadCpuTabs();
         UpdatePendingStatus();
     }
 
@@ -833,6 +834,7 @@ public partial class SettingsWindow : FluentWindow
         LoadDisplays();
         LoadServices();
         LoadWindowsAi();
+        LoadCpuTabs();
         UpdatePendingStatus();
 
         if (results.Count > 0)
@@ -981,6 +983,7 @@ public partial class SettingsWindow : FluentWindow
         LoadDisplays();
         LoadServices();
         LoadWindowsAi();
+        LoadCpuTabs();
 
         if (RecommendedStatusText is not null)
         {
@@ -996,6 +999,229 @@ public partial class SettingsWindow : FluentWindow
 
         System.Windows.MessageBox.Show(this, dialogMsg, "GamerGuardian -- Recommended preset",
             System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+    }
+
+    // ---- CPU / Power + Recommended BIOS tabs ------------------------------
+
+    private CpuTuneResult? _cpuRecipe;
+
+    private void LoadCpuTabs()
+    {
+        var cpu = CpuDetector.Current;
+        var r = CpuTuneCatalog.Resolve(cpu);
+        _cpuRecipe = r;
+
+        if (CpuDetectedText is null) return; // XAML not ready yet
+
+        CpuDetectedText.Text = cpu.IsDetected
+            ? cpu.RawModel
+            : "CPU: not detected -- using a generic tune";
+
+        var tier = r.Definition.Tier switch
+        {
+            TuneTier.Exact => "exact match",
+            TuneTier.Family => "family match",
+            _ => "generic",
+        };
+        var topo = r.Topology switch
+        {
+            CcdTopology.Single => ", single-CCD",
+            CcdTopology.Dual => ", dual-CCD",
+            _ => "",
+        };
+        CpuTierText.Text =
+            $"Recipe: {tier}{topo}, parking: {ParkingText(r.Parking)}. Recommended prebuilt plan: {r.RecommendedPrebuilt}.";
+
+        CpuPlanStatusText.Text = r.IsGeneric
+            ? "No CPU-specific recipe -- 'Build optimized' creates a safe generic tune (aggressive boost, no parking changes)."
+            : $"'Build optimized' will create: {r.PlanName}.";
+
+        if (r.NeedsCcdRoutingStack)
+        {
+            CcdDependencyCard.Visibility = Visibility.Visible;
+            BuildDependencyRows(r);
+        }
+        else
+        {
+            CcdDependencyCard.Visibility = Visibility.Collapsed;
+        }
+
+        BuildBiosRows(r);
+    }
+
+    private void BuildDependencyRows(CpuTuneResult r)
+    {
+        CcdDependencyList.Children.Clear();
+
+        var svc = CpuPlanStatus.ReadAmdVCacheService();
+        var gameBar = CpuPlanStatus.ReadGameBarEnabled();
+        var activeGuid = Powrprof.GetActiveScheme();
+        bool planActive = _config.Global.CpuPlan.BuiltSchemeGuid is { } bg
+                          && Guid.TryParse(bg, out var bgGuid) && bgGuid == activeGuid;
+
+        // Checkable: AMD 3D V-Cache Optimizer service.
+        AddDependencyRow(svc switch
+        {
+            CcdServiceState.Running => "✓  AMD 3D V-Cache Optimizer service: running",
+            CcdServiceState.Stopped => "⚠  AMD 3D V-Cache Optimizer service: stopped -- start it (AMD Adrenalin / Services)",
+            _ => "—  AMD 3D V-Cache Optimizer service: not detected (install AMD chipset drivers)",
+        });
+
+        // Checkable: Xbox Game Bar.
+        AddDependencyRow(gameBar switch
+        {
+            true => "✓  Xbox Game Bar: enabled (game detection signal)",
+            false => "⚠  Xbox Game Bar: disabled -- re-enable so games are detected",
+            null => "—  Xbox Game Bar: unknown",
+        });
+
+        // Advisory: BIOS CPPC -- cannot be read.
+        AddDependencyRow("Advisory  BIOS \"CPPC Dynamic Preferred Cores\" = Driver (the app cannot read BIOS state)");
+
+        var status = CpuPlanStatus.DependencyStatus(planActive, svc, gameBar);
+        var summary = status switch
+        {
+            CcdDependencyStatus.Met =>
+                "Checkable dependencies look good. Still verify BIOS CPPC=Driver in your firmware -- the app can't read it, so it never claims full confirmation.",
+            CcdDependencyStatus.PartlyUnmet =>
+                "At least one dependency is unmet -- the optimized plan won't route games to the cache CCD until it's fixed.",
+            _ =>
+                "Can't confirm the AMD routing stack (service not detected). Install AMD chipset drivers + the 3D V-Cache Optimizer.",
+        };
+        var summaryBlock = new System.Windows.Controls.TextBlock
+        {
+            Text = summary,
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 12,
+            Margin = new Thickness(0, 8, 0, 0),
+            FontWeight = FontWeights.SemiBold,
+        };
+        CcdDependencyList.Children.Add(summaryBlock);
+    }
+
+    private void AddDependencyRow(string text)
+    {
+        CcdDependencyList.Children.Add(new System.Windows.Controls.TextBlock
+        {
+            Text = text,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 2, 0, 2),
+        });
+    }
+
+    private void BuildBiosRows(CpuTuneResult r)
+    {
+        if (BiosGuidanceList is null) return;
+        BiosGuidanceList.Children.Clear();
+
+        if (r.Bios.Count == 0)
+        {
+            BiosGuidanceList.Children.Add(new System.Windows.Controls.TextBlock
+            {
+                Text = "No CPU-specific BIOS recommendations are available for your processor.",
+                TextWrapping = TextWrapping.Wrap,
+            });
+            return;
+        }
+
+        bool first = true;
+        foreach (var b in r.Bios)
+        {
+            var block = new StackPanel { Margin = new Thickness(0, first ? 0 : 10, 0, 0) };
+            block.Children.Add(new System.Windows.Controls.TextBlock
+            {
+                Text = $"{b.Name}  →  {b.RecommendedValue}",
+                FontWeight = FontWeights.SemiBold,
+                TextWrapping = TextWrapping.Wrap,
+            });
+            block.Children.Add(new System.Windows.Controls.TextBlock
+            {
+                Text = b.Rationale,
+                FontSize = 12,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 2, 0, 0),
+                Foreground = (System.Windows.Media.Brush)FindResource("TextFillColorSecondaryBrush"),
+            });
+            BiosGuidanceList.Children.Add(block);
+            first = false;
+        }
+    }
+
+    private static string ParkingText(ParkingStrategy p) => p switch
+    {
+        ParkingStrategy.NoParking => "no parking",
+        ParkingStrategy.ParkFrequencyCcd => "park frequency CCD",
+        _ => "leave default",
+    };
+
+    private async void BuildOptimizedButton_Click(object sender, RoutedEventArgs e) =>
+        await RunCpuActionAsync(CpuPlanApply.BuildOptimizedDriftItem, (System.Windows.Controls.ContentControl)sender, "Building…");
+
+    private async void SuggestPrebuiltButton_Click(object sender, RoutedEventArgs e) =>
+        await RunCpuActionAsync(CpuPlanApply.SuggestPrebuiltDriftItem, (System.Windows.Controls.ContentControl)sender, "Applying…");
+
+    private async Task RunCpuActionAsync(
+        Func<CpuTuneResult, AppConfig, DriftItem> make,
+        System.Windows.Controls.ContentControl btn, string busyText)
+    {
+        if (_applyInFlight || _cpuRecipe is null) return;
+        _applyInFlight = true;
+        SetButtonsEnabled(false);
+        var origContent = btn.Content;
+        btn.IsEnabled = false;
+        btn.Content = busyText;
+        try
+        {
+            // Commit any staged draft edits first so nothing is lost.
+            PersistFormToDraft();
+            AppConfigCloner.CopyInto(_draft, _config);
+            _store.Save(_config);
+
+            var item = make(_cpuRecipe, _config);
+            var results = await CpuPlanApply.RunAsync(item, _monitors, _config);
+
+            // The Apply lambda updated _config.Global.PowerPlan / CpuPlan on success.
+            _store.Save(_config);
+            if (results.Count > 0)
+            {
+                ChangeLogger.LogApplyResults(results, "ui-cpuplan");
+                _monitorService?.RecordVerifiedApplies(results);
+            }
+            Saved?.Invoke();
+
+            RebaseDraftFromConfig();
+            LoadGlobals();
+            LoadDisplays();
+            LoadServices();
+            LoadWindowsAi();
+            LoadCpuTabs();
+            UpdatePendingStatus();
+
+            if (results.Count > 0)
+            {
+                var win = new ApplyResultsWindow(results) { Owner = this };
+                win.Show();
+                if (results.Any(r => !r.Verified))
+                {
+                    System.Windows.MessageBox.Show(this,
+                        "The power plan action did not verify. If a UAC prompt was declined, the Balanced base was missing, " +
+                        "or (on dual-CCD X3D) the BIOS/driver/Game Bar dependencies aren't in place, see the Apply Results window for details.",
+                        "GamerGuardian", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(this, "Power plan action failed: " + ex.Message,
+                "GamerGuardian", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+        }
+        finally
+        {
+            btn.Content = origContent;
+            btn.IsEnabled = true;
+            _applyInFlight = false;
+            SetButtonsEnabled(true);
+        }
     }
 
     /// <summary>

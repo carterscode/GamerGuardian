@@ -1,4 +1,5 @@
 using GamerGuardian.Models;
+using GamerGuardian.Monitors;
 using GamerGuardian.Services;
 using Xunit;
 
@@ -138,6 +139,70 @@ public class RecommendedPresetTests
     public void Apply_NullDraft_Throws()
     {
         Assert.Throws<ArgumentNullException>(() => RecommendedPreset.ApplyToDraft(null!));
+    }
+
+    private static CpuTuneResult DualCcd() =>
+        CpuTuneCatalog.Resolve(CpuDetector.Parse("AMD Ryzen 9 9950X3D 16-Core Processor", "AuthenticAMD", ""));
+
+    private static CpuTuneResult SingleCcd() =>
+        CpuTuneCatalog.Resolve(CpuDetector.Parse("AMD Ryzen 7 9800X3D 8-Core Processor", "AuthenticAMD", ""));
+
+    private static Dictionary<Guid, string> PlansWithBalanced() =>
+        new() { [PowerPlanMonitor.Balanced] = "Balanced" };
+
+    [Fact]
+    public void Apply_PowerPlan_IsCpuAware_RecommendsBalanced_NotHighPerformance()
+    {
+        var cfg = new AppConfig();
+        // Inject an installed-plans set so the test doesn't depend on a live OS
+        // power-scheme enumeration (deterministic in CI).
+        RecommendedPreset.ApplyToDraft(cfg, DualCcd(), PlansWithBalanced());
+
+        Assert.Equal(PowerPlanChoice.Balanced, cfg.Global.PowerPlan.Desired);
+        Assert.NotEqual(PowerPlanChoice.HighPerformance, cfg.Global.PowerPlan.Desired);
+    }
+
+    [Fact]
+    public void Apply_PowerPlan_NotInstalled_LeavesPlanAlone()
+    {
+        var cfg = new AppConfig();
+        var before = cfg.Global.PowerPlan.Desired;
+        // Recommended Balanced is not in the (empty) installed set.
+        RecommendedPreset.ApplyToDraft(cfg, DualCcd(), new Dictionary<Guid, string>());
+
+        Assert.Equal(before, cfg.Global.PowerPlan.Desired); // unchanged
+        Assert.Null(cfg.Global.PowerPlan.DesiredGuid);
+    }
+
+    [Fact]
+    public void Guardrail_DualCcd_ProtectsCcdRoutingServices()
+    {
+        var dual = DualCcd();
+        Assert.True(RecommendedPreset.ShouldProtectServiceOnDualCcd("AMD3DVCacheSvc", dual));
+        Assert.True(RecommendedPreset.ShouldProtectServiceOnDualCcd("AMDProvisioningPackagesSvc", dual));
+        Assert.True(RecommendedPreset.ShouldProtectServiceOnDualCcd("GamingServices", dual));
+    }
+
+    [Fact]
+    public void Guardrail_SingleCcd_DoesNotProtect()
+    {
+        var single = SingleCcd();
+        Assert.False(RecommendedPreset.ShouldProtectServiceOnDualCcd("AMD3DVCacheSvc", single));
+        Assert.False(RecommendedPreset.ShouldProtectServiceOnDualCcd("GamingServices", single));
+    }
+
+    [Fact]
+    public void Guardrail_DualCcd_NeverDisablesProtectedNamedServicesInPreset()
+    {
+        // AE6: even if a protected-named service carried a Disabled recommended
+        // target, the dual-CCD preset must not stage it disabled.
+        var cfg = new AppConfig();
+        RecommendedPreset.ApplyToDraft(cfg, DualCcd());
+        foreach (var (name, pref) in cfg.Services)
+        {
+            if (RecommendedPreset.ShouldProtectServiceOnDualCcd(name, DualCcd()))
+                Assert.NotEqual(ServiceTargetState.Disabled, pref.Desired);
+        }
     }
 
     [Fact]
