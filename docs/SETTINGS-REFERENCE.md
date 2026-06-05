@@ -25,6 +25,7 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 - [System Responsiveness](#system-responsiveness) (`sysresponse`)
 - [USB Selective Suspend (global)](#usb-selective-suspend-global) (`usbsuspend`)
 - [Variable Refresh Rate (DirectX)](#variable-refresh-rate-directx) (`vrr`)
+- [Visual effects (best performance)](#visual-effects-best-performance) (`visualfx`)
 - [Windows Game Mode](#windows-game-mode) (`gamemode`)
 
 **Privacy**
@@ -481,6 +482,29 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Risks.** Very low. Some older driver+game combos can flicker -- if you see it, turn off in-game V-Sync, leave VRR on.
 
 **Reversible via.** Delete VRROptimizeEnable from HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers.
+
+
+### Visual effects (best performance)
+
+`visualfx` &nbsp; **Recommended:** Best performance (gaming) for a snappy desktop; Default if you like the animations
+
+**What it does.** The Windows UI animation/effects profile. 'Adjust for best performance' (VisualFXSetting=2) disables window animations, menu fades, smooth-scrolling, and shadows. GamerGuardian writes VisualFXSetting=2 plus the matching best-performance UserPreferencesMask; the per-effect changes finish applying on the next sign-out.
+
+**Why you'd change it.** Disabling desktop animations removes compositor work and makes window/menu interactions instant. The gain is mostly desktop snappiness rather than in-game FPS, but some users prefer the zero-animation feel.
+
+**How it helps.** Instant window/menu response, no animation delays, slightly less idle GPU compositor work.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Wants the snappiest desktop | Best performance (gaming) |
+| Likes Windows animations / fluent effects | Default |
+| Low-end / integrated GPU | Best performance (gaming) |
+
+**Risks.** Purely cosmetic -- the desktop looks flatter (no fades/animations). No stability or functionality impact. Full effect applies after sign-out.
+
+**Reversible via.** Set VisualFXSetting = 0 in HKCU\...\Explorer\VisualEffects (System Properties > Performance > 'Let Windows choose' or 'Adjust for best appearance'). GamerGuardian sets it to 0 when you choose Default.
 
 
 ### Windows Game Mode

@@ -56,6 +56,7 @@ public static class SettingDocs
             "privacy.activityhistory" => @"HKLM\SOFTWARE\Policies\Microsoft\Windows\System\{EnableActivityFeed, PublishUserActivities, UploadUserActivities} (DWORD)",
             "powerthrottling" => @"HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling\PowerThrottlingOff (DWORD; absent = Windows default)",
             "faststartup" => @"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power\HiberbootEnabled (DWORD; reboot required)",
+            "visualfx" => @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects\VisualFXSetting (DWORD; 2=best perf) + HKCU\Control Panel\Desktop\UserPreferencesMask (REG_BINARY)",
             _ => "(unknown)",
         };
     }
@@ -172,6 +173,7 @@ public static class SettingDocs
             "privacy.activityhistory" => @"$k='HKLM:\SOFTWARE\Policies\Microsoft\Windows\System'; foreach($n in 'EnableActivityFeed','PublishUserActivities','UploadUserActivities'){ Set-ItemProperty $k -Name $n -Value 0 -Type DWord }   # reverse: Remove-ItemProperty for each",
             "powerthrottling" => @"$k='HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling'; New-Item $k -Force | Out-Null; Set-ItemProperty $k -Name PowerThrottlingOff -Value 1 -Type DWord   # reverse: Remove-ItemProperty $k -Name PowerThrottlingOff",
             "faststartup" => @"Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power' -Name HiberbootEnabled -Value 0 -Type DWord   # reboot required; reverse: set to 1",
+            "visualfx" => @"Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects' -Name VisualFXSetting -Value 2 -Type DWord; Set-ItemProperty 'HKCU:\Control Panel\Desktop' -Name UserPreferencesMask -Value ([byte[]](0x90,0x12,0x03,0x80,0x10,0,0,0)) -Type Binary   # reverse: VisualFXSetting=0; sign out to fully apply",
             _ => "",
         };
     }
@@ -227,6 +229,7 @@ public static class SettingDocs
             "privacy.activityhistory" => @"$k='HKLM:\SOFTWARE\Policies\Microsoft\Windows\System'; @{Feed=(Get-ItemProperty $k -Name EnableActivityFeed -EA SilentlyContinue).EnableActivityFeed; Publish=(Get-ItemProperty $k -Name PublishUserActivities -EA SilentlyContinue).PublishUserActivities; Upload=(Get-ItemProperty $k -Name UploadUserActivities -EA SilentlyContinue).UploadUserActivities}",
             "powerthrottling" => @"(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling' -Name PowerThrottlingOff -EA SilentlyContinue).PowerThrottlingOff",
             "faststartup" => @"(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power' -Name HiberbootEnabled -EA SilentlyContinue).HiberbootEnabled",
+            "visualfx" => @"(Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects' -Name VisualFXSetting -EA SilentlyContinue).VisualFXSetting",
             _ => "",
         };
     }

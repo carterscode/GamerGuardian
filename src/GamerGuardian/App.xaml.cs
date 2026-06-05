@@ -123,6 +123,7 @@ public partial class App : WpfApplication
             // System toggles:
             new PowerThrottlingMonitor(),  // CPU/Power tab
             new FastStartupMonitor(),       // Global gaming tab
+            new VisualEffectsMonitor(),     // Global gaming tab
         };
         var serviceMonitors = GamerGuardian.Services.ServiceCatalog.All
             .Select(d => (IMonitoredSetting)new WindowsServiceMonitor(d));

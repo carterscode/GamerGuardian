@@ -321,6 +321,20 @@ public static class SettingDocsCatalog
             Risks: "Boots are slightly slower (a true cold boot). No stability risk -- this is the pre-Win8 default behavior.",
             ReversibleVia: "Set HiberbootEnabled = 1 in HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power (Control Panel > Power Options > Choose what the power buttons do > Turn on fast startup)."),
 
+        ["visualfx"] = new(
+            SettingId: "visualfx",
+            DisplayName: "Visual effects (best performance)",
+            What: "The Windows UI animation/effects profile. 'Adjust for best performance' (VisualFXSetting=2) disables window animations, menu fades, smooth-scrolling, and shadows. GamerGuardian writes VisualFXSetting=2 plus the matching best-performance UserPreferencesMask; the per-effect changes finish applying on the next sign-out.",
+            Why: "Disabling desktop animations removes compositor work and makes window/menu interactions instant. The gain is mostly desktop snappiness rather than in-game FPS, but some users prefer the zero-animation feel.",
+            HowItHelps: "Instant window/menu response, no animation delays, slightly less idle GPU compositor work.",
+            Scenarios: Scenarios(
+                ("Wants the snappiest desktop", "Best performance (gaming)"),
+                ("Likes Windows animations / fluent effects", "Default"),
+                ("Low-end / integrated GPU", "Best performance (gaming)")),
+            Recommended: "Best performance (gaming) for a snappy desktop; Default if you like the animations",
+            Risks: "Purely cosmetic -- the desktop looks flatter (no fades/animations). No stability or functionality impact. Full effect applies after sign-out.",
+            ReversibleVia: "Set VisualFXSetting = 0 in HKCU\\...\\Explorer\\VisualEffects (System Properties > Performance > 'Let Windows choose' or 'Adjust for best appearance'). GamerGuardian sets it to 0 when you choose Default."),
+
         // ---- Privacy / telemetry ------------------------------------------
 
         ["privacy.advertisingid"] = new(

@@ -476,6 +476,7 @@ public partial class SettingsWindow : FluentWindow
         SyncIfUnmonitored(g.FullscreenOptimizations, FullscreenOptimizationsMonitor.ReadCurrent);
         SyncIfUnmonitored(g.Vrr, VrrMonitor.ReadCurrent);
         SyncIfUnmonitored(g.FastStartup, FastStartupMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.VisualFx, VisualEffectsMonitor.ReadCurrent);
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Game Mode",
@@ -601,6 +602,16 @@ public partial class SettingsWindow : FluentWindow
             pref: g.FastStartup, groupName: "faststartup",
             onPrefChanged: OnRowPrefChanged,
             settingId: "faststartup"));
+
+        GlobalToggleRows.Add(new GlobalToggleRow(
+            name: "Visual effects (best performance)",
+            description: "Windows UI animations and effects. 'Best performance' disables them for the snappiest desktop. Full per-effect changes apply after sign-out.",
+            currentText: $"Current: {GamingDefaultText(SafeRead(VisualEffectsMonitor.ReadCurrent))}",
+            defaultText: "Default: Let Windows choose    Gaming: Best performance",
+            onLabel: "Gaming", offLabel: "Default",
+            pref: g.VisualFx, groupName: "visualfx",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "visualfx"));
 
         var planNames = PowerPlanMonitor.ListAvailablePlans();
         var active = SafeRunGuid(PowerPlanMonitor.GetActivePlan);

@@ -24,6 +24,7 @@ public class SettingDocsTests
     [InlineData("privacy.activityhistory")]
     [InlineData("powerthrottling")]
     [InlineData("faststartup")]
+    [InlineData("visualfx")]
     public void MechanismFor_KnownIds_ReturnsNonEmpty(string id)
     {
         var mech = SettingDocs.MechanismFor(id);

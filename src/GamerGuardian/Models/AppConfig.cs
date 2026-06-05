@@ -119,6 +119,7 @@ public sealed class GlobalPreferences
     // ---- System toggles (inverted Gaming/Default; DesiredOn=true = gaming) ----
     public ToggleSettingPref PowerThrottling { get; set; } = new() { DesiredOn = true };
     public ToggleSettingPref FastStartup { get; set; } = new() { DesiredOn = true };
+    public ToggleSettingPref VisualFx { get; set; } = new() { DesiredOn = true };
 }
 
 public sealed class ToggleSettingPref
