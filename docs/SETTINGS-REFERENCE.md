@@ -25,6 +25,13 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 - [Variable Refresh Rate (DirectX)](#variable-refresh-rate-directx) (`vrr`)
 - [Windows Game Mode](#windows-game-mode) (`gamemode`)
 
+**Privacy**
+
+- [Activity History / Timeline](#activity-history---timeline) (`privacy.activityhistory`)
+- [Advertising ID](#advertising-id) (`privacy.advertisingid`)
+- [Cross-Device Platform (CDP)](#cross-device-platform-cdp) (`privacy.cdp`)
+- [Tailored experiences](#tailored-experiences) (`privacy.tailoredexp`)
+
 **Windows AI policies**
 
 - [Click-to-Do (Snipping Tool AI)](#click-to-do-snipping-tool-ai) (`ai.clicktodo`)
@@ -448,6 +455,99 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Risks.** Some users report frame-rate stuttering or capture glitches on specific GPU/driver/game combos. If you only see stuttering with Game Mode on, turn it off and re-test.
 
 **Reversible via.** Set HKCU\Software\Microsoft\GameBar\AutoGameModeEnabled = 1 (or delete the value).
+
+## Privacy
+
+### Activity History / Timeline
+
+`privacy.activityhistory` &nbsp; **Recommended:** Disabled (gaming)
+
+**What it does.** Collection and publishing of your activity feed (Timeline). Disabled via three HKLM policy values set to 0 together: EnableActivityFeed, PublishUserActivities, UploadUserActivities (requires elevation, one prompt). Absence means the Windows default (on).
+
+**Why you'd change it.** Activity History records what you do across apps and (when signed in) uploads it. Most gamers don't use Timeline, and Windows can re-enable the feed after feature updates.
+
+**How it helps.** Stops the activity feed from collecting and publishing. Reasserted automatically after updates that turn it back on.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Doesn't use Timeline | Disabled (gaming) |
+| Uses Timeline / cross-device activity resume | Default (leave on) |
+| Privacy-conscious | Disabled (gaming) |
+
+**Risks.** Timeline stops showing your recent activities and cross-device resume won't work. No effect on app/game functionality.
+
+**Reversible via.** Delete EnableActivityFeed, PublishUserActivities, and UploadUserActivities from HKLM\SOFTWARE\Policies\Microsoft\Windows\System to restore the Windows default.
+
+
+### Advertising ID
+
+`privacy.advertisingid` &nbsp; **Recommended:** Disabled
+
+**What it does.** A per-user identifier (HKCU\...\AdvertisingInfo\Enabled) that apps can read to build a cross-session advertising profile of you. Direct HKCU value -- no elevation needed.
+
+**Why you'd change it.** There's no gaming or functionality reason to keep the advertising ID on. Disabling it stops apps from correlating your activity under a stable ad identity.
+
+**How it helps.** Apps fall back to requesting a fresh, non-correlatable ID (or none). No effect on app functionality.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Privacy-conscious | Disabled |
+| Gaming setup | Disabled -- no downside |
+| Doesn't care about ad targeting | Either; Disabled is the safe default |
+
+**Risks.** None functional. Ads you see may be slightly less 'relevant' -- which is the point.
+
+**Reversible via.** Set HKCU\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo\Enabled = 1 (Settings > Privacy & security > General > 'Let apps show me personalized ads').
+
+
+### Cross-Device Platform (CDP)
+
+`privacy.cdp` &nbsp; **Recommended:** Disabled (gaming) if you don't use cross-device features
+
+**What it does.** The 'Continue experiences on this device' / shared-experiences subsystem that lets nearby and account-linked devices hand off activities, share the clipboard, and discover each other. Disabled via the HKLM policy EnableCdp=0 (requires elevation). Absence of the value means the Windows default (CDP on).
+
+**Why you'd change it.** CDP runs background discovery/sync that most desktop gamers don't use, and Windows re-enables it after feature updates -- exactly the drift the monitor re-asserts.
+
+**How it helps.** Stops the cross-device discovery/sync background activity. Reasserted automatically if a feature update turns it back on.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Single desktop, no device handoff | Disabled (gaming) |
+| Uses Phone Link / cross-device clipboard | Default (leave on) |
+| Privacy-conscious | Disabled (gaming) |
+
+**Risks.** Cross-device features (handoff, shared clipboard with phones/other PCs, nearby-device discovery) stop working. Phone Link's deeper integrations may be affected.
+
+**Reversible via.** Delete EnableCdp from HKLM\SOFTWARE\Policies\Microsoft\Windows\System to restore the Windows default.
+
+
+### Tailored experiences
+
+`privacy.tailoredexp` &nbsp; **Recommended:** Disabled
+
+**What it does.** Lets Windows use your diagnostic data to personalize tips, ads, and recommendations (HKCU\...\Privacy\TailoredExperiencesWithDiagnosticDataEnabled). Direct HKCU value -- no elevation.
+
+**Why you'd change it.** Removes Microsoft's use of your diagnostic data to target suggestions and promotional content in the Start menu, Settings, and lock screen.
+
+**How it helps.** Fewer suggested/promoted items surfaced by the OS. No effect on app or game functionality.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Privacy-conscious | Disabled |
+| Gaming setup | Disabled -- no downside |
+| Likes Windows tips/suggestions | Enabled |
+
+**Risks.** None functional. You stop seeing personalized Windows tips and suggestions.
+
+**Reversible via.** Set HKCU\Software\Microsoft\Windows\CurrentVersion\Privacy\TailoredExperiencesWithDiagnosticDataEnabled = 1 (Settings > Privacy & security > Diagnostics & feedback).
 
 ## Windows AI policies
 

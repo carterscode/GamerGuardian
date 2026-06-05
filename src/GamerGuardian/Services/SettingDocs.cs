@@ -50,6 +50,10 @@ public static class SettingDocs
             "ai.actions" => @"HKLM\SYSTEM\ControlSet001\Control\FeatureManagement\Overrides\8\{1853569164, 4098520719}\EnabledState (DWORD; 1 = force-disabled, 2 = force-enabled, absent = server default)",
             "ai.inputinsights" => @"HKCU\Software\Microsoft\InputPersonalization\RestrictImplicitTextCollection  +  HKCU\Software\Microsoft\input\Settings\InsightsEnabled",
             "ai.office" => @"HKCU\Software\Microsoft\Office\16.0\{Word\Options\EnableCopilot, Excel\Options\EnableCopilot, OneNote\Options\Copilot\CopilotEnabled}  +  HKLM\SOFTWARE\Policies\Microsoft\office\16.0\common\ai\training\general\disabletraining",
+            "privacy.advertisingid" => @"HKCU\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo\Enabled (DWORD)",
+            "privacy.tailoredexp" => @"HKCU\Software\Microsoft\Windows\CurrentVersion\Privacy\TailoredExperiencesWithDiagnosticDataEnabled (DWORD)",
+            "privacy.cdp" => @"HKLM\SOFTWARE\Policies\Microsoft\Windows\System\EnableCdp (DWORD; absent = Windows default ON)",
+            "privacy.activityhistory" => @"HKLM\SOFTWARE\Policies\Microsoft\Windows\System\{EnableActivityFeed, PublishUserActivities, UploadUserActivities} (DWORD)",
             _ => "(unknown)",
         };
     }
@@ -160,6 +164,10 @@ public static class SettingDocs
                           @"Set-ItemProperty $on -Name CopilotEnabled -Value 0 -Type DWord; " +
                           @"$tr='HKLM:\SOFTWARE\Policies\Microsoft\office\16.0\common\ai\training\general'; New-Item $tr -Force | Out-Null; " +
                           @"Set-ItemProperty $tr -Name disabletraining -Value 1 -Type DWord",
+            "privacy.advertisingid" => @"Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo' -Name Enabled -Value 0 -Type DWord",
+            "privacy.tailoredexp" => @"Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Privacy' -Name TailoredExperiencesWithDiagnosticDataEnabled -Value 0 -Type DWord",
+            "privacy.cdp" => @"$k='HKLM:\SOFTWARE\Policies\Microsoft\Windows\System'; Set-ItemProperty $k -Name EnableCdp -Value 0 -Type DWord   # reverse: Remove-ItemProperty $k -Name EnableCdp",
+            "privacy.activityhistory" => @"$k='HKLM:\SOFTWARE\Policies\Microsoft\Windows\System'; foreach($n in 'EnableActivityFeed','PublishUserActivities','UploadUserActivities'){ Set-ItemProperty $k -Name $n -Value 0 -Type DWord }   # reverse: Remove-ItemProperty for each",
             _ => "",
         };
     }
@@ -209,6 +217,10 @@ public static class SettingDocs
             "ai.actions" => @"$r='HKLM:\SYSTEM\ControlSet001\Control\FeatureManagement\Overrides\8'; @{A=(Get-ItemProperty $r\1853569164 -Name EnabledState -EA SilentlyContinue).EnabledState; B=(Get-ItemProperty $r\4098520719 -Name EnabledState -EA SilentlyContinue).EnabledState}",
             "ai.inputinsights" => @"@{Restrict=(Get-ItemProperty 'HKCU:\Software\Microsoft\InputPersonalization' -Name RestrictImplicitTextCollection -EA SilentlyContinue).RestrictImplicitTextCollection; Insights=(Get-ItemProperty 'HKCU:\Software\Microsoft\input\Settings' -Name InsightsEnabled -EA SilentlyContinue).InsightsEnabled}",
             "ai.office" => @"@{Word=(Get-ItemProperty 'HKCU:\Software\Microsoft\Office\16.0\Word\Options' -Name EnableCopilot -EA SilentlyContinue).EnableCopilot; Excel=(Get-ItemProperty 'HKCU:\Software\Microsoft\Office\16.0\Excel\Options' -Name EnableCopilot -EA SilentlyContinue).EnableCopilot; OneNote=(Get-ItemProperty 'HKCU:\Software\Microsoft\Office\16.0\OneNote\Options\Copilot' -Name CopilotEnabled -EA SilentlyContinue).CopilotEnabled; Training=(Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\office\16.0\common\ai\training\general' -Name disabletraining -EA SilentlyContinue).disabletraining}",
+            "privacy.advertisingid" => @"(Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo' -Name Enabled -EA SilentlyContinue).Enabled",
+            "privacy.tailoredexp" => @"(Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Privacy' -Name TailoredExperiencesWithDiagnosticDataEnabled -EA SilentlyContinue).TailoredExperiencesWithDiagnosticDataEnabled",
+            "privacy.cdp" => @"(Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' -Name EnableCdp -EA SilentlyContinue).EnableCdp",
+            "privacy.activityhistory" => @"$k='HKLM:\SOFTWARE\Policies\Microsoft\Windows\System'; @{Feed=(Get-ItemProperty $k -Name EnableActivityFeed -EA SilentlyContinue).EnableActivityFeed; Publish=(Get-ItemProperty $k -Name PublishUserActivities -EA SilentlyContinue).PublishUserActivities; Upload=(Get-ItemProperty $k -Name UploadUserActivities -EA SilentlyContinue).UploadUserActivities}",
             _ => "",
         };
     }

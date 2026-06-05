@@ -30,6 +30,7 @@ public partial class SettingsWindow : FluentWindow
     private readonly Action _exitApp;
     public ObservableCollection<DisplayRow> DisplayRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> GlobalToggleRows { get; } = new();
+    public ObservableCollection<GlobalToggleRow> PrivacyToggleRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> WindowsAiRowsCollection { get; } = new();
     public ObservableCollection<WindowsAiAppRow> WindowsAiAppRowsCollection { get; } = new();
     public ObservableCollection<ServiceRow> ServiceRows { get; } = new();
@@ -74,6 +75,7 @@ public partial class SettingsWindow : FluentWindow
 
         DisplaysList.ItemsSource = DisplayRows;
         GlobalTogglesList.ItemsSource = GlobalToggleRows;
+        PrivacyTogglesList.ItemsSource = PrivacyToggleRows;
         ServicesList.ItemsSource = ServiceRows;
         WindowsAiRows.ItemsSource = WindowsAiRowsCollection;
         WindowsAiAppRows.ItemsSource = WindowsAiAppRowsCollection;
@@ -82,6 +84,7 @@ public partial class SettingsWindow : FluentWindow
         LoadDisplays();
         LoadServices();
         LoadWindowsAi();
+        LoadPrivacy();
         LoadCpuTabs();
         UpdatePendingStatus();
     }
@@ -399,6 +402,57 @@ public partial class SettingsWindow : FluentWindow
         bool? cur;
         try { cur = readCurrent(); } catch { return; }
         if (cur.HasValue) pref.DesiredOn = cur.Value;
+    }
+
+    private void LoadPrivacy()
+    {
+        PrivacyToggleRows.Clear();
+        var g = _draft.Global;
+
+        SyncIfUnmonitored(g.AdvertisingId, AdvertisingIdMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.TailoredExperiences, TailoredExperiencesMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.Cdp, CdpMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.ActivityHistory, ActivityHistoryMonitor.ReadCurrent);
+
+        PrivacyToggleRows.Add(new GlobalToggleRow(
+            name: "Advertising ID",
+            description: "Per-user identifier apps use to profile you for ads. Privacy-recommended off.",
+            currentText: $"Current: {OnOffText(SafeRead(AdvertisingIdMonitor.ReadCurrent))}",
+            defaultText: "Default: Enabled",
+            onLabel: "Enabled", offLabel: "Disabled",
+            pref: g.AdvertisingId, groupName: "pv_adid",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "privacy.advertisingid"));
+
+        PrivacyToggleRows.Add(new GlobalToggleRow(
+            name: "Tailored experiences",
+            description: "Lets Windows use your diagnostic data to personalize tips, ads, and recommendations.",
+            currentText: $"Current: {OnOffText(SafeRead(TailoredExperiencesMonitor.ReadCurrent))}",
+            defaultText: "Default: Enabled",
+            onLabel: "Enabled", offLabel: "Disabled",
+            pref: g.TailoredExperiences, groupName: "pv_tailored",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "privacy.tailoredexp"));
+
+        PrivacyToggleRows.Add(new GlobalToggleRow(
+            name: "Cross-Device Platform (CDP)",
+            description: "\"Continue experiences on this device\" / shared-experiences subsystem. Off via policy; reasserted after feature updates.",
+            currentText: $"Current: {GamingDefaultText(SafeRead(CdpMonitor.ReadCurrent))}",
+            defaultText: "Default: On    Gaming: Disabled",
+            onLabel: "Gaming", offLabel: "Default",
+            pref: g.Cdp, groupName: "pv_cdp",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "privacy.cdp"));
+
+        PrivacyToggleRows.Add(new GlobalToggleRow(
+            name: "Activity History / Timeline",
+            description: "Collection and publishing of your activity feed. Off via policy; reasserted after feature updates.",
+            currentText: $"Current: {GamingDefaultText(SafeRead(ActivityHistoryMonitor.ReadCurrent))}",
+            defaultText: "Default: On    Gaming: Disabled",
+            onLabel: "Gaming", offLabel: "Default",
+            pref: g.ActivityHistory, groupName: "pv_activity",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "privacy.activityhistory"));
     }
 
     private void LoadGlobals()
@@ -834,6 +888,7 @@ public partial class SettingsWindow : FluentWindow
         LoadDisplays();
         LoadServices();
         LoadWindowsAi();
+        LoadPrivacy();
         LoadCpuTabs();
         UpdatePendingStatus();
 
@@ -930,9 +985,11 @@ public partial class SettingsWindow : FluentWindow
         {
             DisplaysList.ItemsSource = null;
             GlobalTogglesList.ItemsSource = null;
+            PrivacyTogglesList.ItemsSource = null;
             ServicesList.ItemsSource = null;
             DisplayRows.Clear();
             GlobalToggleRows.Clear();
+            PrivacyToggleRows.Clear();
             ServiceRows.Clear();
         }
         catch { }
@@ -983,6 +1040,7 @@ public partial class SettingsWindow : FluentWindow
         LoadDisplays();
         LoadServices();
         LoadWindowsAi();
+        LoadPrivacy();
         LoadCpuTabs();
 
         if (RecommendedStatusText is not null)

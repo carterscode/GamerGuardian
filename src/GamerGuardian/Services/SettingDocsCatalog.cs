@@ -291,6 +291,64 @@ public static class SettingDocsCatalog
             Risks: "Low. The plan is additive -- your existing Windows plans are never modified or deleted, and you can switch back at any time. For asymmetric dual-CCD X3D the power plan alone is not sufficient: it depends on the AMD CCD-routing stack (BIOS CPPC=Driver, the 3D V-Cache Optimizer service, and Xbox Game Bar), which the app surfaces but cannot set.",
             ReversibleVia: "Switch the active plan back via Settings > System > Power, or 'powercfg /setactive SCHEME_BALANCED'. The GamerGuardian plan can be deleted from the legacy Power control panel if you no longer want it."),
 
+        // ---- Privacy / telemetry ------------------------------------------
+
+        ["privacy.advertisingid"] = new(
+            SettingId: "privacy.advertisingid",
+            DisplayName: "Advertising ID",
+            What: "A per-user identifier (HKCU\\...\\AdvertisingInfo\\Enabled) that apps can read to build a cross-session advertising profile of you. Direct HKCU value -- no elevation needed.",
+            Why: "There's no gaming or functionality reason to keep the advertising ID on. Disabling it stops apps from correlating your activity under a stable ad identity.",
+            HowItHelps: "Apps fall back to requesting a fresh, non-correlatable ID (or none). No effect on app functionality.",
+            Scenarios: Scenarios(
+                ("Privacy-conscious", "Disabled"),
+                ("Gaming setup", "Disabled -- no downside"),
+                ("Doesn't care about ad targeting", "Either; Disabled is the safe default")),
+            Recommended: "Disabled",
+            Risks: "None functional. Ads you see may be slightly less 'relevant' -- which is the point.",
+            ReversibleVia: "Set HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo\\Enabled = 1 (Settings > Privacy & security > General > 'Let apps show me personalized ads')."),
+
+        ["privacy.tailoredexp"] = new(
+            SettingId: "privacy.tailoredexp",
+            DisplayName: "Tailored experiences",
+            What: "Lets Windows use your diagnostic data to personalize tips, ads, and recommendations (HKCU\\...\\Privacy\\TailoredExperiencesWithDiagnosticDataEnabled). Direct HKCU value -- no elevation.",
+            Why: "Removes Microsoft's use of your diagnostic data to target suggestions and promotional content in the Start menu, Settings, and lock screen.",
+            HowItHelps: "Fewer suggested/promoted items surfaced by the OS. No effect on app or game functionality.",
+            Scenarios: Scenarios(
+                ("Privacy-conscious", "Disabled"),
+                ("Gaming setup", "Disabled -- no downside"),
+                ("Likes Windows tips/suggestions", "Enabled")),
+            Recommended: "Disabled",
+            Risks: "None functional. You stop seeing personalized Windows tips and suggestions.",
+            ReversibleVia: "Set HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Privacy\\TailoredExperiencesWithDiagnosticDataEnabled = 1 (Settings > Privacy & security > Diagnostics & feedback)."),
+
+        ["privacy.cdp"] = new(
+            SettingId: "privacy.cdp",
+            DisplayName: "Cross-Device Platform (CDP)",
+            What: "The 'Continue experiences on this device' / shared-experiences subsystem that lets nearby and account-linked devices hand off activities, share the clipboard, and discover each other. Disabled via the HKLM policy EnableCdp=0 (requires elevation). Absence of the value means the Windows default (CDP on).",
+            Why: "CDP runs background discovery/sync that most desktop gamers don't use, and Windows re-enables it after feature updates -- exactly the drift the monitor re-asserts.",
+            HowItHelps: "Stops the cross-device discovery/sync background activity. Reasserted automatically if a feature update turns it back on.",
+            Scenarios: Scenarios(
+                ("Single desktop, no device handoff", "Disabled (gaming)"),
+                ("Uses Phone Link / cross-device clipboard", "Default (leave on)"),
+                ("Privacy-conscious", "Disabled (gaming)")),
+            Recommended: "Disabled (gaming) if you don't use cross-device features",
+            Risks: "Cross-device features (handoff, shared clipboard with phones/other PCs, nearby-device discovery) stop working. Phone Link's deeper integrations may be affected.",
+            ReversibleVia: "Delete EnableCdp from HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System to restore the Windows default."),
+
+        ["privacy.activityhistory"] = new(
+            SettingId: "privacy.activityhistory",
+            DisplayName: "Activity History / Timeline",
+            What: "Collection and publishing of your activity feed (Timeline). Disabled via three HKLM policy values set to 0 together: EnableActivityFeed, PublishUserActivities, UploadUserActivities (requires elevation, one prompt). Absence means the Windows default (on).",
+            Why: "Activity History records what you do across apps and (when signed in) uploads it. Most gamers don't use Timeline, and Windows can re-enable the feed after feature updates.",
+            HowItHelps: "Stops the activity feed from collecting and publishing. Reasserted automatically after updates that turn it back on.",
+            Scenarios: Scenarios(
+                ("Doesn't use Timeline", "Disabled (gaming)"),
+                ("Uses Timeline / cross-device activity resume", "Default (leave on)"),
+                ("Privacy-conscious", "Disabled (gaming)")),
+            Recommended: "Disabled (gaming)",
+            Risks: "Timeline stops showing your recent activities and cross-device resume won't work. No effect on app/game functionality.",
+            ReversibleVia: "Delete EnableActivityFeed, PublishUserActivities, and UploadUserActivities from HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System to restore the Windows default."),
+
         // ---- Windows AI ---------------------------------------------------
 
         ["ai.copilot"] = new(

@@ -115,6 +115,11 @@ public partial class App : WpfApplication
             new AiActionsMonitor(),
             new InputInsightsMonitor(),
             new OfficeCopilotMonitor(),
+            // Privacy / telemetry toggles (Privacy tab):
+            new AdvertisingIdMonitor(),
+            new TailoredExperiencesMonitor(),
+            new CdpMonitor(),
+            new ActivityHistoryMonitor(),
         };
         var serviceMonitors = GamerGuardian.Services.ServiceCatalog.All
             .Select(d => (IMonitoredSetting)new WindowsServiceMonitor(d));

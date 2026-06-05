@@ -18,6 +18,10 @@ public class SettingDocsTests
     [InlineData("usbsuspend")]
     [InlineData("gamestask")]
     [InlineData("powerplan")]
+    [InlineData("privacy.advertisingid")]
+    [InlineData("privacy.tailoredexp")]
+    [InlineData("privacy.cdp")]
+    [InlineData("privacy.activityhistory")]
     public void MechanismFor_KnownIds_ReturnsNonEmpty(string id)
     {
         var mech = SettingDocs.MechanismFor(id);
@@ -30,6 +34,9 @@ public class SettingDocsTests
     [InlineData("memintegrity")]
     [InlineData("gamemode")]
     [InlineData("powerplan")]
+    [InlineData("privacy.advertisingid")]
+    [InlineData("privacy.cdp")]
+    [InlineData("privacy.activityhistory")]
     public void VerifyCommandFor_KnownIds_ReturnsNonEmpty(string id)
     {
         var cmd = SettingDocs.VerifyCommandFor(id);

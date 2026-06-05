@@ -105,6 +105,16 @@ public sealed class GlobalPreferences
     public ToggleSettingPref AiActions { get; set; } = new() { DesiredOn = true };
     public ToggleSettingPref InputInsights { get; set; } = new() { DesiredOn = true };
     public ToggleSettingPref OfficeCopilot { get; set; } = new() { DesiredOn = true };
+
+    // ---- Privacy / telemetry toggles (Privacy tab). Monitor=false by default ----
+    // Intuitive Enabled/Disabled settings: DesiredOn maps to the feature being
+    // enabled, so the privacy-optimized default is DesiredOn=false (off).
+    public ToggleSettingPref AdvertisingId { get; set; } = new() { DesiredOn = false };
+    public ToggleSettingPref TailoredExperiences { get; set; } = new() { DesiredOn = false };
+    // Inverted Gaming/Default settings (HKLM policy): DesiredOn=true is the gaming
+    // state (disabled-by-policy), matching the NetworkThrottling/USB convention.
+    public ToggleSettingPref Cdp { get; set; } = new() { DesiredOn = true };
+    public ToggleSettingPref ActivityHistory { get; set; } = new() { DesiredOn = true };
 }
 
 public sealed class ToggleSettingPref

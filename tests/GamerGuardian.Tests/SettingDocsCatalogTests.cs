@@ -31,6 +31,10 @@ public class SettingDocsCatalogTests
     [InlineData("ai.actions")]
     [InlineData("ai.inputinsights")]
     [InlineData("ai.office")]
+    [InlineData("privacy.advertisingid")]
+    [InlineData("privacy.tailoredexp")]
+    [InlineData("privacy.cdp")]
+    [InlineData("privacy.activityhistory")]
     public void Get_KnownIds_ReturnsPopulatedEntry(string id)
     {
         var d = SettingDocsCatalog.Get(id);
