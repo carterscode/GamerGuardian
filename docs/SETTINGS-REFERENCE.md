@@ -197,7 +197,7 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 
 `gamedvr` &nbsp; **Recommended:** Off
 
-**What it does.** Windows Game Bar's continuous rolling-buffer recording of the active game. While enabled, the OS encodes and buffers game video so you can press Win+Alt+G to save the last X seconds.
+**What it does.** Windows Game Bar's continuous rolling-buffer recording of the active game. While enabled, the OS encodes and buffers game video so you can press Win+Alt+G to save the last X seconds. GamerGuardian covers the two per-user capture toggles AND the machine-wide AllowGameDVR policy -- the part Windows re-enables after feature updates -- so the lockdown holds.
 
 **Why you'd change it.** Continuous encoding is a constant tax on framerate and GPU. On older systems it's noticeable (5-10%). On modern GPUs the cost is small but nonzero. Most serious players already use NVIDIA App / OBS for clips and don't need the OS buffer.
 
@@ -214,7 +214,7 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 
 **Risks.** You lose the 'save last 30s' shortcut. Game Bar itself (overlay, FPS counter, performance widgets) still works.
 
-**Reversible via.** Set HKCU\System\GameConfigStore\GameDVR_Enabled = 1 and HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR\AppCaptureEnabled = 1.
+**Reversible via.** Set HKCU\System\GameConfigStore\GameDVR_Enabled = 1 and HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR\AppCaptureEnabled = 1, and delete AllowGameDVR from HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR (the app does all three when you set it back to On).
 
 
 ### Games multimedia task profile

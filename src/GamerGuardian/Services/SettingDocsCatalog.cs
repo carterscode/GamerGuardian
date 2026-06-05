@@ -111,7 +111,7 @@ public static class SettingDocsCatalog
         ["gamedvr"] = new(
             SettingId: "gamedvr",
             DisplayName: "Game DVR background recording",
-            What: "Windows Game Bar's continuous rolling-buffer recording of the active game. While enabled, the OS encodes and buffers game video so you can press Win+Alt+G to save the last X seconds.",
+            What: "Windows Game Bar's continuous rolling-buffer recording of the active game. While enabled, the OS encodes and buffers game video so you can press Win+Alt+G to save the last X seconds. GamerGuardian covers the two per-user capture toggles AND the machine-wide AllowGameDVR policy -- the part Windows re-enables after feature updates -- so the lockdown holds.",
             Why: "Continuous encoding is a constant tax on framerate and GPU. On older systems it's noticeable (5-10%). On modern GPUs the cost is small but nonzero. Most serious players already use NVIDIA App / OBS for clips and don't need the OS buffer.",
             HowItHelps: "Frees the GPU's video encoder and removes a constant background overhead. Lets third-party capture tools claim the encoder exclusively (NVENC, AMD Re-Live, etc.).",
             Scenarios: Scenarios(
@@ -121,7 +121,7 @@ public static class SettingDocsCatalog
                 ("Productivity / not gaming", "Off")),
             Recommended: "Off",
             Risks: "You lose the 'save last 30s' shortcut. Game Bar itself (overlay, FPS counter, performance widgets) still works.",
-            ReversibleVia: "Set HKCU\\System\\GameConfigStore\\GameDVR_Enabled = 1 and HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR\\AppCaptureEnabled = 1."),
+            ReversibleVia: "Set HKCU\\System\\GameConfigStore\\GameDVR_Enabled = 1 and HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR\\AppCaptureEnabled = 1, and delete AllowGameDVR from HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\GameDVR (the app does all three when you set it back to On)."),
 
         ["hags"] = new(
             SettingId: "hags",
