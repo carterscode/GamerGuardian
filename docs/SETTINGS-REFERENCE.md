@@ -57,9 +57,11 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 - [Delivery Optimization](#delivery-optimization) (`service:DoSvc`)
 - [Downloaded Maps Manager](#downloaded-maps-manager) (`service:MapsBroker`)
 - [Retail Demo Service](#retail-demo-service) (`service:RetailDemo`)
+- [Routing and Remote Access](#routing-and-remote-access) (`service:RemoteAccess`)
 - [Superfetch / SysMain](#superfetch---sysmain) (`service:SysMain`)
 - [Windows AI Fabric Service](#windows-ai-fabric-service) (`service:WSAIFabricSvc`)
 - [Windows Error Reporting Service](#windows-error-reporting-service) (`service:WerSvc`)
+- [Windows Insider Service](#windows-insider-service) (`service:wisvc`)
 - [Windows Search](#windows-search) (`service:WSearch`)
 - [Xbox Accessory Management](#xbox-accessory-management) (`service:XboxGipSvc`)
 - [Xbox Live Auth Manager](#xbox-live-auth-manager) (`service:XblAuthManager`)
@@ -953,6 +955,30 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Reversible via.** Set-Service -Name RetailDemo -StartupType Manual
 
 
+### Routing and Remote Access
+
+`service:RemoteAccess` &nbsp; **Recommended:** Default (stays Disabled)
+
+**What it does.** Provides LAN/WAN routing and dial-up/VPN server functionality. Disabled by default on client Windows.
+
+**Why you'd change it.** Already disabled on a default install -- this entry is a drift-guard so you can confirm nothing silently re-enables it.
+
+**How it helps.** No change on a default machine; catches an unexpected re-enable.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive FPS | Default (stays Disabled) |
+| Streaming + game | Default (stays Disabled) |
+| Casual single-player | Default (stays Disabled) |
+| Productivity / mixed-use | Default (stays Disabled) |
+
+**Risks.** If you intentionally run the Windows routing / RRAS VPN server role (rare on a gaming desktop), leave it alone.
+
+**Reversible via.** Set-Service -Name RemoteAccess -StartupType Disabled (its default), or Manual if you need it.
+
+
 ### Superfetch / SysMain
 
 `service:SysMain` &nbsp; **Recommended:** Default (leave on -- current Microsoft guidance)
@@ -1023,6 +1049,30 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Risks.** Crash dump collection stops. If you ever need to share a crash report with Microsoft support, re-enable first.
 
 **Reversible via.** Set-Service -Name WerSvc -StartupType Manual
+
+
+### Windows Insider Service
+
+`service:wisvc` &nbsp; **Recommended:** Disabled (Manual if you run Insider builds)
+
+**What it does.** Backs the Windows Insider Program: preview-build enrollment, flighting configuration, and the diagnostic flow Insider builds use. Idle on a machine not enrolled in the Insider Program.
+
+**Why you'd change it.** If you're on the stable channel (the vast majority of users), this service has nothing to do. Disabling removes one more idle background service.
+
+**How it helps.** Removes an idle service. No effect on stable Windows.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive FPS | Disabled (Manual if you run Insider builds) |
+| Streaming + game | Disabled (Manual if you run Insider builds) |
+| Casual single-player | Disabled (Manual if you run Insider builds) |
+| Productivity / mixed-use | Disabled (Manual if you run Insider builds) |
+
+**Risks.** If you are an Insider or plan to enroll, leave it on -- with it disabled, the Insider Program settings page won't enroll or flight new builds. Re-enable before joining.
+
+**Reversible via.** Set-Service -Name wisvc -StartupType Manual
 
 
 ### Windows Search

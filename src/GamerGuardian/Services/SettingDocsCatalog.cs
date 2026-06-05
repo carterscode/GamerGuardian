@@ -712,6 +712,26 @@ public static class SettingDocsCatalog
             recommended: "Default (Manual) -- only Disable if you've also flipped the AI policy toggles + disabled WSAIFabricSvc",
             risks: "Per-user services use a generated suffix on the actual service name (AarSvc_<hex>). GamerGuardian disables the template definition so every new per-user instance starts disabled, but existing user sessions may need a logoff/logon to pick up the change. If you re-enable any AI feature later, it will fail to launch until you re-enable this service.",
             reversibleVia: "Set-Service -Name AarSvc -StartupType Manual"),
+
+        ["wisvc"] = SvcRec(
+            "wisvc",
+            "Windows Insider Service",
+            "Backs the Windows Insider Program: preview-build enrollment, flighting configuration, and the diagnostic flow Insider builds use. Idle on a machine not enrolled in the Insider Program.",
+            "If you're on the stable channel (the vast majority of users), this service has nothing to do. Disabling removes one more idle background service.",
+            "Removes an idle service. No effect on stable Windows.",
+            recommended: "Disabled (Manual if you run Insider builds)",
+            risks: "If you are an Insider or plan to enroll, leave it on -- with it disabled, the Insider Program settings page won't enroll or flight new builds. Re-enable before joining.",
+            reversibleVia: "Set-Service -Name wisvc -StartupType Manual"),
+
+        ["RemoteAccess"] = SvcRec(
+            "RemoteAccess",
+            "Routing and Remote Access",
+            "Provides LAN/WAN routing and dial-up/VPN server functionality. Disabled by default on client Windows.",
+            "Already disabled on a default install -- this entry is a drift-guard so you can confirm nothing silently re-enables it.",
+            "No change on a default machine; catches an unexpected re-enable.",
+            recommended: "Default (stays Disabled)",
+            risks: "If you intentionally run the Windows routing / RRAS VPN server role (rare on a gaming desktop), leave it alone.",
+            reversibleVia: "Set-Service -Name RemoteAccess -StartupType Disabled (its default), or Manual if you need it."),
     };
 
     private static SettingDetails SvcRec(

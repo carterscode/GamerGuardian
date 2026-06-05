@@ -64,6 +64,13 @@ public static class ServiceCatalog
             DefaultStartType: ServiceStartType.Manual,
             RecommendedTarget: ServiceTargetState.Disabled),
 
+        new(
+            Name: "wisvc",
+            DisplayName: "Windows Insider Service",
+            Description: "Backs the Windows Insider Program (preview-build enrollment and flighting). Safe to disable unless you run Insider builds.",
+            DefaultStartType: ServiceStartType.Manual,
+            RecommendedTarget: ServiceTargetState.Disabled),
+
         // ---------------- Listed but NOT in preset ----------------
         new(
             Name: "WSearch",
@@ -93,6 +100,12 @@ public static class ServiceCatalog
             Name: "RemoteRegistry",
             DisplayName: "Remote Registry",
             Description: "Lets remote machines read/write your registry. Disabled by default on modern Windows; included here so you can confirm it stays that way.",
+            DefaultStartType: ServiceStartType.Disabled),
+
+        new(
+            Name: "RemoteAccess",
+            DisplayName: "Routing and Remote Access",
+            Description: "Provides LAN/WAN routing and dial-up/VPN server functionality. Disabled by default on client Windows; listed so you can confirm it stays disabled (catches anything that silently re-enables it).",
             DefaultStartType: ServiceStartType.Disabled),
 
         new(
