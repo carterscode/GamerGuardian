@@ -31,6 +31,7 @@ public partial class SettingsWindow : FluentWindow
     public ObservableCollection<DisplayRow> DisplayRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> GlobalToggleRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> PrivacyToggleRows { get; } = new();
+    public ObservableCollection<GlobalToggleRow> NetworkToggleRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> PowerToggleRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> WindowsAiRowsCollection { get; } = new();
     public ObservableCollection<WindowsAiAppRow> WindowsAiAppRowsCollection { get; } = new();
@@ -77,6 +78,7 @@ public partial class SettingsWindow : FluentWindow
         DisplaysList.ItemsSource = DisplayRows;
         GlobalTogglesList.ItemsSource = GlobalToggleRows;
         PrivacyTogglesList.ItemsSource = PrivacyToggleRows;
+        NetworkTogglesList.ItemsSource = NetworkToggleRows;
         PowerTogglesList.ItemsSource = PowerToggleRows;
         ServicesList.ItemsSource = ServiceRows;
         WindowsAiRows.ItemsSource = WindowsAiRowsCollection;
@@ -87,6 +89,7 @@ public partial class SettingsWindow : FluentWindow
         LoadServices();
         LoadWindowsAi();
         LoadPrivacy();
+        LoadNetwork();
         LoadCpuTabs();
         UpdatePendingStatus();
     }
@@ -455,6 +458,22 @@ public partial class SettingsWindow : FluentWindow
             pref: g.ActivityHistory, groupName: "pv_activity",
             onPrefChanged: OnRowPrefChanged,
             settingId: "privacy.activityhistory"));
+    }
+
+    private void LoadNetwork()
+    {
+        NetworkToggleRows.Clear();
+        var g = _draft.Global;
+        SyncIfUnmonitored(g.Nagle, NagleMonitor.ReadCurrent);
+        NetworkToggleRows.Add(new GlobalToggleRow(
+            name: "Nagle's algorithm (TCP no-delay)",
+            description: "Disables Nagle packet batching on every active adapter for lower latency in online games. Contested: the benefit varies by hardware and can make some connections worse -- see Learn more.",
+            currentText: $"Current: {GamingDefaultText(SafeRead(NagleMonitor.ReadCurrent))}",
+            defaultText: "Default: On    Gaming: Disabled",
+            onLabel: "Gaming", offLabel: "Default",
+            pref: g.Nagle, groupName: "net_nagle",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "network.nagle"));
     }
 
     private void LoadGlobals()
@@ -917,6 +936,7 @@ public partial class SettingsWindow : FluentWindow
         LoadServices();
         LoadWindowsAi();
         LoadPrivacy();
+        LoadNetwork();
         LoadCpuTabs();
         UpdatePendingStatus();
 
@@ -1014,11 +1034,13 @@ public partial class SettingsWindow : FluentWindow
             DisplaysList.ItemsSource = null;
             GlobalTogglesList.ItemsSource = null;
             PrivacyTogglesList.ItemsSource = null;
+            NetworkTogglesList.ItemsSource = null;
             PowerTogglesList.ItemsSource = null;
             ServicesList.ItemsSource = null;
             DisplayRows.Clear();
             GlobalToggleRows.Clear();
             PrivacyToggleRows.Clear();
+            NetworkToggleRows.Clear();
             PowerToggleRows.Clear();
             ServiceRows.Clear();
         }
@@ -1071,6 +1093,7 @@ public partial class SettingsWindow : FluentWindow
         LoadServices();
         LoadWindowsAi();
         LoadPrivacy();
+        LoadNetwork();
         LoadCpuTabs();
 
         if (RecommendedStatusText is not null)

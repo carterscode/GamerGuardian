@@ -394,6 +394,22 @@ public static class SettingDocsCatalog
             Risks: "Timeline stops showing your recent activities and cross-device resume won't work. No effect on app/game functionality.",
             ReversibleVia: "Delete EnableActivityFeed, PublishUserActivities, and UploadUserActivities from HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System to restore the Windows default."),
 
+        // ---- Network ------------------------------------------------------
+
+        ["network.nagle"] = new(
+            SettingId: "network.nagle",
+            DisplayName: "Nagle's algorithm (TCP no-delay)",
+            What: "Nagle's algorithm batches small outgoing TCP packets to reduce overhead. Disabling it (TcpAckFrequency=1, TCPNoDelay=1 under each network adapter's interface key) sends small packets immediately. GamerGuardian asserts this on every active physical adapter in one elevation prompt; reversal deletes the values to restore the Windows default.",
+            Why: "For latency-sensitive online games, batching can add a few ms of delay to small input/state packets. Turning Nagle off can shave that -- but the benefit is genuinely contested and per-hardware.",
+            HowItHelps: "Potentially lower, more consistent latency for small-packet game netcode. On many setups the difference is unmeasurable; on a few it helps.",
+            Scenarios: Scenarios(
+                ("Competitive online shooter", "Disabled (gaming) -- try it, measure, revert if worse"),
+                ("Stable connection, no latency issues", "Default -- don't fix what isn't broken"),
+                ("Wi-Fi / high-latency link", "Default -- more likely to hurt than help here")),
+            Recommended: "Default unless you've measured a benefit -- this is a contested, per-hardware tweak",
+            Risks: "Real: disabling Nagle can INCREASE bufferbloat-related latency or harm throughput on some links (especially Wi-Fi or congested connections). It is not a guaranteed win. Revert if your latency or stability gets worse.",
+            ReversibleVia: "Delete TcpAckFrequency and TCPNoDelay from each HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces\\{GUID} (GamerGuardian does this across all adapters when you choose Default)."),
+
         // ---- Windows AI ---------------------------------------------------
 
         ["ai.copilot"] = new(

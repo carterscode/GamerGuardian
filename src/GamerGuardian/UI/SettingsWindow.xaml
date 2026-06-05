@@ -325,6 +325,76 @@
                     </ScrollViewer>
                 </TabItem>
 
+                <TabItem Header="Network"
+                         HorizontalContentAlignment="Stretch"
+                         VerticalContentAlignment="Stretch">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,8,8,0">
+                        <StackPanel>
+                            <ui:Card Padding="16" Margin="0,0,0,8">
+                                <TextBlock Text="Network latency tweaks. These are contested: the benefit varies by hardware and can make some connections worse. Read each Learn more before enabling, and revert if your latency gets worse."
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                            </ui:Card>
+                            <ItemsControl x:Name="NetworkTogglesList" Margin="0,0,0,8">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <ui:Card Padding="16" Margin="0,0,0,8">
+                                            <StackPanel>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                        <Border Visibility="{Binding RebootBadgeVisibility}"
+                                                                Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                                                                CornerRadius="3" Padding="6,1"
+                                                                HorizontalAlignment="Left"
+                                                                Margin="0,4,0,0">
+                                                            <TextBlock Text="reboot required"
+                                                                       Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                                                       FontSize="10" FontWeight="SemiBold"/>
+                                                        </Border>
+                                                        <TextBlock Text="{Binding Description}"
+                                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                   FontSize="12" Margin="0,3,0,0"
+                                                                   TextWrapping="Wrap"/>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                            <TextBlock Text="{Binding CurrentText}"
+                                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                       FontSize="11" Margin="0,0,12,0"/>
+                                                            <TextBlock Text="{Binding DefaultText}"
+                                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                       FontSize="11"/>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1" Orientation="Vertical">
+                                                        <CheckBox Content="Monitor" IsChecked="{Binding Monitor}"/>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
+                                                            <TextBlock Text="Want:" Margin="0,4,8,0"/>
+                                                            <RadioButton GroupName="{Binding GroupName}" Content="{Binding OnLabel}" IsChecked="{Binding DesiredOn}" Margin="0,0,8,0"/>
+                                                            <RadioButton GroupName="{Binding GroupName}" Content="{Binding OffLabel}" IsChecked="{Binding DesiredOff}"/>
+                                                        </StackPanel>
+                                                        <CheckBox Content="Auto-apply silently" IsChecked="{Binding AutoApply}"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                                <Expander Header="Learn more" Margin="0,8,0,0"
+                                                          Visibility="{Binding LearnMoreVisibility}">
+                                                    <TextBlock Text="{Binding LearnMoreContent}"
+                                                               TextWrapping="Wrap" FontSize="12"
+                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                               Margin="8,8,8,8"/>
+                                                </Expander>
+                                            </StackPanel>
+                                        </ui:Card>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
                 <TabItem Header="Windows services"
                          HorizontalContentAlignment="Stretch"
                          VerticalContentAlignment="Stretch">

@@ -131,6 +131,10 @@ public sealed class GlobalPreferences
     public ToggleSettingPref PowerThrottling { get; set; } = new() { DesiredOn = true };
     public ToggleSettingPref FastStartup { get; set; } = new() { DesiredOn = true };
     public ToggleSettingPref VisualFx { get; set; } = new() { DesiredOn = true };
+
+    // ---- Network toggles (Network tab; contested per-hardware tweaks) ----
+    public ToggleSettingPref Nagle { get; set; } = new() { DesiredOn = true };
+    public ToggleSettingPref NicPower { get; set; } = new() { DesiredOn = true };
 }
 
 public sealed class ToggleSettingPref

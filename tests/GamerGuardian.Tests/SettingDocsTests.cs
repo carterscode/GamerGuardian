@@ -25,6 +25,7 @@ public class SettingDocsTests
     [InlineData("powerthrottling")]
     [InlineData("faststartup")]
     [InlineData("visualfx")]
+    [InlineData("network.nagle")]
     public void MechanismFor_KnownIds_ReturnsNonEmpty(string id)
     {
         var mech = SettingDocs.MechanismFor(id);

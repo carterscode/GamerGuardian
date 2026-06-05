@@ -38,6 +38,7 @@ public class SettingDocsCatalogTests
     [InlineData("powerthrottling")]
     [InlineData("faststartup")]
     [InlineData("visualfx")]
+    [InlineData("network.nagle")]
     public void Get_KnownIds_ReturnsPopulatedEntry(string id)
     {
         var d = SettingDocsCatalog.Get(id);
