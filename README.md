@@ -50,7 +50,14 @@ It's also paranoid about not making your gaming worse. Polling pauses entirely d
 
 ## What it watches
 
-For each setting you choose: **monitor or not**, **desired value**, and whether to **auto-apply silently** when it drifts.
+For each setting you choose three things: **Monitor** (watch it or not), the **desired value** (**Want** — shown as Enabled/Disabled, or Gaming/Default where the registry meaning is inverted), and whether to **auto-apply silently** when it drifts. Changes are staged until you click **Apply**, every change is reversible, and each one is recorded in `changes.log`.
+
+Settings live across **nine tabs**. The lists below cover the monitored settings; for a complete walkthrough of every tab and what each setting means, see the **[Settings & tabs guide](https://github.com/carterscode/GamerGuardian/wiki/Settings-and-tabs)** (and [SETTINGS-REFERENCE.md](docs/SETTINGS-REFERENCE.md) for the full per-setting reference).
+
+- **General** — theme, launch-at-startup, polling interval, update check, change log, and the **one-click Recommended setup** button that stages the gaming-optimized config across every tab.
+- **Global gaming**, **Privacy**, **Network**, **Windows services**, **Windows AI**, **Display** — the monitored settings, listed below.
+- **CPU / Power** — detected CPU, **Power Throttling**, a CPU-aware custom gaming **power plan** (Balanced clone tuned for your CPU — e.g. X3D core-parking), and dual-CCD routing prerequisites. See [CPU-aware power plans](https://github.com/carterscode/GamerGuardian/wiki/CPU-Power-Plans).
+- **Recommended BIOS** — a firmware checklist (Resizable BAR, XMP/EXPO, CPPC mode, etc.); guidance only, nothing is changed.
 
 ### Per-display
 
@@ -74,7 +81,6 @@ For each setting you choose: **monitor or not**, **desired value**, and whether 
 | [**Variable Refresh Rate (DirectX)**](https://devblogs.microsoft.com/directx/os-variable-refresh-rate/) | G-Sync / FreeSync compatibility flag. Not the same as Dynamic Refresh Rate (DRR). | |
 | [**Power plan**](https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/configure-power-settings) | Active Windows power scheme. | |
 | [**System Responsiveness**](https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service) | MMCSS reservation percentage. | ✓ |
-| [**Network Throttling**](https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service) | MMCSS network packet pacing. | |
 | [**USB Selective Suspend**](https://learn.microsoft.com/en-us/windows-hardware/drivers/usbcon/usb-selective-suspend) | Lets Windows suspend idle USB devices. | ✓ |
 | [**Games multimedia task profile**](https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service) | Priority + scheduling values for the MMCSS Games task. | |
 | [**Power Throttling**](https://learn.microsoft.com/en-us/windows/win32/power/power-throttling) | Disables OS throttling of background threads for sustained performance (CPU / Power tab). | |
@@ -87,7 +93,7 @@ Telemetry/privacy toggles Windows often re-enables after feature updates -- the 
 
 ### Network
 
-Latency tweaks shipped at full monitor/desired/auto-apply parity, with honest copy about their contested, per-hardware nature: **Nagle's algorithm** (per-interface TCP no-delay) and **NIC power management** (stops Windows from powering down the adapter). Both can make some connections *worse* -- read each Learn more and revert if latency degrades. See the [Network section of SETTINGS-REFERENCE.md](docs/SETTINGS-REFERENCE.md#network).
+Network-latency tweaks. **Network Throttling** (MMCSS packet pacing) is a safe, well-established tweak. **Nagle's algorithm** (per-interface TCP no-delay) and **NIC power management** (stops Windows from powering down the adapter) are contested -- their benefit varies by hardware and can make some connections *worse*, so read each Learn more and revert if latency degrades. All three ship at full monitor / desired / auto-apply parity. See the [Network section of SETTINGS-REFERENCE.md](docs/SETTINGS-REFERENCE.md#network).
 
 ### Windows services
 

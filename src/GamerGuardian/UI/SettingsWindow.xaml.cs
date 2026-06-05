@@ -464,8 +464,20 @@ public partial class SettingsWindow : FluentWindow
     {
         NetworkToggleRows.Clear();
         var g = _draft.Global;
+        SyncIfUnmonitored(g.NetworkThrottling, NetworkThrottlingMonitor.ReadCurrent);
         SyncIfUnmonitored(g.Nagle, NagleMonitor.ReadCurrent);
         SyncIfUnmonitored(g.NicPower, NicPowerMonitor.ReadCurrent);
+
+        NetworkToggleRows.Add(new GlobalToggleRow(
+            name: "Network Throttling",
+            description: "Windows' MMCSS rate-limits network packets during multimedia tasks. Disabling removes that pacing for steadier online-game netcode. Safe, well-established tweak.",
+            currentText: $"Current: {GamingDefaultText(SafeRead(NetworkThrottlingMonitor.ReadCurrent))}",
+            defaultText: "Default: 10    Gaming: Disabled",
+            onLabel: "Gaming", offLabel: "Default",
+            pref: g.NetworkThrottling, groupName: "netthr",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "netthrottle"));
+
         NetworkToggleRows.Add(new GlobalToggleRow(
             name: "Nagle's algorithm (TCP no-delay)",
             description: "Disables Nagle packet batching on every active adapter for lower latency in online games. Contested: the benefit varies by hardware and can make some connections worse -- see Learn more.",
@@ -500,7 +512,6 @@ public partial class SettingsWindow : FluentWindow
         SyncIfUnmonitored(g.Hags, HagsMonitor.ReadCurrent);
         SyncIfUnmonitored(g.MemoryIntegrity, MemoryIntegrityMonitor.ReadCurrent);
         SyncIfUnmonitored(g.SystemResponsiveness, SystemResponsivenessMonitor.ReadCurrent);
-        SyncIfUnmonitored(g.NetworkThrottling, NetworkThrottlingMonitor.ReadCurrent);
         SyncIfUnmonitored(g.UsbSelectiveSuspend, UsbSelectiveSuspendMonitor.ReadCurrent);
         SyncIfUnmonitored(g.GamesTaskProfile, GamesTaskProfileMonitor.ReadCurrent);
         SyncIfUnmonitored(g.MousePrecision, MousePrecisionMonitor.ReadCurrent);
@@ -561,16 +572,6 @@ public partial class SettingsWindow : FluentWindow
             pref: g.SystemResponsiveness, groupName: "sysresp",
             onPrefChanged: OnRowPrefChanged,
             settingId: "sysresponse"));
-
-        GlobalToggleRows.Add(new GlobalToggleRow(
-            name: "Network Throttling",
-            description: "Multimedia packet pacing. Disabling reduces network jitter for online games.",
-            currentText: $"Current: {GamingDefaultText(SafeRead(NetworkThrottlingMonitor.ReadCurrent))}",
-            defaultText: "Default: 10    Gaming: Disabled",
-            onLabel: "Gaming", offLabel: "Default",
-            pref: g.NetworkThrottling, groupName: "netthr",
-            onPrefChanged: OnRowPrefChanged,
-            settingId: "netthrottle"));
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "USB Selective Suspend (global)",
