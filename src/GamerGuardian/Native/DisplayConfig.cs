@@ -8,6 +8,20 @@ public static class DisplayConfig
 
     public const uint QDC_ALL_PATHS = 0x00000001;
     public const uint QDC_ONLY_ACTIVE_PATHS = 0x00000002;
+    // Modifier: return paths/flags with virtual-refresh-rate (DRR) awareness so
+    // DISPLAYCONFIG_PATH_BOOST_REFRESH_RATE reflects the real DRR state.
+    public const uint QDC_VIRTUAL_REFRESH_RATE_AWARE = 0x00000040;
+
+    // SetDisplayConfig flags (winuser.h).
+    public const uint SDC_USE_SUPPLIED_DISPLAY_CONFIG = 0x00000020;
+    public const uint SDC_VALIDATE = 0x00000040;
+    public const uint SDC_APPLY = 0x00000080;
+    public const uint SDC_SAVE_TO_DATABASE = 0x00000200;
+    public const uint SDC_VIRTUAL_REFRESH_RATE_AWARE = 0x00020000;
+
+    // DISPLAYCONFIG_PATH_INFO.flags bit: when set, the path runs Dynamic Refresh
+    // Rate (boosts between the virtual and physical refresh rate). Win11+.
+    public const uint DISPLAYCONFIG_PATH_BOOST_REFRESH_RATE = 0x00000010;
 
     public enum DISPLAYCONFIG_DEVICE_INFO_TYPE : int
     {
@@ -216,4 +230,12 @@ public static class DisplayConfig
 
     [DllImport("user32.dll")]
     public static extern int DisplayConfigSetDeviceInfo(ref DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE info);
+
+    [DllImport("user32.dll")]
+    public static extern int SetDisplayConfig(
+        uint numPathArrayElements,
+        [In] DISPLAYCONFIG_PATH_INFO[]? pathArray,
+        uint numModeInfoArrayElements,
+        [In] DISPLAYCONFIG_MODE_INFO[]? modeInfoArray,
+        uint flags);
 }
