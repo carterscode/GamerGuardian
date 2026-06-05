@@ -64,8 +64,9 @@ public class WindowsAiTests
     }
 
     [Theory]
+    [InlineData("ai.settingssearch", "BingSearchEnabled")]
+    [InlineData("ai.settingssearch", "IsDynamicSearchBoxEnabled")]
     [InlineData("ai.settingssearch", "DisableSearchBoxSuggestions")]
-    [InlineData("ai.settingssearch", "TaskbarCompanion")]
     [InlineData("ai.actions", "FeatureManagement")]
     [InlineData("ai.actions", "1853569164")]
     [InlineData("ai.actions", "4098520719")]
@@ -111,6 +112,46 @@ public class WindowsAiTests
         Assert.Contains("AllowRecallEnablement", cmd);
         Assert.Contains("DisableAIDataAnalysis", cmd);
         Assert.Contains("WindowsAI", cmd);
+    }
+
+    [Fact]
+    public void SettingDocs_SettingsSearchAi_UsesReliableBingSearchEnabled_NotBogusTaskbarCompanion()
+    {
+        // Regression guard for the recurring "Search box AI suggestions" drift
+        // popup (commit 3202e9c band-aided the read; this is the real fix). The
+        // authoritative mechanism is now BingSearchEnabled under
+        // CurrentVersion\Search -- the value Windows 11 actually honors and that
+        // reads back reliably. The bogus TaskbarCompanion value name (never
+        // recognized by Explorer) must be gone from every doc surface so the
+        // verify-fail/15-min-backoff/popup loop can't recur.
+        var mech = SettingDocs.MechanismFor("ai.settingssearch");
+        var apply = SettingDocs.ApplyCommandFor("ai.settingssearch");
+        var verify = SettingDocs.VerifyCommandFor("ai.settingssearch");
+
+        Assert.Contains("BingSearchEnabled", mech);
+        Assert.Contains("BingSearchEnabled", apply);
+        Assert.Contains("BingSearchEnabled", verify);
+        Assert.Contains("CurrentVersion\\Search", apply);
+
+        Assert.DoesNotContain("TaskbarCompanion", mech);
+        Assert.DoesNotContain("TaskbarCompanion", apply);
+        Assert.DoesNotContain("TaskbarCompanion", verify);
+    }
+
+    [Fact]
+    public void SettingsSearchAiMonitor_NoDrift_WhenDesiredMatchesCurrent()
+    {
+        // Mirrors CopilotMonitor's live-read test: with a default config
+        // (DesiredOn=true) there should be no drift on any machine whose search
+        // box AI suggestions aren't already disabled. Asserts ReadCurrent and
+        // CheckDrift agree -- the invariant whose violation produced the popup
+        // loop -- without mutating the registry.
+        var cfg = new AppConfig();
+        cfg.Global.SettingsSearchAi.Monitor = true;
+        var current = SettingsSearchAiMonitor.ReadCurrent();
+        var drift = new SettingsSearchAiMonitor().CheckDrift(cfg).ToList();
+        if (current is bool c && c == cfg.Global.SettingsSearchAi.DesiredOn)
+            Assert.Empty(drift);
     }
 
     [Fact]

@@ -354,7 +354,7 @@ public static class SettingDocsCatalog
         ["ai.settingssearch"] = new(
             SettingId: "ai.settingssearch",
             DisplayName: "Search box AI suggestions + taskbar companion",
-            What: "Two HKCU policies: DisableSearchBoxSuggestions (kills the AI/Copilot-flavored web suggestion layer in the Windows search box) and TaskbarCompanion (the floating Copilot widget Windows can dock next to the taskbar). HKCU only -- no UAC.",
+            What: "Three HKCU values: BingSearchEnabled=0 (the value Windows 11 actually honors for the AI/web suggestion layer in the search box -- this is the authoritative one), IsDynamicSearchBoxEnabled=0 (search highlights / the companion content), and the legacy DisableSearchBoxSuggestions=1 policy (best-effort -- unreliable on Win11). HKCU only -- no UAC.",
             Why: "The search box's AI suggestion layer calls Microsoft web endpoints to suggest answers as you type. The taskbar companion is a floating overlay some Windows 11 builds enable by default. Both are noise for users who use the search box for files and apps.",
             HowItHelps: "Search box returns local files / apps only -- no web suggestions, no Copilot answers inline, no taskbar companion widget. Indexing itself (Start menu, Explorer, Outlook) is untouched.",
             Scenarios: Scenarios(
@@ -363,7 +363,7 @@ public static class SettingDocsCatalog
                 ("Privacy-conscious", "Off")),
             Recommended: "Off",
             Risks: "You lose the web-suggestion layer and the taskbar companion. Search itself works exactly as before.",
-            ReversibleVia: "Delete DisableSearchBoxSuggestions from HKCU\\SOFTWARE\\Policies\\Microsoft\\Windows\\Explorer and TaskbarCompanion from HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced."),
+            ReversibleVia: "Delete BingSearchEnabled from HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Search, IsDynamicSearchBoxEnabled from HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\SearchSettings, and DisableSearchBoxSuggestions from HKCU\\SOFTWARE\\Policies\\Microsoft\\Windows\\Explorer (or set them back to 1 / 1 / absent)."),
 
         ["ai.actions"] = new(
             SettingId: "ai.actions",
