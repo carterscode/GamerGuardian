@@ -12,6 +12,7 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 - [CPU-optimized gaming power plan](#cpu-optimized-gaming-power-plan) (`cpuplan`)
 - [Display refresh rate](#display-refresh-rate) (`refresh`)
 - [Display resolution](#display-resolution) (`resolution`)
+- [Fast Startup (hybrid boot)](#fast-startup-hybrid-boot) (`faststartup`)
 - [Fullscreen optimizations (global)](#fullscreen-optimizations-global) (`fso`)
 - [Game DVR background recording](#game-dvr-background-recording) (`gamedvr`)
 - [Games multimedia task profile](#games-multimedia-task-profile) (`gamestask`)
@@ -20,6 +21,7 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 - [Memory Integrity / VBS (Core Isolation)](#memory-integrity---vbs-core-isolation) (`memintegrity`)
 - [Mouse "Enhance pointer precision"](#mouse-enhance-pointer-precision) (`mouseaccel`)
 - [Network Throttling](#network-throttling) (`netthrottle`)
+- [Power Throttling](#power-throttling) (`powerthrottling`)
 - [System Responsiveness](#system-responsiveness) (`sysresponse`)
 - [USB Selective Suspend (global)](#usb-selective-suspend-global) (`usbsuspend`)
 - [Variable Refresh Rate (DirectX)](#variable-refresh-rate-directx) (`vrr`)
@@ -167,6 +169,29 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Risks.** Pinning can fight legitimate display changes (docking a laptop, plugging in a different monitor).
 
 **Reversible via.** Uncheck 'Monitor this setting' for Resolution on the display tab.
+
+
+### Fast Startup (hybrid boot)
+
+`faststartup` &nbsp; **Recommended:** Disabled (gaming)
+
+**What it does.** Saves the kernel session to the hiberfile on shutdown so the next boot skips part of initialization. Driven by HKLM\...\Session Manager\Power\HiberbootEnabled=0 to disable (requires elevation and a reboot to take effect).
+
+**Why you'd change it.** Fast Startup means 'shutdown' isn't a true cold boot -- drivers and hardware can carry stale state across restarts, which occasionally causes USB/GPU/peripheral quirks. Turning it off makes every shutdown a clean boot.
+
+**How it helps.** Cleaner, more predictable boots; resolves a class of intermittent driver/peripheral issues that 'a real restart fixes'. Low drift -- mostly a set-once toggle.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Troubleshooting flaky USB/GPU state | Disabled (gaming) |
+| Wants the fastest possible boot, no quirks | Default (leave on) |
+| Dual-boot with another OS | Disabled (gaming) -- Fast Startup locks the disk |
+
+**Risks.** Boots are slightly slower (a true cold boot). No stability risk -- this is the pre-Win8 default behavior.
+
+**Reversible via.** Set HiberbootEnabled = 1 in HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power (Control Panel > Power Options > Choose what the power buttons do > Turn on fast startup).
 
 
 ### Fullscreen optimizations (global)
@@ -361,6 +386,29 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Risks.** Very low. In theory multimedia apps could see slightly less reliable timing if your network is saturated -- in practice not observable.
 
 **Reversible via.** Set HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\NetworkThrottlingIndex = 10.
+
+
+### Power Throttling
+
+`powerthrottling` &nbsp; **Recommended:** Disabled (gaming) on a desktop; Default on battery
+
+**What it does.** Windows Power Throttling reduces the clock/power of threads it considers background or idle to save energy. Disabled via HKLM\...\Power\PowerThrottling\PowerThrottlingOff=1 (requires elevation). Absence means the Windows default (throttling on). This is a registry setting, not a power-scheme change.
+
+**Why you'd change it.** On a desktop chasing sustained performance, throttling can clip background/helper threads a game relies on. Turning it off keeps all threads at full clock.
+
+**How it helps.** More consistent performance for multi-threaded games and background helpers; no surprise downclocking under the OS's idle heuristics.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Desktop / plugged-in gaming | Disabled (gaming) |
+| Laptop on battery | Default -- throttling saves real battery |
+| Streaming + game | Disabled (gaming) |
+
+**Risks.** Higher power draw and heat, especially on laptops on battery. No stability risk.
+
+**Reversible via.** Delete PowerThrottlingOff from HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling to restore the Windows default.
 
 
 ### System Responsiveness

@@ -22,6 +22,8 @@ public class SettingDocsTests
     [InlineData("privacy.tailoredexp")]
     [InlineData("privacy.cdp")]
     [InlineData("privacy.activityhistory")]
+    [InlineData("powerthrottling")]
+    [InlineData("faststartup")]
     public void MechanismFor_KnownIds_ReturnsNonEmpty(string id)
     {
         var mech = SettingDocs.MechanismFor(id);
@@ -37,6 +39,8 @@ public class SettingDocsTests
     [InlineData("privacy.advertisingid")]
     [InlineData("privacy.cdp")]
     [InlineData("privacy.activityhistory")]
+    [InlineData("powerthrottling")]
+    [InlineData("faststartup")]
     public void VerifyCommandFor_KnownIds_ReturnsNonEmpty(string id)
     {
         var cmd = SettingDocs.VerifyCommandFor(id);

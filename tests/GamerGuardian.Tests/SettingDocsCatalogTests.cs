@@ -35,6 +35,8 @@ public class SettingDocsCatalogTests
     [InlineData("privacy.tailoredexp")]
     [InlineData("privacy.cdp")]
     [InlineData("privacy.activityhistory")]
+    [InlineData("powerthrottling")]
+    [InlineData("faststartup")]
     public void Get_KnownIds_ReturnsPopulatedEntry(string id)
     {
         var d = SettingDocsCatalog.Get(id);

@@ -54,6 +54,8 @@ public static class SettingDocs
             "privacy.tailoredexp" => @"HKCU\Software\Microsoft\Windows\CurrentVersion\Privacy\TailoredExperiencesWithDiagnosticDataEnabled (DWORD)",
             "privacy.cdp" => @"HKLM\SOFTWARE\Policies\Microsoft\Windows\System\EnableCdp (DWORD; absent = Windows default ON)",
             "privacy.activityhistory" => @"HKLM\SOFTWARE\Policies\Microsoft\Windows\System\{EnableActivityFeed, PublishUserActivities, UploadUserActivities} (DWORD)",
+            "powerthrottling" => @"HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling\PowerThrottlingOff (DWORD; absent = Windows default)",
+            "faststartup" => @"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power\HiberbootEnabled (DWORD; reboot required)",
             _ => "(unknown)",
         };
     }
@@ -168,6 +170,8 @@ public static class SettingDocs
             "privacy.tailoredexp" => @"Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Privacy' -Name TailoredExperiencesWithDiagnosticDataEnabled -Value 0 -Type DWord",
             "privacy.cdp" => @"$k='HKLM:\SOFTWARE\Policies\Microsoft\Windows\System'; Set-ItemProperty $k -Name EnableCdp -Value 0 -Type DWord   # reverse: Remove-ItemProperty $k -Name EnableCdp",
             "privacy.activityhistory" => @"$k='HKLM:\SOFTWARE\Policies\Microsoft\Windows\System'; foreach($n in 'EnableActivityFeed','PublishUserActivities','UploadUserActivities'){ Set-ItemProperty $k -Name $n -Value 0 -Type DWord }   # reverse: Remove-ItemProperty for each",
+            "powerthrottling" => @"$k='HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling'; New-Item $k -Force | Out-Null; Set-ItemProperty $k -Name PowerThrottlingOff -Value 1 -Type DWord   # reverse: Remove-ItemProperty $k -Name PowerThrottlingOff",
+            "faststartup" => @"Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power' -Name HiberbootEnabled -Value 0 -Type DWord   # reboot required; reverse: set to 1",
             _ => "",
         };
     }
@@ -221,6 +225,8 @@ public static class SettingDocs
             "privacy.tailoredexp" => @"(Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Privacy' -Name TailoredExperiencesWithDiagnosticDataEnabled -EA SilentlyContinue).TailoredExperiencesWithDiagnosticDataEnabled",
             "privacy.cdp" => @"(Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' -Name EnableCdp -EA SilentlyContinue).EnableCdp",
             "privacy.activityhistory" => @"$k='HKLM:\SOFTWARE\Policies\Microsoft\Windows\System'; @{Feed=(Get-ItemProperty $k -Name EnableActivityFeed -EA SilentlyContinue).EnableActivityFeed; Publish=(Get-ItemProperty $k -Name PublishUserActivities -EA SilentlyContinue).PublishUserActivities; Upload=(Get-ItemProperty $k -Name UploadUserActivities -EA SilentlyContinue).UploadUserActivities}",
+            "powerthrottling" => @"(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling' -Name PowerThrottlingOff -EA SilentlyContinue).PowerThrottlingOff",
+            "faststartup" => @"(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power' -Name HiberbootEnabled -EA SilentlyContinue).HiberbootEnabled",
             _ => "",
         };
     }

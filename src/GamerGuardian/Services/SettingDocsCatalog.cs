@@ -291,6 +291,36 @@ public static class SettingDocsCatalog
             Risks: "Low. The plan is additive -- your existing Windows plans are never modified or deleted, and you can switch back at any time. For asymmetric dual-CCD X3D the power plan alone is not sufficient: it depends on the AMD CCD-routing stack (BIOS CPPC=Driver, the 3D V-Cache Optimizer service, and Xbox Game Bar), which the app surfaces but cannot set.",
             ReversibleVia: "Switch the active plan back via Settings > System > Power, or 'powercfg /setactive SCHEME_BALANCED'. The GamerGuardian plan can be deleted from the legacy Power control panel if you no longer want it."),
 
+        // ---- System toggles -----------------------------------------------
+
+        ["powerthrottling"] = new(
+            SettingId: "powerthrottling",
+            DisplayName: "Power Throttling",
+            What: "Windows Power Throttling reduces the clock/power of threads it considers background or idle to save energy. Disabled via HKLM\\...\\Power\\PowerThrottling\\PowerThrottlingOff=1 (requires elevation). Absence means the Windows default (throttling on). This is a registry setting, not a power-scheme change.",
+            Why: "On a desktop chasing sustained performance, throttling can clip background/helper threads a game relies on. Turning it off keeps all threads at full clock.",
+            HowItHelps: "More consistent performance for multi-threaded games and background helpers; no surprise downclocking under the OS's idle heuristics.",
+            Scenarios: Scenarios(
+                ("Desktop / plugged-in gaming", "Disabled (gaming)"),
+                ("Laptop on battery", "Default -- throttling saves real battery"),
+                ("Streaming + game", "Disabled (gaming)")),
+            Recommended: "Disabled (gaming) on a desktop; Default on battery",
+            Risks: "Higher power draw and heat, especially on laptops on battery. No stability risk.",
+            ReversibleVia: "Delete PowerThrottlingOff from HKLM\\SYSTEM\\CurrentControlSet\\Control\\Power\\PowerThrottling to restore the Windows default."),
+
+        ["faststartup"] = new(
+            SettingId: "faststartup",
+            DisplayName: "Fast Startup (hybrid boot)",
+            What: "Saves the kernel session to the hiberfile on shutdown so the next boot skips part of initialization. Driven by HKLM\\...\\Session Manager\\Power\\HiberbootEnabled=0 to disable (requires elevation and a reboot to take effect).",
+            Why: "Fast Startup means 'shutdown' isn't a true cold boot -- drivers and hardware can carry stale state across restarts, which occasionally causes USB/GPU/peripheral quirks. Turning it off makes every shutdown a clean boot.",
+            HowItHelps: "Cleaner, more predictable boots; resolves a class of intermittent driver/peripheral issues that 'a real restart fixes'. Low drift -- mostly a set-once toggle.",
+            Scenarios: Scenarios(
+                ("Troubleshooting flaky USB/GPU state", "Disabled (gaming)"),
+                ("Wants the fastest possible boot, no quirks", "Default (leave on)"),
+                ("Dual-boot with another OS", "Disabled (gaming) -- Fast Startup locks the disk")),
+            Recommended: "Disabled (gaming)",
+            Risks: "Boots are slightly slower (a true cold boot). No stability risk -- this is the pre-Win8 default behavior.",
+            ReversibleVia: "Set HiberbootEnabled = 1 in HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power (Control Panel > Power Options > Choose what the power buttons do > Turn on fast startup)."),
+
         // ---- Privacy / telemetry ------------------------------------------
 
         ["privacy.advertisingid"] = new(

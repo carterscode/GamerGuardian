@@ -120,6 +120,9 @@ public partial class App : WpfApplication
             new TailoredExperiencesMonitor(),
             new CdpMonitor(),
             new ActivityHistoryMonitor(),
+            // System toggles:
+            new PowerThrottlingMonitor(),  // CPU/Power tab
+            new FastStartupMonitor(),       // Global gaming tab
         };
         var serviceMonitors = GamerGuardian.Services.ServiceCatalog.All
             .Select(d => (IMonitoredSetting)new WindowsServiceMonitor(d));

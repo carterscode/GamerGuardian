@@ -115,6 +115,10 @@ public sealed class GlobalPreferences
     // state (disabled-by-policy), matching the NetworkThrottling/USB convention.
     public ToggleSettingPref Cdp { get; set; } = new() { DesiredOn = true };
     public ToggleSettingPref ActivityHistory { get; set; } = new() { DesiredOn = true };
+
+    // ---- System toggles (inverted Gaming/Default; DesiredOn=true = gaming) ----
+    public ToggleSettingPref PowerThrottling { get; set; } = new() { DesiredOn = true };
+    public ToggleSettingPref FastStartup { get; set; } = new() { DesiredOn = true };
 }
 
 public sealed class ToggleSettingPref

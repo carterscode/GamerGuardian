@@ -31,6 +31,7 @@ public partial class SettingsWindow : FluentWindow
     public ObservableCollection<DisplayRow> DisplayRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> GlobalToggleRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> PrivacyToggleRows { get; } = new();
+    public ObservableCollection<GlobalToggleRow> PowerToggleRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> WindowsAiRowsCollection { get; } = new();
     public ObservableCollection<WindowsAiAppRow> WindowsAiAppRowsCollection { get; } = new();
     public ObservableCollection<ServiceRow> ServiceRows { get; } = new();
@@ -76,6 +77,7 @@ public partial class SettingsWindow : FluentWindow
         DisplaysList.ItemsSource = DisplayRows;
         GlobalTogglesList.ItemsSource = GlobalToggleRows;
         PrivacyTogglesList.ItemsSource = PrivacyToggleRows;
+        PowerTogglesList.ItemsSource = PowerToggleRows;
         ServicesList.ItemsSource = ServiceRows;
         WindowsAiRows.ItemsSource = WindowsAiRowsCollection;
         WindowsAiAppRows.ItemsSource = WindowsAiAppRowsCollection;
@@ -473,6 +475,7 @@ public partial class SettingsWindow : FluentWindow
         SyncIfUnmonitored(g.MousePrecision, MousePrecisionMonitor.ReadCurrent);
         SyncIfUnmonitored(g.FullscreenOptimizations, FullscreenOptimizationsMonitor.ReadCurrent);
         SyncIfUnmonitored(g.Vrr, VrrMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.FastStartup, FastStartupMonitor.ReadCurrent);
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Game Mode",
@@ -587,6 +590,17 @@ public partial class SettingsWindow : FluentWindow
             pref: g.Vrr, groupName: "vrr",
             onPrefChanged: OnRowPrefChanged,
             settingId: "vrr"));
+
+        GlobalToggleRows.Add(new GlobalToggleRow(
+            name: "Fast Startup (hybrid boot)",
+            description: "Saves the kernel session to the hiberfile so 'shutdown' isn't a true cold boot. Off makes every shutdown a clean boot; fixes a class of stale driver/USB state issues.",
+            currentText: $"Current: {GamingDefaultText(SafeRead(FastStartupMonitor.ReadCurrent))}",
+            defaultText: "Default: On    Gaming: Disabled",
+            onLabel: "Gaming", offLabel: "Default",
+            requiresReboot: true,
+            pref: g.FastStartup, groupName: "faststartup",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "faststartup"));
 
         var planNames = PowerPlanMonitor.ListAvailablePlans();
         var active = SafeRunGuid(PowerPlanMonitor.GetActivePlan);
@@ -986,10 +1000,12 @@ public partial class SettingsWindow : FluentWindow
             DisplaysList.ItemsSource = null;
             GlobalTogglesList.ItemsSource = null;
             PrivacyTogglesList.ItemsSource = null;
+            PowerTogglesList.ItemsSource = null;
             ServicesList.ItemsSource = null;
             DisplayRows.Clear();
             GlobalToggleRows.Clear();
             PrivacyToggleRows.Clear();
+            PowerToggleRows.Clear();
             ServiceRows.Clear();
         }
         catch { }
@@ -1063,8 +1079,25 @@ public partial class SettingsWindow : FluentWindow
 
     private CpuTuneResult? _cpuRecipe;
 
+    private void LoadPowerToggles()
+    {
+        PowerToggleRows.Clear();
+        var g = _draft.Global;
+        SyncIfUnmonitored(g.PowerThrottling, PowerThrottlingMonitor.ReadCurrent);
+        PowerToggleRows.Add(new GlobalToggleRow(
+            name: "Power Throttling",
+            description: "Windows throttles threads it considers background/idle to save power. Off keeps all threads at full clock for sustained performance (desktop-recommended; leave Default on battery).",
+            currentText: $"Current: {GamingDefaultText(SafeRead(PowerThrottlingMonitor.ReadCurrent))}",
+            defaultText: "Default: On    Gaming: Disabled",
+            onLabel: "Gaming", offLabel: "Default",
+            pref: g.PowerThrottling, groupName: "powerthrottle",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "powerthrottling"));
+    }
+
     private void LoadCpuTabs()
     {
+        LoadPowerToggles();
         var cpu = CpuDetector.Current;
         var r = CpuTuneCatalog.Resolve(cpu);
         _cpuRecipe = r;
