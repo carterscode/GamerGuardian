@@ -651,6 +651,8 @@ public partial class SettingsWindow : FluentWindow
         {
             var pref = DisplayPreferenceResolver.Resolve(_draft, d, active);
             var hdr = SafeRead(() => HdrMonitor.ReadHdrState(d) is { } s ? (bool?)(s.Supported && s.Enabled) : null);
+            var drr = DrrMonitor.ReadState(d); // internally guarded, won't throw
+            bool drrSupported = drr is { } ds && ds.Supported;
             var refresh = string.IsNullOrEmpty(d.GdiDeviceName) ? null : RefreshRateMonitor.GetCurrentRefresh(d.GdiDeviceName);
             uint maxHz = refresh is null ? 0 : RefreshRateMonitor.GetMaxSupportedRefresh(d.GdiDeviceName, refresh.Value.Width, refresh.Value.Height);
             var rates = refresh is null
@@ -669,12 +671,13 @@ public partial class SettingsWindow : FluentWindow
             var current = ResolutionMonitor.GetCurrent(d.GdiDeviceName);
 
             var status = string.Format(CultureInfo.InvariantCulture,
-                "Now — HDR: {0}    Refresh: {1}    Resolution: {2}",
+                "Now — HDR: {0}    Refresh: {1}    Resolution: {2}    DRR: {3}",
                 hdr is null ? "unknown" : (hdr.Value ? "On" : "Off"),
                 refresh is null ? "unknown" : refresh.Value.Hz + " Hz" + (maxHz > 0 ? $" (max {maxHz})" : ""),
-                current is null ? "unknown" : $"{current.Value.Width}x{current.Value.Height}");
+                current is null ? "unknown" : $"{current.Value.Width}x{current.Value.Height}",
+                drr is null ? "unknown" : (!drr.Value.Supported ? "n/a" : (drr.Value.Enabled ? "On" : "Off")));
 
-            DisplayRows.Add(new DisplayRow(d.StableKey, d.DisplayLabel, status, pref, rates, resStrings));
+            DisplayRows.Add(new DisplayRow(d.StableKey, d.DisplayLabel, status, pref, rates, resStrings, drrSupported));
         }
     }
 
@@ -1674,6 +1677,17 @@ public sealed class DisplayRow : INotifyPropertyChanged
     public bool HdrDesiredOn { get => _pref.Hdr.DesiredOn; set { _pref.Hdr.DesiredOn = value; OnPropertyChanged(); } }
     public bool HdrAutoApply { get => _pref.Hdr.AutoApply; set { _pref.Hdr.AutoApply = value; OnPropertyChanged(); } }
 
+    // Dynamic Refresh Rate (per display). When the panel/OS doesn't support DRR
+    // the controls are hidden and a "Not supported on this display" label shows.
+    public bool DrrSupported { get; }
+    public System.Windows.Visibility DrrSupportedVisibility =>
+        DrrSupported ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+    public System.Windows.Visibility DrrUnsupportedVisibility =>
+        DrrSupported ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
+    public bool DrrMonitor { get => _pref.Drr.Monitor; set { _pref.Drr.Monitor = value; OnPropertyChanged(); } }
+    public bool DrrDesiredOn { get => _pref.Drr.DesiredOn; set { _pref.Drr.DesiredOn = value; OnPropertyChanged(); } }
+    public bool DrrAutoApply { get => _pref.Drr.AutoApply; set { _pref.Drr.AutoApply = value; OnPropertyChanged(); } }
+
     public bool RefreshMonitor { get => _pref.RefreshRate.Monitor; set { _pref.RefreshRate.Monitor = value; OnPropertyChanged(); } }
     public bool RefreshUseMax
     {
@@ -1736,13 +1750,14 @@ public sealed class DisplayRow : INotifyPropertyChanged
     }
     public bool ResolutionAutoApply { get => _pref.Resolution.AutoApply; set { _pref.Resolution.AutoApply = value; OnPropertyChanged(); } }
 
-    public DisplayRow(string key, string label, string status, DisplayPreference pref, IReadOnlyList<uint> rates, IReadOnlyList<string> resolutions)
+    public DisplayRow(string key, string label, string status, DisplayPreference pref, IReadOnlyList<uint> rates, IReadOnlyList<string> resolutions, bool drrSupported)
     {
         _key = key;
         _pref = pref;
         HeaderText = label;
         StatusText = status;
         RateGroupName = "rate_" + key.GetHashCode().ToString("X");
+        DrrSupported = drrSupported;
         AvailableHz = rates;
         AvailableResolutions = resolutions;
     }

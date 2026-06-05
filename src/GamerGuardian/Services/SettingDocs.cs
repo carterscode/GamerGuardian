@@ -12,6 +12,7 @@ public static class SettingDocs
         if (settingId.StartsWith("hdr:")) return "DisplayConfigSetDeviceInfo (CCD API)";
         if (settingId.StartsWith("refresh:")) return "ChangeDisplaySettingsEx (DEVMODE.dmDisplayFrequency)";
         if (settingId.StartsWith("resolution:")) return "ChangeDisplaySettingsEx (DEVMODE.dmPelsWidth/Height)";
+        if (settingId.StartsWith("drr:")) return "SetDisplayConfig (CCD API; DISPLAYCONFIG_PATH_BOOST_REFRESH_RATE + SDC_VIRTUAL_REFRESH_RATE_AWARE)";
         if (settingId.StartsWith("service:"))
         {
             var name = settingId["service:".Length..];
@@ -108,6 +109,8 @@ public static class SettingDocs
             return "(no direct PowerShell equivalent; uses ChangeDisplaySettingsEx -- consider DisplaySettings.dll on a custom build)";
         if (settingId.StartsWith("resolution:"))
             return "(no direct PowerShell equivalent; uses ChangeDisplaySettingsEx)";
+        if (settingId.StartsWith("drr:"))
+            return "(no PowerShell equivalent; uses SetDisplayConfig with the BOOST_REFRESH_RATE path flag)";
 
         return settingId switch
         {
@@ -190,6 +193,8 @@ public static class SettingDocs
         }
         if (settingId.StartsWith("hdr:") || settingId.StartsWith("refresh:") || settingId.StartsWith("resolution:"))
             return "Open Settings -> System -> Display, or run: dxdiag";
+        if (settingId.StartsWith("drr:"))
+            return "Settings -> System -> Display -> Advanced display -> 'Choose a refresh rate' (Dynamic = DRR on)";
         if (settingId.StartsWith("service:"))
         {
             var name = settingId["service:".Length..];

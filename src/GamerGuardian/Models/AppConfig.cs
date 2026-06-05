@@ -41,6 +41,17 @@ public sealed class DisplayPreference
     public HdrPref Hdr { get; set; } = new();
     public RefreshRatePref RefreshRate { get; set; } = new();
     public ResolutionPref Resolution { get; set; } = new();
+    public DrrPref Drr { get; set; } = new();
+}
+
+public sealed class DrrPref
+{
+    public bool Monitor { get; set; } = false;
+    // DRR is content-driven; gaming-recommended direction is user choice, so the
+    // desired value defaults to enabled and Monitor is off (zero behavior change
+    // until the user opts in on a DRR-capable display).
+    public bool DesiredOn { get; set; } = true;
+    public bool AutoApply { get; set; } = false;
 }
 
 public sealed class HdrPref

@@ -37,6 +37,7 @@ public static class SettingDocsCatalog
         if (settingId.StartsWith("hdr:")) return Hdr;
         if (settingId.StartsWith("refresh:")) return RefreshRate;
         if (settingId.StartsWith("resolution:")) return Resolution;
+        if (settingId.StartsWith("drr:")) return Drr;
 
         return Globals.TryGetValue(settingId, out var g) ? g : null;
     }
@@ -44,7 +45,7 @@ public static class SettingDocsCatalog
     /// <summary>Every documented setting. Used by docs generation and tests.</summary>
     public static IEnumerable<SettingDetails> All =>
         Globals.Values.Concat(Services.Values).Concat(AiApps.Values)
-               .Append(Hdr).Append(RefreshRate).Append(Resolution);
+               .Append(Hdr).Append(RefreshRate).Append(Resolution).Append(Drr);
 
     /// <summary>
     /// Plain-text rendering of a SettingDetails suitable for the in-app
@@ -557,6 +558,21 @@ public static class SettingDocsCatalog
         Recommended: "Maximum supported",
         Risks: "Very low. Some VRR displays produce eye-noticeable flicker at certain refresh rates in dark scenes -- if you see it, try the next rate down.",
         ReversibleVia: "Settings > System > Display > Advanced display > Choose a refresh rate.");
+
+    private static readonly SettingDetails Drr = new(
+        SettingId: "drr",
+        DisplayName: "Dynamic Refresh Rate (DRR)",
+        What: "Per-display Win11 22H2+ feature that dynamically boosts the refresh rate between a low 'virtual' rate (e.g. 60 Hz for static content, saving power) and the panel's physical max (e.g. 120/144 Hz for scrolling/ink). Read/written via the DisplayConfig CCD API (the BOOST_REFRESH_RATE path flag) -- user-mode, no elevation. Distinct from VRR (G-Sync/FreeSync).",
+        Why: "DRR is mostly a laptop power feature. Some gamers prefer a fixed maximum refresh for consistent latency and disable DRR; others keep it on for battery. It needs a VRR-capable panel and a recent driver, so the toggle only appears on displays that actually support it.",
+        HowItHelps: "Monitoring keeps DRR at your chosen state -- Windows can reset it after driver updates, sleep, or display reconnects. The drift-guard re-asserts your preference.",
+        Scenarios: Scenarios(
+            ("Laptop, wants battery savings", "Enabled"),
+            ("Wants a fixed predictable refresh", "Disabled"),
+            ("Display without DRR support", "n/a -- the control is hidden"),
+            ("Desktop high-refresh gaming", "Personal taste; many leave it off for consistency")),
+        Recommended: "Personal preference -- Enabled saves power, Disabled is the most predictable",
+        Risks: "Very low -- DRR only engages on supported panels. Verify reflects the path flag, not a guarantee the boost engaged in every app (same honest limitation as VRR).",
+        ReversibleVia: "Settings > System > Display > Advanced display > 'Choose a refresh rate' > pick Dynamic / a fixed rate. GamerGuardian toggles the same DisplayConfig flag.");
 
     private static readonly SettingDetails Resolution = new(
         SettingId: "resolution",

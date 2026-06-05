@@ -12,6 +12,7 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 - [CPU-optimized gaming power plan](#cpu-optimized-gaming-power-plan) (`cpuplan`)
 - [Display refresh rate](#display-refresh-rate) (`refresh`)
 - [Display resolution](#display-resolution) (`resolution`)
+- [Dynamic Refresh Rate (DRR)](#dynamic-refresh-rate-drr) (`drr`)
 - [Fast Startup (hybrid boot)](#fast-startup-hybrid-boot) (`faststartup`)
 - [Fullscreen optimizations (global)](#fullscreen-optimizations-global) (`fso`)
 - [Game DVR background recording](#game-dvr-background-recording) (`gamedvr`)
@@ -170,6 +171,30 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Risks.** Pinning can fight legitimate display changes (docking a laptop, plugging in a different monitor).
 
 **Reversible via.** Uncheck 'Monitor this setting' for Resolution on the display tab.
+
+
+### Dynamic Refresh Rate (DRR)
+
+`drr` &nbsp; **Recommended:** Personal preference -- Enabled saves power, Disabled is the most predictable
+
+**What it does.** Per-display Win11 22H2+ feature that dynamically boosts the refresh rate between a low 'virtual' rate (e.g. 60 Hz for static content, saving power) and the panel's physical max (e.g. 120/144 Hz for scrolling/ink). Read/written via the DisplayConfig CCD API (the BOOST_REFRESH_RATE path flag) -- user-mode, no elevation. Distinct from VRR (G-Sync/FreeSync).
+
+**Why you'd change it.** DRR is mostly a laptop power feature. Some gamers prefer a fixed maximum refresh for consistent latency and disable DRR; others keep it on for battery. It needs a VRR-capable panel and a recent driver, so the toggle only appears on displays that actually support it.
+
+**How it helps.** Monitoring keeps DRR at your chosen state -- Windows can reset it after driver updates, sleep, or display reconnects. The drift-guard re-asserts your preference.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Laptop, wants battery savings | Enabled |
+| Wants a fixed predictable refresh | Disabled |
+| Display without DRR support | n/a -- the control is hidden |
+| Desktop high-refresh gaming | Personal taste; many leave it off for consistency |
+
+**Risks.** Very low -- DRR only engages on supported panels. Verify reflects the path flag, not a guarantee the boost engaged in every app (same honest limitation as VRR).
+
+**Reversible via.** Settings > System > Display > Advanced display > 'Choose a refresh rate' > pick Dynamic / a fixed rate. GamerGuardian toggles the same DisplayConfig flag.
 
 
 ### Fast Startup (hybrid boot)

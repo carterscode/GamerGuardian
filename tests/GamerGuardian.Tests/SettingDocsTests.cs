@@ -54,6 +54,7 @@ public class SettingDocsTests
         Assert.NotEqual("(unknown)", SettingDocs.MechanismFor("hdr:DISPLAY1"));
         Assert.NotEqual("(unknown)", SettingDocs.MechanismFor("refresh:DISPLAY1"));
         Assert.NotEqual("(unknown)", SettingDocs.MechanismFor("resolution:DISPLAY1"));
+        Assert.NotEqual("(unknown)", SettingDocs.MechanismFor("drr:DISPLAY1"));
     }
 
     [Fact]

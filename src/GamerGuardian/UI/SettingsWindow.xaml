@@ -581,6 +581,18 @@
                                             <CheckBox Content="Auto-apply silently when it drifts" IsChecked="{Binding HdrAutoApply}"/>
 
                                             <Separator Margin="0,12,0,8"/>
+                                            <TextBlock Text="Dynamic Refresh Rate (DRR)" FontWeight="SemiBold" Margin="0,4,0,4"/>
+                                            <TextBlock Text="Not supported on this display"
+                                                       Visibility="{Binding DrrUnsupportedVisibility}"
+                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                       FontSize="12" FontStyle="Italic" Margin="0,0,0,4"/>
+                                            <StackPanel Visibility="{Binding DrrSupportedVisibility}">
+                                                <CheckBox Content="Monitor this setting" IsChecked="{Binding DrrMonitor}"/>
+                                                <CheckBox Content="Desired: Enabled" IsChecked="{Binding DrrDesiredOn}"/>
+                                                <CheckBox Content="Auto-apply silently when it drifts" IsChecked="{Binding DrrAutoApply}"/>
+                                            </StackPanel>
+
+                                            <Separator Margin="0,12,0,8"/>
                                             <TextBlock Text="Refresh Rate" FontWeight="SemiBold" Margin="0,4,0,4"/>
                                             <CheckBox Content="Monitor this setting" IsChecked="{Binding RefreshMonitor}"/>
                                             <StackPanel Orientation="Horizontal" Margin="0,4,0,4">

@@ -90,6 +90,7 @@ public partial class App : WpfApplication
             new HdrMonitor(),
             new RefreshRateMonitor(),
             new ResolutionMonitor(),
+            new DrrMonitor(),
             new VrrMonitor(),
             new HagsMonitor(),
             new MemoryIntegrityMonitor(),
