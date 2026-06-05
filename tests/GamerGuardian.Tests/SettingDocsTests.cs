@@ -26,6 +26,7 @@ public class SettingDocsTests
     [InlineData("faststartup")]
     [InlineData("visualfx")]
     [InlineData("network.nagle")]
+    [InlineData("network.nicpower")]
     public void MechanismFor_KnownIds_ReturnsNonEmpty(string id)
     {
         var mech = SettingDocs.MechanismFor(id);

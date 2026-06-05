@@ -465,6 +465,7 @@ public partial class SettingsWindow : FluentWindow
         NetworkToggleRows.Clear();
         var g = _draft.Global;
         SyncIfUnmonitored(g.Nagle, NagleMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.NicPower, NicPowerMonitor.ReadCurrent);
         NetworkToggleRows.Add(new GlobalToggleRow(
             name: "Nagle's algorithm (TCP no-delay)",
             description: "Disables Nagle packet batching on every active adapter for lower latency in online games. Contested: the benefit varies by hardware and can make some connections worse -- see Learn more.",
@@ -474,6 +475,17 @@ public partial class SettingsWindow : FluentWindow
             pref: g.Nagle, groupName: "net_nagle",
             onPrefChanged: OnRowPrefChanged,
             settingId: "network.nagle"));
+
+        NetworkToggleRows.Add(new GlobalToggleRow(
+            name: "NIC power management",
+            description: "Disables 'Allow the computer to turn off this device to save power' on every active adapter, so the NIC never sleeps. Contested per-hardware; needs a reboot. Leave Default on laptops on battery.",
+            currentText: $"Current: {GamingDefaultText(SafeRead(NicPowerMonitor.ReadCurrent))}",
+            defaultText: "Default: On    Gaming: Disabled",
+            onLabel: "Gaming", offLabel: "Default",
+            requiresReboot: true,
+            pref: g.NicPower, groupName: "net_nicpower",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "network.nicpower"));
     }
 
     private void LoadGlobals()

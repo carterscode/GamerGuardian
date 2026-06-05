@@ -39,6 +39,7 @@ public class SettingDocsCatalogTests
     [InlineData("faststartup")]
     [InlineData("visualfx")]
     [InlineData("network.nagle")]
+    [InlineData("network.nicpower")]
     public void Get_KnownIds_ReturnsPopulatedEntry(string id)
     {
         var d = SettingDocsCatalog.Get(id);

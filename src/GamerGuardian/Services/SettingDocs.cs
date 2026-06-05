@@ -59,6 +59,7 @@ public static class SettingDocs
             "faststartup" => @"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power\HiberbootEnabled (DWORD; reboot required)",
             "visualfx" => @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects\VisualFXSetting (DWORD; 2=best perf) + HKCU\Control Panel\Desktop\UserPreferencesMask (REG_BINARY)",
             "network.nagle" => @"HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\{GUID}\{TcpAckFrequency, TCPNoDelay} (DWORD; per active adapter)",
+            "network.nicpower" => @"HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-...}\<NNNN>\PnPCapabilities (DWORD; 0x18 bits; per active adapter; reboot required)",
             _ => "(unknown)",
         };
     }
@@ -180,6 +181,8 @@ public static class SettingDocs
             "visualfx" => @"Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects' -Name VisualFXSetting -Value 2 -Type DWord; Set-ItemProperty 'HKCU:\Control Panel\Desktop' -Name UserPreferencesMask -Value ([byte[]](0x90,0x12,0x03,0x80,0x10,0,0,0)) -Type Binary   # reverse: VisualFXSetting=0; sign out to fully apply",
             "network.nagle" => @"# Per adapter interface key (repeat for each active adapter GUID):" + "\n" +
                               @"$if='HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\<GUID>'; Set-ItemProperty $if -Name TcpAckFrequency -Value 1 -Type DWord; Set-ItemProperty $if -Name TCPNoDelay -Value 1 -Type DWord   # reverse: Remove-ItemProperty both per adapter",
+            "network.nicpower" => @"# Per network-class instance (match NetCfgInstanceId to the adapter GUID), reboot after:" + "\n" +
+                                 @"$k='HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}\<NNNN>'; $v=[int](Get-ItemProperty $k -Name PnPCapabilities -EA SilentlyContinue).PnPCapabilities; Set-ItemProperty $k -Name PnPCapabilities -Value ($v -bor 0x18) -Type DWord   # reverse: -band (-bnot 0x18)",
             _ => "",
         };
     }

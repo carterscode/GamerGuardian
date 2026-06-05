@@ -410,6 +410,20 @@ public static class SettingDocsCatalog
             Risks: "Real: disabling Nagle can INCREASE bufferbloat-related latency or harm throughput on some links (especially Wi-Fi or congested connections). It is not a guaranteed win. Revert if your latency or stability gets worse.",
             ReversibleVia: "Delete TcpAckFrequency and TCPNoDelay from each HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces\\{GUID} (GamerGuardian does this across all adapters when you choose Default)."),
 
+        ["network.nicpower"] = new(
+            SettingId: "network.nicpower",
+            DisplayName: "NIC power management",
+            What: "The per-adapter 'Allow the computer to turn off this device to save power' setting (PnPCapabilities under the adapter's network-class instance). Disabling it keeps the NIC fully powered. GamerGuardian asserts this on every active physical adapter in one elevation prompt; reversal clears the bits to restore the default. A reboot (or adapter disable/enable) is needed for it to take effect.",
+            Why: "Letting Windows power down the NIC can cause brief stalls or micro-disconnects when it wakes -- noticeable as a hitch in online games. Keeping it powered avoids that.",
+            HowItHelps: "No NIC sleep/wake cycles, so no wake-from-idle network stalls. Most useful on desktops.",
+            Scenarios: Scenarios(
+                ("Desktop online gaming", "Disabled (gaming)"),
+                ("Laptop on battery", "Default -- the NIC power saving matters more"),
+                ("Stable wired connection with no hitches", "Personal taste; Default is fine")),
+            Recommended: "Disabled (gaming) on a desktop; Default on a laptop on battery",
+            Risks: "Slightly higher idle power draw. On laptops on battery, measurably worse battery life. Contested per-hardware -- some adapters are unaffected either way. Needs a reboot to apply.",
+            ReversibleVia: "Clear the 0x18 bits from PnPCapabilities under the adapter's class instance, or check 'Allow the computer to turn off this device' in Device Manager > the adapter > Power Management (GamerGuardian clears the bits across all adapters when you choose Default)."),
+
         // ---- Windows AI ---------------------------------------------------
 
         ["ai.copilot"] = new(
