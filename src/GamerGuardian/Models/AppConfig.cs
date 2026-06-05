@@ -41,6 +41,17 @@ public sealed class DisplayPreference
     public HdrPref Hdr { get; set; } = new();
     public RefreshRatePref RefreshRate { get; set; } = new();
     public ResolutionPref Resolution { get; set; } = new();
+    public DrrPref Drr { get; set; } = new();
+}
+
+public sealed class DrrPref
+{
+    public bool Monitor { get; set; } = false;
+    // DRR is content-driven; gaming-recommended direction is user choice, so the
+    // desired value defaults to enabled and Monitor is off (zero behavior change
+    // until the user opts in on a DRR-capable display).
+    public bool DesiredOn { get; set; } = true;
+    public bool AutoApply { get; set; } = false;
 }
 
 public sealed class HdrPref
@@ -105,6 +116,25 @@ public sealed class GlobalPreferences
     public ToggleSettingPref AiActions { get; set; } = new() { DesiredOn = true };
     public ToggleSettingPref InputInsights { get; set; } = new() { DesiredOn = true };
     public ToggleSettingPref OfficeCopilot { get; set; } = new() { DesiredOn = true };
+
+    // ---- Privacy / telemetry toggles (Privacy tab). Monitor=false by default ----
+    // Intuitive Enabled/Disabled settings: DesiredOn maps to the feature being
+    // enabled, so the privacy-optimized default is DesiredOn=false (off).
+    public ToggleSettingPref AdvertisingId { get; set; } = new() { DesiredOn = false };
+    public ToggleSettingPref TailoredExperiences { get; set; } = new() { DesiredOn = false };
+    // Inverted Gaming/Default settings (HKLM policy): DesiredOn=true is the gaming
+    // state (disabled-by-policy), matching the NetworkThrottling/USB convention.
+    public ToggleSettingPref Cdp { get; set; } = new() { DesiredOn = true };
+    public ToggleSettingPref ActivityHistory { get; set; } = new() { DesiredOn = true };
+
+    // ---- System toggles (inverted Gaming/Default; DesiredOn=true = gaming) ----
+    public ToggleSettingPref PowerThrottling { get; set; } = new() { DesiredOn = true };
+    public ToggleSettingPref FastStartup { get; set; } = new() { DesiredOn = true };
+    public ToggleSettingPref VisualFx { get; set; } = new() { DesiredOn = true };
+
+    // ---- Network toggles (Network tab; contested per-hardware tweaks) ----
+    public ToggleSettingPref Nagle { get; set; } = new() { DesiredOn = true };
+    public ToggleSettingPref NicPower { get; set; } = new() { DesiredOn = true };
 }
 
 public sealed class ToggleSettingPref

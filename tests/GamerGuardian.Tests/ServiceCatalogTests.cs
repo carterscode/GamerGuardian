@@ -58,6 +58,8 @@ public class ServiceCatalogTests
     [InlineData("Spooler")]
     [InlineData("DoSvc")]
     [InlineData("iphlpsvc")]
+    [InlineData("wisvc")]
+    [InlineData("RemoteAccess")]
     public void All_IncludesExpectedServices(string serviceName)
     {
         Assert.Contains(ServiceCatalog.All, d =>

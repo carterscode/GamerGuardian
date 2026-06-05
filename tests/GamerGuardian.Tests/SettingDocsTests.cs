@@ -18,6 +18,15 @@ public class SettingDocsTests
     [InlineData("usbsuspend")]
     [InlineData("gamestask")]
     [InlineData("powerplan")]
+    [InlineData("privacy.advertisingid")]
+    [InlineData("privacy.tailoredexp")]
+    [InlineData("privacy.cdp")]
+    [InlineData("privacy.activityhistory")]
+    [InlineData("powerthrottling")]
+    [InlineData("faststartup")]
+    [InlineData("visualfx")]
+    [InlineData("network.nagle")]
+    [InlineData("network.nicpower")]
     public void MechanismFor_KnownIds_ReturnsNonEmpty(string id)
     {
         var mech = SettingDocs.MechanismFor(id);
@@ -30,6 +39,11 @@ public class SettingDocsTests
     [InlineData("memintegrity")]
     [InlineData("gamemode")]
     [InlineData("powerplan")]
+    [InlineData("privacy.advertisingid")]
+    [InlineData("privacy.cdp")]
+    [InlineData("privacy.activityhistory")]
+    [InlineData("powerthrottling")]
+    [InlineData("faststartup")]
     public void VerifyCommandFor_KnownIds_ReturnsNonEmpty(string id)
     {
         var cmd = SettingDocs.VerifyCommandFor(id);
@@ -42,6 +56,7 @@ public class SettingDocsTests
         Assert.NotEqual("(unknown)", SettingDocs.MechanismFor("hdr:DISPLAY1"));
         Assert.NotEqual("(unknown)", SettingDocs.MechanismFor("refresh:DISPLAY1"));
         Assert.NotEqual("(unknown)", SettingDocs.MechanismFor("resolution:DISPLAY1"));
+        Assert.NotEqual("(unknown)", SettingDocs.MechanismFor("drr:DISPLAY1"));
     }
 
     [Fact]

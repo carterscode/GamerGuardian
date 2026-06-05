@@ -23,12 +23,20 @@ public static class SettingsReferenceGen
         sb.AppendLine("## Contents");
         sb.AppendLine();
 
-        var globals = Order(SettingDocsCatalog.All.Where(d => !d.SettingId.StartsWith("service:") && !d.SettingId.StartsWith("ai.app:") && !d.SettingId.StartsWith("ai.")));
+        bool IsGlobal(string id) =>
+            !id.StartsWith("service:") && !id.StartsWith("ai.app:") && !id.StartsWith("ai.")
+            && !id.StartsWith("privacy.") && !id.StartsWith("network.");
+
+        var globals = Order(SettingDocsCatalog.All.Where(d => IsGlobal(d.SettingId)));
+        var privacy = Order(SettingDocsCatalog.All.Where(d => d.SettingId.StartsWith("privacy.")));
+        var network = Order(SettingDocsCatalog.All.Where(d => d.SettingId.StartsWith("network.")));
         var ai = Order(SettingDocsCatalog.All.Where(d => d.SettingId.StartsWith("ai.") && !d.SettingId.StartsWith("ai.app:")));
         var aiApps = Order(SettingDocsCatalog.All.Where(d => d.SettingId.StartsWith("ai.app:")));
         var services = Order(SettingDocsCatalog.All.Where(d => d.SettingId.StartsWith("service:")));
 
         Toc(sb, "Global gaming + display", globals);
+        Toc(sb, "Privacy", privacy);
+        Toc(sb, "Network", network);
         Toc(sb, "Windows AI policies", ai);
         Toc(sb, "Windows AI UWP packages", aiApps);
         Toc(sb, "Windows services", services);
@@ -36,26 +44,29 @@ public static class SettingsReferenceGen
         sb.AppendLine();
         sb.AppendLine("---");
         sb.AppendLine();
-        sb.AppendLine("## Global gaming + display");
-        foreach (var d in globals) Render(sb, d);
-
-        sb.AppendLine("## Windows AI policies");
-        foreach (var d in ai) Render(sb, d);
-
-        sb.AppendLine("## Windows AI UWP packages");
-        foreach (var d in aiApps) Render(sb, d);
-
-        sb.AppendLine("## Windows services");
-        foreach (var d in services) Render(sb, d);
+        Section(sb, "Global gaming + display", globals);
+        Section(sb, "Privacy", privacy);
+        Section(sb, "Network", network);
+        Section(sb, "Windows AI policies", ai);
+        Section(sb, "Windows AI UWP packages", aiApps);
+        Section(sb, "Windows services", services);
 
         return sb.ToString();
     }
 
-    private static IEnumerable<SettingDetails> Order(IEnumerable<SettingDetails> src)
-        => src.OrderBy(d => d.DisplayName, StringComparer.OrdinalIgnoreCase);
-
-    private static void Toc(StringBuilder sb, string section, IEnumerable<SettingDetails> entries)
+    private static void Section(StringBuilder sb, string title, IReadOnlyCollection<SettingDetails> entries)
     {
+        if (entries.Count == 0) return;
+        sb.AppendLine($"## {title}");
+        foreach (var d in entries) Render(sb, d);
+    }
+
+    private static IReadOnlyList<SettingDetails> Order(IEnumerable<SettingDetails> src)
+        => src.OrderBy(d => d.DisplayName, StringComparer.OrdinalIgnoreCase).ToList();
+
+    private static void Toc(StringBuilder sb, string section, IReadOnlyCollection<SettingDetails> entries)
+    {
+        if (entries.Count == 0) return;
         sb.AppendLine($"**{section}**");
         sb.AppendLine();
         foreach (var d in entries)

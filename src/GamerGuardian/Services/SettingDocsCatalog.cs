@@ -37,6 +37,7 @@ public static class SettingDocsCatalog
         if (settingId.StartsWith("hdr:")) return Hdr;
         if (settingId.StartsWith("refresh:")) return RefreshRate;
         if (settingId.StartsWith("resolution:")) return Resolution;
+        if (settingId.StartsWith("drr:")) return Drr;
 
         return Globals.TryGetValue(settingId, out var g) ? g : null;
     }
@@ -44,7 +45,7 @@ public static class SettingDocsCatalog
     /// <summary>Every documented setting. Used by docs generation and tests.</summary>
     public static IEnumerable<SettingDetails> All =>
         Globals.Values.Concat(Services.Values).Concat(AiApps.Values)
-               .Append(Hdr).Append(RefreshRate).Append(Resolution);
+               .Append(Hdr).Append(RefreshRate).Append(Resolution).Append(Drr);
 
     /// <summary>
     /// Plain-text rendering of a SettingDetails suitable for the in-app
@@ -111,7 +112,7 @@ public static class SettingDocsCatalog
         ["gamedvr"] = new(
             SettingId: "gamedvr",
             DisplayName: "Game DVR background recording",
-            What: "Windows Game Bar's continuous rolling-buffer recording of the active game. While enabled, the OS encodes and buffers game video so you can press Win+Alt+G to save the last X seconds.",
+            What: "Windows Game Bar's continuous rolling-buffer recording of the active game. While enabled, the OS encodes and buffers game video so you can press Win+Alt+G to save the last X seconds. GamerGuardian covers the two per-user capture toggles AND the machine-wide AllowGameDVR policy -- the part Windows re-enables after feature updates -- so the lockdown holds.",
             Why: "Continuous encoding is a constant tax on framerate and GPU. On older systems it's noticeable (5-10%). On modern GPUs the cost is small but nonzero. Most serious players already use NVIDIA App / OBS for clips and don't need the OS buffer.",
             HowItHelps: "Frees the GPU's video encoder and removes a constant background overhead. Lets third-party capture tools claim the encoder exclusively (NVENC, AMD Re-Live, etc.).",
             Scenarios: Scenarios(
@@ -121,7 +122,7 @@ public static class SettingDocsCatalog
                 ("Productivity / not gaming", "Off")),
             Recommended: "Off",
             Risks: "You lose the 'save last 30s' shortcut. Game Bar itself (overlay, FPS counter, performance widgets) still works.",
-            ReversibleVia: "Set HKCU\\System\\GameConfigStore\\GameDVR_Enabled = 1 and HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR\\AppCaptureEnabled = 1."),
+            ReversibleVia: "Set HKCU\\System\\GameConfigStore\\GameDVR_Enabled = 1 and HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR\\AppCaptureEnabled = 1, and delete AllowGameDVR from HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\GameDVR (the app does all three when you set it back to On)."),
 
         ["hags"] = new(
             SettingId: "hags",
@@ -291,6 +292,138 @@ public static class SettingDocsCatalog
             Risks: "Low. The plan is additive -- your existing Windows plans are never modified or deleted, and you can switch back at any time. For asymmetric dual-CCD X3D the power plan alone is not sufficient: it depends on the AMD CCD-routing stack (BIOS CPPC=Driver, the 3D V-Cache Optimizer service, and Xbox Game Bar), which the app surfaces but cannot set.",
             ReversibleVia: "Switch the active plan back via Settings > System > Power, or 'powercfg /setactive SCHEME_BALANCED'. The GamerGuardian plan can be deleted from the legacy Power control panel if you no longer want it."),
 
+        // ---- System toggles -----------------------------------------------
+
+        ["powerthrottling"] = new(
+            SettingId: "powerthrottling",
+            DisplayName: "Power Throttling",
+            What: "Windows Power Throttling reduces the clock/power of threads it considers background or idle to save energy. Disabled via HKLM\\...\\Power\\PowerThrottling\\PowerThrottlingOff=1 (requires elevation). Absence means the Windows default (throttling on). This is a registry setting, not a power-scheme change.",
+            Why: "On a desktop chasing sustained performance, throttling can clip background/helper threads a game relies on. Turning it off keeps all threads at full clock.",
+            HowItHelps: "More consistent performance for multi-threaded games and background helpers; no surprise downclocking under the OS's idle heuristics.",
+            Scenarios: Scenarios(
+                ("Desktop / plugged-in gaming", "Disabled (gaming)"),
+                ("Laptop on battery", "Default -- throttling saves real battery"),
+                ("Streaming + game", "Disabled (gaming)")),
+            Recommended: "Disabled (gaming) on a desktop; Default on battery",
+            Risks: "Higher power draw and heat, especially on laptops on battery. No stability risk.",
+            ReversibleVia: "Delete PowerThrottlingOff from HKLM\\SYSTEM\\CurrentControlSet\\Control\\Power\\PowerThrottling to restore the Windows default."),
+
+        ["faststartup"] = new(
+            SettingId: "faststartup",
+            DisplayName: "Fast Startup (hybrid boot)",
+            What: "Saves the kernel session to the hiberfile on shutdown so the next boot skips part of initialization. Driven by HKLM\\...\\Session Manager\\Power\\HiberbootEnabled=0 to disable (requires elevation and a reboot to take effect).",
+            Why: "Fast Startup means 'shutdown' isn't a true cold boot -- drivers and hardware can carry stale state across restarts, which occasionally causes USB/GPU/peripheral quirks. Turning it off makes every shutdown a clean boot.",
+            HowItHelps: "Cleaner, more predictable boots; resolves a class of intermittent driver/peripheral issues that 'a real restart fixes'. Low drift -- mostly a set-once toggle.",
+            Scenarios: Scenarios(
+                ("Troubleshooting flaky USB/GPU state", "Disabled (gaming)"),
+                ("Wants the fastest possible boot, no quirks", "Default (leave on)"),
+                ("Dual-boot with another OS", "Disabled (gaming) -- Fast Startup locks the disk")),
+            Recommended: "Disabled (gaming)",
+            Risks: "Boots are slightly slower (a true cold boot). No stability risk -- this is the pre-Win8 default behavior.",
+            ReversibleVia: "Set HiberbootEnabled = 1 in HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power (Control Panel > Power Options > Choose what the power buttons do > Turn on fast startup)."),
+
+        ["visualfx"] = new(
+            SettingId: "visualfx",
+            DisplayName: "Visual effects (best performance)",
+            What: "The Windows UI animation/effects profile. 'Adjust for best performance' (VisualFXSetting=2) disables window animations, menu fades, smooth-scrolling, and shadows. GamerGuardian writes VisualFXSetting=2 plus the matching best-performance UserPreferencesMask; the per-effect changes finish applying on the next sign-out.",
+            Why: "Disabling desktop animations removes compositor work and makes window/menu interactions instant. The gain is mostly desktop snappiness rather than in-game FPS, but some users prefer the zero-animation feel.",
+            HowItHelps: "Instant window/menu response, no animation delays, slightly less idle GPU compositor work.",
+            Scenarios: Scenarios(
+                ("Wants the snappiest desktop", "Best performance (gaming)"),
+                ("Likes Windows animations / fluent effects", "Default"),
+                ("Low-end / integrated GPU", "Best performance (gaming)")),
+            Recommended: "Best performance (gaming) for a snappy desktop; Default if you like the animations",
+            Risks: "Purely cosmetic -- the desktop looks flatter (no fades/animations). No stability or functionality impact. Full effect applies after sign-out.",
+            ReversibleVia: "Set VisualFXSetting = 0 in HKCU\\...\\Explorer\\VisualEffects (System Properties > Performance > 'Let Windows choose' or 'Adjust for best appearance'). GamerGuardian sets it to 0 when you choose Default."),
+
+        // ---- Privacy / telemetry ------------------------------------------
+
+        ["privacy.advertisingid"] = new(
+            SettingId: "privacy.advertisingid",
+            DisplayName: "Advertising ID",
+            What: "A per-user identifier (HKCU\\...\\AdvertisingInfo\\Enabled) that apps can read to build a cross-session advertising profile of you. Direct HKCU value -- no elevation needed.",
+            Why: "There's no gaming or functionality reason to keep the advertising ID on. Disabling it stops apps from correlating your activity under a stable ad identity.",
+            HowItHelps: "Apps fall back to requesting a fresh, non-correlatable ID (or none). No effect on app functionality.",
+            Scenarios: Scenarios(
+                ("Privacy-conscious", "Disabled"),
+                ("Gaming setup", "Disabled -- no downside"),
+                ("Doesn't care about ad targeting", "Either; Disabled is the safe default")),
+            Recommended: "Disabled",
+            Risks: "None functional. Ads you see may be slightly less 'relevant' -- which is the point.",
+            ReversibleVia: "Set HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo\\Enabled = 1 (Settings > Privacy & security > General > 'Let apps show me personalized ads')."),
+
+        ["privacy.tailoredexp"] = new(
+            SettingId: "privacy.tailoredexp",
+            DisplayName: "Tailored experiences",
+            What: "Lets Windows use your diagnostic data to personalize tips, ads, and recommendations (HKCU\\...\\Privacy\\TailoredExperiencesWithDiagnosticDataEnabled). Direct HKCU value -- no elevation.",
+            Why: "Removes Microsoft's use of your diagnostic data to target suggestions and promotional content in the Start menu, Settings, and lock screen.",
+            HowItHelps: "Fewer suggested/promoted items surfaced by the OS. No effect on app or game functionality.",
+            Scenarios: Scenarios(
+                ("Privacy-conscious", "Disabled"),
+                ("Gaming setup", "Disabled -- no downside"),
+                ("Likes Windows tips/suggestions", "Enabled")),
+            Recommended: "Disabled",
+            Risks: "None functional. You stop seeing personalized Windows tips and suggestions.",
+            ReversibleVia: "Set HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Privacy\\TailoredExperiencesWithDiagnosticDataEnabled = 1 (Settings > Privacy & security > Diagnostics & feedback)."),
+
+        ["privacy.cdp"] = new(
+            SettingId: "privacy.cdp",
+            DisplayName: "Cross-Device Platform (CDP)",
+            What: "The 'Continue experiences on this device' / shared-experiences subsystem that lets nearby and account-linked devices hand off activities, share the clipboard, and discover each other. Disabled via the HKLM policy EnableCdp=0 (requires elevation). Absence of the value means the Windows default (CDP on).",
+            Why: "CDP runs background discovery/sync that most desktop gamers don't use, and Windows re-enables it after feature updates -- exactly the drift the monitor re-asserts.",
+            HowItHelps: "Stops the cross-device discovery/sync background activity. Reasserted automatically if a feature update turns it back on.",
+            Scenarios: Scenarios(
+                ("Single desktop, no device handoff", "Disabled (gaming)"),
+                ("Uses Phone Link / cross-device clipboard", "Default (leave on)"),
+                ("Privacy-conscious", "Disabled (gaming)")),
+            Recommended: "Disabled (gaming) if you don't use cross-device features",
+            Risks: "Cross-device features (handoff, shared clipboard with phones/other PCs, nearby-device discovery) stop working. Phone Link's deeper integrations may be affected.",
+            ReversibleVia: "Delete EnableCdp from HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System to restore the Windows default."),
+
+        ["privacy.activityhistory"] = new(
+            SettingId: "privacy.activityhistory",
+            DisplayName: "Activity History / Timeline",
+            What: "Collection and publishing of your activity feed (Timeline). Disabled via three HKLM policy values set to 0 together: EnableActivityFeed, PublishUserActivities, UploadUserActivities (requires elevation, one prompt). Absence means the Windows default (on).",
+            Why: "Activity History records what you do across apps and (when signed in) uploads it. Most gamers don't use Timeline, and Windows can re-enable the feed after feature updates.",
+            HowItHelps: "Stops the activity feed from collecting and publishing. Reasserted automatically after updates that turn it back on.",
+            Scenarios: Scenarios(
+                ("Doesn't use Timeline", "Disabled (gaming)"),
+                ("Uses Timeline / cross-device activity resume", "Default (leave on)"),
+                ("Privacy-conscious", "Disabled (gaming)")),
+            Recommended: "Disabled (gaming)",
+            Risks: "Timeline stops showing your recent activities and cross-device resume won't work. No effect on app/game functionality.",
+            ReversibleVia: "Delete EnableActivityFeed, PublishUserActivities, and UploadUserActivities from HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System to restore the Windows default."),
+
+        // ---- Network ------------------------------------------------------
+
+        ["network.nagle"] = new(
+            SettingId: "network.nagle",
+            DisplayName: "Nagle's algorithm (TCP no-delay)",
+            What: "Nagle's algorithm batches small outgoing TCP packets to reduce overhead. Disabling it (TcpAckFrequency=1, TCPNoDelay=1 under each network adapter's interface key) sends small packets immediately. GamerGuardian asserts this on every active physical adapter in one elevation prompt; reversal deletes the values to restore the Windows default.",
+            Why: "For latency-sensitive online games, batching can add a few ms of delay to small input/state packets. Turning Nagle off can shave that -- but the benefit is genuinely contested and per-hardware.",
+            HowItHelps: "Potentially lower, more consistent latency for small-packet game netcode. On many setups the difference is unmeasurable; on a few it helps.",
+            Scenarios: Scenarios(
+                ("Competitive online shooter", "Disabled (gaming) -- try it, measure, revert if worse"),
+                ("Stable connection, no latency issues", "Default -- don't fix what isn't broken"),
+                ("Wi-Fi / high-latency link", "Default -- more likely to hurt than help here")),
+            Recommended: "Default unless you've measured a benefit -- this is a contested, per-hardware tweak",
+            Risks: "Real: disabling Nagle can INCREASE bufferbloat-related latency or harm throughput on some links (especially Wi-Fi or congested connections). It is not a guaranteed win. Revert if your latency or stability gets worse.",
+            ReversibleVia: "Delete TcpAckFrequency and TCPNoDelay from each HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces\\{GUID} (GamerGuardian does this across all adapters when you choose Default)."),
+
+        ["network.nicpower"] = new(
+            SettingId: "network.nicpower",
+            DisplayName: "NIC power management",
+            What: "The per-adapter 'Allow the computer to turn off this device to save power' setting (PnPCapabilities under the adapter's network-class instance). Disabling it keeps the NIC fully powered. GamerGuardian asserts this on every active physical adapter in one elevation prompt; reversal clears the bits to restore the default. A reboot (or adapter disable/enable) is needed for it to take effect.",
+            Why: "Letting Windows power down the NIC can cause brief stalls or micro-disconnects when it wakes -- noticeable as a hitch in online games. Keeping it powered avoids that.",
+            HowItHelps: "No NIC sleep/wake cycles, so no wake-from-idle network stalls. Most useful on desktops.",
+            Scenarios: Scenarios(
+                ("Desktop online gaming", "Disabled (gaming)"),
+                ("Laptop on battery", "Default -- the NIC power saving matters more"),
+                ("Stable wired connection with no hitches", "Personal taste; Default is fine")),
+            Recommended: "Disabled (gaming) on a desktop; Default on a laptop on battery",
+            Risks: "Slightly higher idle power draw. On laptops on battery, measurably worse battery life. Contested per-hardware -- some adapters are unaffected either way. Needs a reboot to apply.",
+            ReversibleVia: "Clear the 0x18 bits from PnPCapabilities under the adapter's class instance, or check 'Allow the computer to turn off this device' in Device Manager > the adapter > Power Management (GamerGuardian clears the bits across all adapters when you choose Default)."),
+
         // ---- Windows AI ---------------------------------------------------
 
         ["ai.copilot"] = new(
@@ -455,6 +588,21 @@ public static class SettingDocsCatalog
         Recommended: "Maximum supported",
         Risks: "Very low. Some VRR displays produce eye-noticeable flicker at certain refresh rates in dark scenes -- if you see it, try the next rate down.",
         ReversibleVia: "Settings > System > Display > Advanced display > Choose a refresh rate.");
+
+    private static readonly SettingDetails Drr = new(
+        SettingId: "drr",
+        DisplayName: "Dynamic Refresh Rate (DRR)",
+        What: "Per-display Win11 22H2+ feature that dynamically boosts the refresh rate between a low 'virtual' rate (e.g. 60 Hz for static content, saving power) and the panel's physical max (e.g. 120/144 Hz for scrolling/ink). Read/written via the DisplayConfig CCD API (the BOOST_REFRESH_RATE path flag) -- user-mode, no elevation. Distinct from VRR (G-Sync/FreeSync).",
+        Why: "DRR is mostly a laptop power feature. Some gamers prefer a fixed maximum refresh for consistent latency and disable DRR; others keep it on for battery. It needs a VRR-capable panel and a recent driver, so the toggle only appears on displays that actually support it.",
+        HowItHelps: "Monitoring keeps DRR at your chosen state -- Windows can reset it after driver updates, sleep, or display reconnects. The drift-guard re-asserts your preference.",
+        Scenarios: Scenarios(
+            ("Laptop, wants battery savings", "Enabled"),
+            ("Wants a fixed predictable refresh", "Disabled"),
+            ("Display without DRR support", "n/a -- the control is hidden"),
+            ("Desktop high-refresh gaming", "Personal taste; many leave it off for consistency")),
+        Recommended: "Personal preference -- Enabled saves power, Disabled is the most predictable",
+        Risks: "Very low -- DRR only engages on supported panels. Verify reflects the path flag, not a guarantee the boost engaged in every app (same honest limitation as VRR).",
+        ReversibleVia: "Settings > System > Display > Advanced display > 'Choose a refresh rate' > pick Dynamic / a fixed rate. GamerGuardian toggles the same DisplayConfig flag.");
 
     private static readonly SettingDetails Resolution = new(
         SettingId: "resolution",
@@ -654,6 +802,26 @@ public static class SettingDocsCatalog
             recommended: "Default (Manual) -- only Disable if you've also flipped the AI policy toggles + disabled WSAIFabricSvc",
             risks: "Per-user services use a generated suffix on the actual service name (AarSvc_<hex>). GamerGuardian disables the template definition so every new per-user instance starts disabled, but existing user sessions may need a logoff/logon to pick up the change. If you re-enable any AI feature later, it will fail to launch until you re-enable this service.",
             reversibleVia: "Set-Service -Name AarSvc -StartupType Manual"),
+
+        ["wisvc"] = SvcRec(
+            "wisvc",
+            "Windows Insider Service",
+            "Backs the Windows Insider Program: preview-build enrollment, flighting configuration, and the diagnostic flow Insider builds use. Idle on a machine not enrolled in the Insider Program.",
+            "If you're on the stable channel (the vast majority of users), this service has nothing to do. Disabling removes one more idle background service.",
+            "Removes an idle service. No effect on stable Windows.",
+            recommended: "Disabled (Manual if you run Insider builds)",
+            risks: "If you are an Insider or plan to enroll, leave it on -- with it disabled, the Insider Program settings page won't enroll or flight new builds. Re-enable before joining.",
+            reversibleVia: "Set-Service -Name wisvc -StartupType Manual"),
+
+        ["RemoteAccess"] = SvcRec(
+            "RemoteAccess",
+            "Routing and Remote Access",
+            "Provides LAN/WAN routing and dial-up/VPN server functionality. Disabled by default on client Windows.",
+            "Already disabled on a default install -- this entry is a drift-guard so you can confirm nothing silently re-enables it.",
+            "No change on a default machine; catches an unexpected re-enable.",
+            recommended: "Default (stays Disabled)",
+            risks: "If you intentionally run the Windows routing / RRAS VPN server role (rare on a gaming desktop), leave it alone.",
+            reversibleVia: "Set-Service -Name RemoteAccess -StartupType Disabled (its default), or Manual if you need it."),
     };
 
     private static SettingDetails SvcRec(

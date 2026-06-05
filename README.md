@@ -30,7 +30,7 @@ It's also paranoid about not making your gaming worse. Polling pauses entirely d
 
 ## Highlights
 
-- 🎯 **17+ monitored settings** spanning display, security, performance, capture, input, and Windows services
+- 🎯 **28+ monitored settings** spanning display, security, performance, capture, input, privacy/telemetry, network latency, system tuning, and Windows services
 - ⚙️ **One-click Recommended preset** -- General tab button stages the gaming-optimized configuration across every setting (Want + Monitor + Auto-apply). Idempotent, so re-running it after a future update picks up only the new settings.
 - 🎮 **Pauses during gameplay** — fullscreen, borderless, *and* during benchmark runs (3DMark, Cinebench, Geekbench, etc.)
 - ⚡ **One-click apply** with a per-setting auto-apply opt-in
@@ -44,7 +44,7 @@ It's also paranoid about not making your gaming worse. Polling pauses entirely d
 
 <img src="docs/screenshots/settings-global-gaming.png" width="780" alt="GamerGuardian Settings — Global gaming tab" />
 
-*Settings → Global gaming tab. Each card shows the setting name, a short description, current value, Windows default, and per-setting Monitor / Want / Auto-apply controls. Reboot-required settings get a yellow badge. The other three tabs cover General preferences, Windows services, and per-display HDR/refresh/resolution.*
+*Settings → Global gaming tab. Each card shows the setting name, a short description, current value, Windows default, and per-setting Monitor / Want / Auto-apply controls. Reboot-required settings get a yellow badge. The other tabs cover General preferences, **Privacy** (Advertising ID, Activity History, Cross-Device Platform, Tailored experiences), **Network** (Nagle's algorithm, NIC power management), Windows services, Windows AI, per-display Display settings (HDR / refresh / DRR), and CPU / Power.*
 
 </div>
 
@@ -59,6 +59,7 @@ For each setting you choose: **monitor or not**, **desired value**, and whether 
 | [**HDR**](https://support.microsoft.com/en-us/windows/hdr-settings-in-windows-2d767185-38ec-7fdc-6f97-bbc6c5ef24e6) | On/off via Windows Display Configuration (CCD) API |
 | [**Refresh rate**](https://support.microsoft.com/en-us/windows/change-the-refresh-rate-on-your-monitor-in-windows-c8ea729e-0678-015c-c415-f806f04aae5a) | Maximum supported, or pin a specific Hz |
 | [**Resolution**](https://support.microsoft.com/en-us/windows/change-your-screen-resolution-and-layout-in-windows-5effefe3-2eac-e306-0b5d-2073b765876b) | Pin to a specific resolution (opt-in) |
+| [**Dynamic Refresh Rate (DRR)**](https://devblogs.microsoft.com/directx/dynamic-refresh-rate/) | Win11 22H2+ content-based refresh boost via the CCD API. Shows "not supported" on panels that lack it. Distinct from VRR. |
 
 ### Global gaming settings
 
@@ -76,10 +77,21 @@ For each setting you choose: **monitor or not**, **desired value**, and whether 
 | [**Network Throttling**](https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service) | MMCSS network packet pacing. | |
 | [**USB Selective Suspend**](https://learn.microsoft.com/en-us/windows-hardware/drivers/usbcon/usb-selective-suspend) | Lets Windows suspend idle USB devices. | ✓ |
 | [**Games multimedia task profile**](https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service) | Priority + scheduling values for the MMCSS Games task. | |
+| [**Power Throttling**](https://learn.microsoft.com/en-us/windows/win32/power/power-throttling) | Disables OS throttling of background threads for sustained performance (CPU / Power tab). | |
+| [**Fast Startup (hybrid boot)**](https://learn.microsoft.com/en-us/troubleshoot/windows-client/performance/fast-startup-and-hybrid-boot) | Off makes every shutdown a true cold boot; fixes stale driver/USB state. | ✓ |
+| **Visual effects (best performance)** | Disables Windows UI animations/effects for a snappier desktop. | |
+
+### Privacy
+
+Telemetry/privacy toggles Windows often re-enables after feature updates -- the drift-guard re-asserts your choice. **Advertising ID** and **Tailored experiences** (per-user, HKCU); **Cross-Device Platform** and **Activity History / Timeline** (HKLM policy). Each is monitored against your preference and reversible. See the [Privacy section of SETTINGS-REFERENCE.md](docs/SETTINGS-REFERENCE.md#privacy).
+
+### Network
+
+Latency tweaks shipped at full monitor/desired/auto-apply parity, with honest copy about their contested, per-hardware nature: **Nagle's algorithm** (per-interface TCP no-delay) and **NIC power management** (stops Windows from powering down the adapter). Both can make some connections *worse* -- read each Learn more and revert if latency degrades. See the [Network section of SETTINGS-REFERENCE.md](docs/SETTINGS-REFERENCE.md#network).
 
 ### Windows services
 
-A curated catalog of services GamerGuardian can stop + disable (or set to Manual). One-click "Gaming optimized" preset, plus per-service Default/Manual/Disabled. Includes `DiagTrack` (telemetry), `MapsBroker`, `Fax`, `lfsvc` (Geolocation), Xbox services, `DoSvc` (Delivery Optimization), `iphlpsvc` (IP Helper), and more. See [`ServiceCatalog.cs`](src/GamerGuardian/Services/ServiceCatalog.cs) for the full list.
+A curated catalog of services GamerGuardian can stop + disable (or set to Manual). One-click "Gaming optimized" preset, plus per-service Default/Manual/Disabled. Includes `DiagTrack` (telemetry), `MapsBroker`, `Fax`, `lfsvc` (Geolocation), `wisvc` (Windows Insider), Xbox services, `DoSvc` (Delivery Optimization), `iphlpsvc` (IP Helper), `RemoteAccess` / `RemoteRegistry` (drift-confirm), and more. See [`ServiceCatalog.cs`](src/GamerGuardian/Services/ServiceCatalog.cs) for the full list.
 
 ### Windows AI
 

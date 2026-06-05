@@ -90,6 +90,7 @@ public partial class App : WpfApplication
             new HdrMonitor(),
             new RefreshRateMonitor(),
             new ResolutionMonitor(),
+            new DrrMonitor(),
             new VrrMonitor(),
             new HagsMonitor(),
             new MemoryIntegrityMonitor(),
@@ -115,6 +116,18 @@ public partial class App : WpfApplication
             new AiActionsMonitor(),
             new InputInsightsMonitor(),
             new OfficeCopilotMonitor(),
+            // Privacy / telemetry toggles (Privacy tab):
+            new AdvertisingIdMonitor(),
+            new TailoredExperiencesMonitor(),
+            new CdpMonitor(),
+            new ActivityHistoryMonitor(),
+            // System toggles:
+            new PowerThrottlingMonitor(),  // CPU/Power tab
+            new FastStartupMonitor(),       // Global gaming tab
+            new VisualEffectsMonitor(),     // Global gaming tab
+            // Network toggles (Network tab):
+            new NagleMonitor(),
+            new NicPowerMonitor(),
         };
         var serviceMonitors = GamerGuardian.Services.ServiceCatalog.All
             .Select(d => (IMonitoredSetting)new WindowsServiceMonitor(d));

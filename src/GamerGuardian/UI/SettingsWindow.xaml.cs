@@ -30,6 +30,9 @@ public partial class SettingsWindow : FluentWindow
     private readonly Action _exitApp;
     public ObservableCollection<DisplayRow> DisplayRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> GlobalToggleRows { get; } = new();
+    public ObservableCollection<GlobalToggleRow> PrivacyToggleRows { get; } = new();
+    public ObservableCollection<GlobalToggleRow> NetworkToggleRows { get; } = new();
+    public ObservableCollection<GlobalToggleRow> PowerToggleRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> WindowsAiRowsCollection { get; } = new();
     public ObservableCollection<WindowsAiAppRow> WindowsAiAppRowsCollection { get; } = new();
     public ObservableCollection<ServiceRow> ServiceRows { get; } = new();
@@ -74,6 +77,9 @@ public partial class SettingsWindow : FluentWindow
 
         DisplaysList.ItemsSource = DisplayRows;
         GlobalTogglesList.ItemsSource = GlobalToggleRows;
+        PrivacyTogglesList.ItemsSource = PrivacyToggleRows;
+        NetworkTogglesList.ItemsSource = NetworkToggleRows;
+        PowerTogglesList.ItemsSource = PowerToggleRows;
         ServicesList.ItemsSource = ServiceRows;
         WindowsAiRows.ItemsSource = WindowsAiRowsCollection;
         WindowsAiAppRows.ItemsSource = WindowsAiAppRowsCollection;
@@ -82,6 +88,8 @@ public partial class SettingsWindow : FluentWindow
         LoadDisplays();
         LoadServices();
         LoadWindowsAi();
+        LoadPrivacy();
+        LoadNetwork();
         LoadCpuTabs();
         UpdatePendingStatus();
     }
@@ -401,6 +409,85 @@ public partial class SettingsWindow : FluentWindow
         if (cur.HasValue) pref.DesiredOn = cur.Value;
     }
 
+    private void LoadPrivacy()
+    {
+        PrivacyToggleRows.Clear();
+        var g = _draft.Global;
+
+        SyncIfUnmonitored(g.AdvertisingId, AdvertisingIdMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.TailoredExperiences, TailoredExperiencesMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.Cdp, CdpMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.ActivityHistory, ActivityHistoryMonitor.ReadCurrent);
+
+        PrivacyToggleRows.Add(new GlobalToggleRow(
+            name: "Advertising ID",
+            description: "Per-user identifier apps use to profile you for ads. Privacy-recommended off.",
+            currentText: $"Current: {OnOffText(SafeRead(AdvertisingIdMonitor.ReadCurrent))}",
+            defaultText: "Default: Enabled",
+            onLabel: "Enabled", offLabel: "Disabled",
+            pref: g.AdvertisingId, groupName: "pv_adid",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "privacy.advertisingid"));
+
+        PrivacyToggleRows.Add(new GlobalToggleRow(
+            name: "Tailored experiences",
+            description: "Lets Windows use your diagnostic data to personalize tips, ads, and recommendations.",
+            currentText: $"Current: {OnOffText(SafeRead(TailoredExperiencesMonitor.ReadCurrent))}",
+            defaultText: "Default: Enabled",
+            onLabel: "Enabled", offLabel: "Disabled",
+            pref: g.TailoredExperiences, groupName: "pv_tailored",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "privacy.tailoredexp"));
+
+        PrivacyToggleRows.Add(new GlobalToggleRow(
+            name: "Cross-Device Platform (CDP)",
+            description: "\"Continue experiences on this device\" / shared-experiences subsystem. Off via policy; reasserted after feature updates.",
+            currentText: $"Current: {GamingDefaultText(SafeRead(CdpMonitor.ReadCurrent))}",
+            defaultText: "Default: On    Gaming: Disabled",
+            onLabel: "Gaming", offLabel: "Default",
+            pref: g.Cdp, groupName: "pv_cdp",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "privacy.cdp"));
+
+        PrivacyToggleRows.Add(new GlobalToggleRow(
+            name: "Activity History / Timeline",
+            description: "Collection and publishing of your activity feed. Off via policy; reasserted after feature updates.",
+            currentText: $"Current: {GamingDefaultText(SafeRead(ActivityHistoryMonitor.ReadCurrent))}",
+            defaultText: "Default: On    Gaming: Disabled",
+            onLabel: "Gaming", offLabel: "Default",
+            pref: g.ActivityHistory, groupName: "pv_activity",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "privacy.activityhistory"));
+    }
+
+    private void LoadNetwork()
+    {
+        NetworkToggleRows.Clear();
+        var g = _draft.Global;
+        SyncIfUnmonitored(g.Nagle, NagleMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.NicPower, NicPowerMonitor.ReadCurrent);
+        NetworkToggleRows.Add(new GlobalToggleRow(
+            name: "Nagle's algorithm (TCP no-delay)",
+            description: "Disables Nagle packet batching on every active adapter for lower latency in online games. Contested: the benefit varies by hardware and can make some connections worse -- see Learn more.",
+            currentText: $"Current: {GamingDefaultText(SafeRead(NagleMonitor.ReadCurrent))}",
+            defaultText: "Default: On    Gaming: Disabled",
+            onLabel: "Gaming", offLabel: "Default",
+            pref: g.Nagle, groupName: "net_nagle",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "network.nagle"));
+
+        NetworkToggleRows.Add(new GlobalToggleRow(
+            name: "NIC power management",
+            description: "Disables 'Allow the computer to turn off this device to save power' on every active adapter, so the NIC never sleeps. Contested per-hardware; needs a reboot. Leave Default on laptops on battery.",
+            currentText: $"Current: {GamingDefaultText(SafeRead(NicPowerMonitor.ReadCurrent))}",
+            defaultText: "Default: On    Gaming: Disabled",
+            onLabel: "Gaming", offLabel: "Default",
+            requiresReboot: true,
+            pref: g.NicPower, groupName: "net_nicpower",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "network.nicpower"));
+    }
+
     private void LoadGlobals()
     {
         GlobalToggleRows.Clear();
@@ -419,6 +506,8 @@ public partial class SettingsWindow : FluentWindow
         SyncIfUnmonitored(g.MousePrecision, MousePrecisionMonitor.ReadCurrent);
         SyncIfUnmonitored(g.FullscreenOptimizations, FullscreenOptimizationsMonitor.ReadCurrent);
         SyncIfUnmonitored(g.Vrr, VrrMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.FastStartup, FastStartupMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.VisualFx, VisualEffectsMonitor.ReadCurrent);
 
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Game Mode",
@@ -534,6 +623,27 @@ public partial class SettingsWindow : FluentWindow
             onPrefChanged: OnRowPrefChanged,
             settingId: "vrr"));
 
+        GlobalToggleRows.Add(new GlobalToggleRow(
+            name: "Fast Startup (hybrid boot)",
+            description: "Saves the kernel session to the hiberfile so 'shutdown' isn't a true cold boot. Off makes every shutdown a clean boot; fixes a class of stale driver/USB state issues.",
+            currentText: $"Current: {GamingDefaultText(SafeRead(FastStartupMonitor.ReadCurrent))}",
+            defaultText: "Default: On    Gaming: Disabled",
+            onLabel: "Gaming", offLabel: "Default",
+            requiresReboot: true,
+            pref: g.FastStartup, groupName: "faststartup",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "faststartup"));
+
+        GlobalToggleRows.Add(new GlobalToggleRow(
+            name: "Visual effects (best performance)",
+            description: "Windows UI animations and effects. 'Best performance' disables them for the snappiest desktop. Full per-effect changes apply after sign-out.",
+            currentText: $"Current: {GamingDefaultText(SafeRead(VisualEffectsMonitor.ReadCurrent))}",
+            defaultText: "Default: Let Windows choose    Gaming: Best performance",
+            onLabel: "Gaming", offLabel: "Default",
+            pref: g.VisualFx, groupName: "visualfx",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "visualfx"));
+
         var planNames = PowerPlanMonitor.ListAvailablePlans();
         var active = SafeRunGuid(PowerPlanMonitor.GetActivePlan);
         var activeName = active is not null && planNames.TryGetValue(active.Value, out var name) ? name : "unknown";
@@ -572,6 +682,8 @@ public partial class SettingsWindow : FluentWindow
         {
             var pref = DisplayPreferenceResolver.Resolve(_draft, d, active);
             var hdr = SafeRead(() => HdrMonitor.ReadHdrState(d) is { } s ? (bool?)(s.Supported && s.Enabled) : null);
+            var drr = DrrMonitor.ReadState(d); // internally guarded, won't throw
+            bool drrSupported = drr is { } ds && ds.Supported;
             var refresh = string.IsNullOrEmpty(d.GdiDeviceName) ? null : RefreshRateMonitor.GetCurrentRefresh(d.GdiDeviceName);
             uint maxHz = refresh is null ? 0 : RefreshRateMonitor.GetMaxSupportedRefresh(d.GdiDeviceName, refresh.Value.Width, refresh.Value.Height);
             var rates = refresh is null
@@ -590,12 +702,13 @@ public partial class SettingsWindow : FluentWindow
             var current = ResolutionMonitor.GetCurrent(d.GdiDeviceName);
 
             var status = string.Format(CultureInfo.InvariantCulture,
-                "Now — HDR: {0}    Refresh: {1}    Resolution: {2}",
+                "Now — HDR: {0}    Refresh: {1}    Resolution: {2}    DRR: {3}",
                 hdr is null ? "unknown" : (hdr.Value ? "On" : "Off"),
                 refresh is null ? "unknown" : refresh.Value.Hz + " Hz" + (maxHz > 0 ? $" (max {maxHz})" : ""),
-                current is null ? "unknown" : $"{current.Value.Width}x{current.Value.Height}");
+                current is null ? "unknown" : $"{current.Value.Width}x{current.Value.Height}",
+                drr is null ? "unknown" : (!drr.Value.Supported ? "n/a" : (drr.Value.Enabled ? "On" : "Off")));
 
-            DisplayRows.Add(new DisplayRow(d.StableKey, d.DisplayLabel, status, pref, rates, resStrings));
+            DisplayRows.Add(new DisplayRow(d.StableKey, d.DisplayLabel, status, pref, rates, resStrings, drrSupported));
         }
     }
 
@@ -834,6 +947,8 @@ public partial class SettingsWindow : FluentWindow
         LoadDisplays();
         LoadServices();
         LoadWindowsAi();
+        LoadPrivacy();
+        LoadNetwork();
         LoadCpuTabs();
         UpdatePendingStatus();
 
@@ -930,9 +1045,15 @@ public partial class SettingsWindow : FluentWindow
         {
             DisplaysList.ItemsSource = null;
             GlobalTogglesList.ItemsSource = null;
+            PrivacyTogglesList.ItemsSource = null;
+            NetworkTogglesList.ItemsSource = null;
+            PowerTogglesList.ItemsSource = null;
             ServicesList.ItemsSource = null;
             DisplayRows.Clear();
             GlobalToggleRows.Clear();
+            PrivacyToggleRows.Clear();
+            NetworkToggleRows.Clear();
+            PowerToggleRows.Clear();
             ServiceRows.Clear();
         }
         catch { }
@@ -983,6 +1104,8 @@ public partial class SettingsWindow : FluentWindow
         LoadDisplays();
         LoadServices();
         LoadWindowsAi();
+        LoadPrivacy();
+        LoadNetwork();
         LoadCpuTabs();
 
         if (RecommendedStatusText is not null)
@@ -1005,8 +1128,25 @@ public partial class SettingsWindow : FluentWindow
 
     private CpuTuneResult? _cpuRecipe;
 
+    private void LoadPowerToggles()
+    {
+        PowerToggleRows.Clear();
+        var g = _draft.Global;
+        SyncIfUnmonitored(g.PowerThrottling, PowerThrottlingMonitor.ReadCurrent);
+        PowerToggleRows.Add(new GlobalToggleRow(
+            name: "Power Throttling",
+            description: "Windows throttles threads it considers background/idle to save power. Off keeps all threads at full clock for sustained performance (desktop-recommended; leave Default on battery).",
+            currentText: $"Current: {GamingDefaultText(SafeRead(PowerThrottlingMonitor.ReadCurrent))}",
+            defaultText: "Default: On    Gaming: Disabled",
+            onLabel: "Gaming", offLabel: "Default",
+            pref: g.PowerThrottling, groupName: "powerthrottle",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "powerthrottling"));
+    }
+
     private void LoadCpuTabs()
     {
+        LoadPowerToggles();
         var cpu = CpuDetector.Current;
         var r = CpuTuneCatalog.Resolve(cpu);
         _cpuRecipe = r;
@@ -1572,6 +1712,17 @@ public sealed class DisplayRow : INotifyPropertyChanged
     public bool HdrDesiredOn { get => _pref.Hdr.DesiredOn; set { _pref.Hdr.DesiredOn = value; OnPropertyChanged(); } }
     public bool HdrAutoApply { get => _pref.Hdr.AutoApply; set { _pref.Hdr.AutoApply = value; OnPropertyChanged(); } }
 
+    // Dynamic Refresh Rate (per display). When the panel/OS doesn't support DRR
+    // the controls are hidden and a "Not supported on this display" label shows.
+    public bool DrrSupported { get; }
+    public System.Windows.Visibility DrrSupportedVisibility =>
+        DrrSupported ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+    public System.Windows.Visibility DrrUnsupportedVisibility =>
+        DrrSupported ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
+    public bool DrrMonitor { get => _pref.Drr.Monitor; set { _pref.Drr.Monitor = value; OnPropertyChanged(); } }
+    public bool DrrDesiredOn { get => _pref.Drr.DesiredOn; set { _pref.Drr.DesiredOn = value; OnPropertyChanged(); } }
+    public bool DrrAutoApply { get => _pref.Drr.AutoApply; set { _pref.Drr.AutoApply = value; OnPropertyChanged(); } }
+
     public bool RefreshMonitor { get => _pref.RefreshRate.Monitor; set { _pref.RefreshRate.Monitor = value; OnPropertyChanged(); } }
     public bool RefreshUseMax
     {
@@ -1634,13 +1785,14 @@ public sealed class DisplayRow : INotifyPropertyChanged
     }
     public bool ResolutionAutoApply { get => _pref.Resolution.AutoApply; set { _pref.Resolution.AutoApply = value; OnPropertyChanged(); } }
 
-    public DisplayRow(string key, string label, string status, DisplayPreference pref, IReadOnlyList<uint> rates, IReadOnlyList<string> resolutions)
+    public DisplayRow(string key, string label, string status, DisplayPreference pref, IReadOnlyList<uint> rates, IReadOnlyList<string> resolutions, bool drrSupported)
     {
         _key = key;
         _pref = pref;
         HeaderText = label;
         StatusText = status;
         RateGroupName = "rate_" + key.GetHashCode().ToString("X");
+        DrrSupported = drrSupported;
         AvailableHz = rates;
         AvailableResolutions = resolutions;
     }

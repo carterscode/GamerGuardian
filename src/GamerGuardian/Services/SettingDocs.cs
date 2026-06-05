@@ -12,6 +12,7 @@ public static class SettingDocs
         if (settingId.StartsWith("hdr:")) return "DisplayConfigSetDeviceInfo (CCD API)";
         if (settingId.StartsWith("refresh:")) return "ChangeDisplaySettingsEx (DEVMODE.dmDisplayFrequency)";
         if (settingId.StartsWith("resolution:")) return "ChangeDisplaySettingsEx (DEVMODE.dmPelsWidth/Height)";
+        if (settingId.StartsWith("drr:")) return "SetDisplayConfig (CCD API; DISPLAYCONFIG_PATH_BOOST_REFRESH_RATE + SDC_VIRTUAL_REFRESH_RATE_AWARE)";
         if (settingId.StartsWith("service:"))
         {
             var name = settingId["service:".Length..];
@@ -31,7 +32,7 @@ public static class SettingDocs
             "hags" => @"HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\HwSchMode (DWORD)",
             "memintegrity" => @"HKLM\SYSTEM\...\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity\Enabled (DWORD)",
             "gamemode" => @"HKCU\Software\Microsoft\GameBar\AutoGameModeEnabled / AllowAutoGameMode",
-            "gamedvr" => @"HKCU\System\GameConfigStore\GameDVR_Enabled  +  HKCU\...\GameDVR\AppCaptureEnabled",
+            "gamedvr" => @"HKCU\System\GameConfigStore\GameDVR_Enabled  +  HKCU\...\GameDVR\AppCaptureEnabled  +  HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR\AllowGameDVR (policy lock)",
             "mouseaccel" => @"user32.SystemParametersInfo SPI_SETMOUSE  +  HKCU\Control Panel\Mouse",
             "fso" => @"HKCU\System\GameConfigStore (GameDVR_FSEBehaviorMode + 3 related DWORDs)",
             "vrr" => @"HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\VRROptimizeEnable (DWORD)",
@@ -50,6 +51,15 @@ public static class SettingDocs
             "ai.actions" => @"HKLM\SYSTEM\ControlSet001\Control\FeatureManagement\Overrides\8\{1853569164, 4098520719}\EnabledState (DWORD; 1 = force-disabled, 2 = force-enabled, absent = server default)",
             "ai.inputinsights" => @"HKCU\Software\Microsoft\InputPersonalization\RestrictImplicitTextCollection  +  HKCU\Software\Microsoft\input\Settings\InsightsEnabled",
             "ai.office" => @"HKCU\Software\Microsoft\Office\16.0\{Word\Options\EnableCopilot, Excel\Options\EnableCopilot, OneNote\Options\Copilot\CopilotEnabled}  +  HKLM\SOFTWARE\Policies\Microsoft\office\16.0\common\ai\training\general\disabletraining",
+            "privacy.advertisingid" => @"HKCU\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo\Enabled (DWORD)",
+            "privacy.tailoredexp" => @"HKCU\Software\Microsoft\Windows\CurrentVersion\Privacy\TailoredExperiencesWithDiagnosticDataEnabled (DWORD)",
+            "privacy.cdp" => @"HKLM\SOFTWARE\Policies\Microsoft\Windows\System\EnableCdp (DWORD; absent = Windows default ON)",
+            "privacy.activityhistory" => @"HKLM\SOFTWARE\Policies\Microsoft\Windows\System\{EnableActivityFeed, PublishUserActivities, UploadUserActivities} (DWORD)",
+            "powerthrottling" => @"HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling\PowerThrottlingOff (DWORD; absent = Windows default)",
+            "faststartup" => @"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power\HiberbootEnabled (DWORD; reboot required)",
+            "visualfx" => @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects\VisualFXSetting (DWORD; 2=best perf) + HKCU\Control Panel\Desktop\UserPreferencesMask (REG_BINARY)",
+            "network.nagle" => @"HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\{GUID}\{TcpAckFrequency, TCPNoDelay} (DWORD; per active adapter)",
+            "network.nicpower" => @"HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-...}\<NNNN>\PnPCapabilities (DWORD; 0x18 bits; per active adapter; reboot required)",
             _ => "(unknown)",
         };
     }
@@ -101,13 +111,15 @@ public static class SettingDocs
             return "(no direct PowerShell equivalent; uses ChangeDisplaySettingsEx -- consider DisplaySettings.dll on a custom build)";
         if (settingId.StartsWith("resolution:"))
             return "(no direct PowerShell equivalent; uses ChangeDisplaySettingsEx)";
+        if (settingId.StartsWith("drr:"))
+            return "(no PowerShell equivalent; uses SetDisplayConfig with the BOOST_REFRESH_RATE path flag)";
 
         return settingId switch
         {
             "hags" => $@"Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers' -Name HwSchMode -Value {OrDefault(rawDesired, "2")} -Type DWord",
             "memintegrity" => $@"Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity' -Name Enabled -Value {OrDefault(rawDesired, "1")} -Type DWord",
             "gamemode" => $@"Set-ItemProperty 'HKCU:\Software\Microsoft\GameBar' -Name AutoGameModeEnabled -Value {OrDefault(rawDesired, "1")} -Type DWord",
-            "gamedvr" => $@"Set-ItemProperty 'HKCU:\System\GameConfigStore' -Name GameDVR_Enabled -Value {OrDefault(rawDesired, "0")} -Type DWord; Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\GameDVR' -Name AppCaptureEnabled -Value {OrDefault(rawDesired, "0")} -Type DWord",
+            "gamedvr" => @"Set-ItemProperty 'HKCU:\System\GameConfigStore' -Name GameDVR_Enabled -Value 0 -Type DWord; Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\GameDVR' -Name AppCaptureEnabled -Value 0 -Type DWord; $p='HKLM:\SOFTWARE\Policies\Microsoft\Windows\GameDVR'; New-Item $p -Force | Out-Null; Set-ItemProperty $p -Name AllowGameDVR -Value 0 -Type DWord   # reverse: set HKCU values to 1 and Remove-ItemProperty $p -Name AllowGameDVR",
             "mouseaccel" => @"# Enhance pointer precision OFF (per-user). Use SystemParametersInfo SPI_SETMOUSE in a small EXE; PowerShell can't call it cleanly.",
             "fso" => @"Set-ItemProperty 'HKCU:\System\GameConfigStore' -Name GameDVR_FSEBehaviorMode -Value 2 -Type DWord",
             "vrr" => $@"Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers' -Name VRROptimizeEnable -Value {OrDefault(rawDesired, "1")} -Type DWord",
@@ -160,6 +172,17 @@ public static class SettingDocs
                           @"Set-ItemProperty $on -Name CopilotEnabled -Value 0 -Type DWord; " +
                           @"$tr='HKLM:\SOFTWARE\Policies\Microsoft\office\16.0\common\ai\training\general'; New-Item $tr -Force | Out-Null; " +
                           @"Set-ItemProperty $tr -Name disabletraining -Value 1 -Type DWord",
+            "privacy.advertisingid" => @"Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo' -Name Enabled -Value 0 -Type DWord",
+            "privacy.tailoredexp" => @"Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Privacy' -Name TailoredExperiencesWithDiagnosticDataEnabled -Value 0 -Type DWord",
+            "privacy.cdp" => @"$k='HKLM:\SOFTWARE\Policies\Microsoft\Windows\System'; Set-ItemProperty $k -Name EnableCdp -Value 0 -Type DWord   # reverse: Remove-ItemProperty $k -Name EnableCdp",
+            "privacy.activityhistory" => @"$k='HKLM:\SOFTWARE\Policies\Microsoft\Windows\System'; foreach($n in 'EnableActivityFeed','PublishUserActivities','UploadUserActivities'){ Set-ItemProperty $k -Name $n -Value 0 -Type DWord }   # reverse: Remove-ItemProperty for each",
+            "powerthrottling" => @"$k='HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling'; New-Item $k -Force | Out-Null; Set-ItemProperty $k -Name PowerThrottlingOff -Value 1 -Type DWord   # reverse: Remove-ItemProperty $k -Name PowerThrottlingOff",
+            "faststartup" => @"Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power' -Name HiberbootEnabled -Value 0 -Type DWord   # reboot required; reverse: set to 1",
+            "visualfx" => @"Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects' -Name VisualFXSetting -Value 2 -Type DWord; Set-ItemProperty 'HKCU:\Control Panel\Desktop' -Name UserPreferencesMask -Value ([byte[]](0x90,0x12,0x03,0x80,0x10,0,0,0)) -Type Binary   # reverse: VisualFXSetting=0; sign out to fully apply",
+            "network.nagle" => @"# Per adapter interface key (repeat for each active adapter GUID):" + "\n" +
+                              @"$if='HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\<GUID>'; Set-ItemProperty $if -Name TcpAckFrequency -Value 1 -Type DWord; Set-ItemProperty $if -Name TCPNoDelay -Value 1 -Type DWord   # reverse: Remove-ItemProperty both per adapter",
+            "network.nicpower" => @"# Per network-class instance (match NetCfgInstanceId to the adapter GUID), reboot after:" + "\n" +
+                                 @"$k='HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}\<NNNN>'; $v=[int](Get-ItemProperty $k -Name PnPCapabilities -EA SilentlyContinue).PnPCapabilities; Set-ItemProperty $k -Name PnPCapabilities -Value ($v -bor 0x18) -Type DWord   # reverse: -band (-bnot 0x18)",
             _ => "",
         };
     }
@@ -176,6 +199,8 @@ public static class SettingDocs
         }
         if (settingId.StartsWith("hdr:") || settingId.StartsWith("refresh:") || settingId.StartsWith("resolution:"))
             return "Open Settings -> System -> Display, or run: dxdiag";
+        if (settingId.StartsWith("drr:"))
+            return "Settings -> System -> Display -> Advanced display -> 'Choose a refresh rate' (Dynamic = DRR on)";
         if (settingId.StartsWith("service:"))
         {
             var name = settingId["service:".Length..];
@@ -190,7 +215,7 @@ public static class SettingDocs
             "hags" => @"(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers' -Name HwSchMode).HwSchMode",
             "memintegrity" => @"(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity' -Name Enabled).Enabled",
             "gamemode" => @"(Get-ItemProperty 'HKCU:\Software\Microsoft\GameBar' -Name AutoGameModeEnabled).AutoGameModeEnabled",
-            "gamedvr" => @"(Get-ItemProperty 'HKCU:\System\GameConfigStore' -Name GameDVR_Enabled).GameDVR_Enabled",
+            "gamedvr" => @"@{Capture=(Get-ItemProperty 'HKCU:\System\GameConfigStore' -Name GameDVR_Enabled -EA SilentlyContinue).GameDVR_Enabled; Policy=(Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\GameDVR' -Name AllowGameDVR -EA SilentlyContinue).AllowGameDVR}",
             "mouseaccel" => @"(Get-ItemProperty 'HKCU:\Control Panel\Mouse' -Name MouseSpeed).MouseSpeed",
             "fso" => @"(Get-ItemProperty 'HKCU:\System\GameConfigStore' -Name GameDVR_FSEBehaviorMode).GameDVR_FSEBehaviorMode",
             "vrr" => @"(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers' -Name VRROptimizeEnable).VRROptimizeEnable",
@@ -209,6 +234,14 @@ public static class SettingDocs
             "ai.actions" => @"$r='HKLM:\SYSTEM\ControlSet001\Control\FeatureManagement\Overrides\8'; @{A=(Get-ItemProperty $r\1853569164 -Name EnabledState -EA SilentlyContinue).EnabledState; B=(Get-ItemProperty $r\4098520719 -Name EnabledState -EA SilentlyContinue).EnabledState}",
             "ai.inputinsights" => @"@{Restrict=(Get-ItemProperty 'HKCU:\Software\Microsoft\InputPersonalization' -Name RestrictImplicitTextCollection -EA SilentlyContinue).RestrictImplicitTextCollection; Insights=(Get-ItemProperty 'HKCU:\Software\Microsoft\input\Settings' -Name InsightsEnabled -EA SilentlyContinue).InsightsEnabled}",
             "ai.office" => @"@{Word=(Get-ItemProperty 'HKCU:\Software\Microsoft\Office\16.0\Word\Options' -Name EnableCopilot -EA SilentlyContinue).EnableCopilot; Excel=(Get-ItemProperty 'HKCU:\Software\Microsoft\Office\16.0\Excel\Options' -Name EnableCopilot -EA SilentlyContinue).EnableCopilot; OneNote=(Get-ItemProperty 'HKCU:\Software\Microsoft\Office\16.0\OneNote\Options\Copilot' -Name CopilotEnabled -EA SilentlyContinue).CopilotEnabled; Training=(Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\office\16.0\common\ai\training\general' -Name disabletraining -EA SilentlyContinue).disabletraining}",
+            "privacy.advertisingid" => @"(Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo' -Name Enabled -EA SilentlyContinue).Enabled",
+            "privacy.tailoredexp" => @"(Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Privacy' -Name TailoredExperiencesWithDiagnosticDataEnabled -EA SilentlyContinue).TailoredExperiencesWithDiagnosticDataEnabled",
+            "privacy.cdp" => @"(Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' -Name EnableCdp -EA SilentlyContinue).EnableCdp",
+            "privacy.activityhistory" => @"$k='HKLM:\SOFTWARE\Policies\Microsoft\Windows\System'; @{Feed=(Get-ItemProperty $k -Name EnableActivityFeed -EA SilentlyContinue).EnableActivityFeed; Publish=(Get-ItemProperty $k -Name PublishUserActivities -EA SilentlyContinue).PublishUserActivities; Upload=(Get-ItemProperty $k -Name UploadUserActivities -EA SilentlyContinue).UploadUserActivities}",
+            "powerthrottling" => @"(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling' -Name PowerThrottlingOff -EA SilentlyContinue).PowerThrottlingOff",
+            "faststartup" => @"(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power' -Name HiberbootEnabled -EA SilentlyContinue).HiberbootEnabled",
+            "visualfx" => @"(Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects' -Name VisualFXSetting -EA SilentlyContinue).VisualFXSetting",
+            "network.nagle" => @"Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { [pscustomobject]@{ If=$_.PSChildName; Ack=(Get-ItemProperty $_.PSPath -Name TcpAckFrequency -EA SilentlyContinue).TcpAckFrequency; NoDelay=(Get-ItemProperty $_.PSPath -Name TCPNoDelay -EA SilentlyContinue).TCPNoDelay } }",
             _ => "",
         };
     }

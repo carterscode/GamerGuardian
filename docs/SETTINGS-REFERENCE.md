@@ -12,6 +12,8 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 - [CPU-optimized gaming power plan](#cpu-optimized-gaming-power-plan) (`cpuplan`)
 - [Display refresh rate](#display-refresh-rate) (`refresh`)
 - [Display resolution](#display-resolution) (`resolution`)
+- [Dynamic Refresh Rate (DRR)](#dynamic-refresh-rate-drr) (`drr`)
+- [Fast Startup (hybrid boot)](#fast-startup-hybrid-boot) (`faststartup`)
 - [Fullscreen optimizations (global)](#fullscreen-optimizations-global) (`fso`)
 - [Game DVR background recording](#game-dvr-background-recording) (`gamedvr`)
 - [Games multimedia task profile](#games-multimedia-task-profile) (`gamestask`)
@@ -20,10 +22,24 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 - [Memory Integrity / VBS (Core Isolation)](#memory-integrity---vbs-core-isolation) (`memintegrity`)
 - [Mouse "Enhance pointer precision"](#mouse-enhance-pointer-precision) (`mouseaccel`)
 - [Network Throttling](#network-throttling) (`netthrottle`)
+- [Power Throttling](#power-throttling) (`powerthrottling`)
 - [System Responsiveness](#system-responsiveness) (`sysresponse`)
 - [USB Selective Suspend (global)](#usb-selective-suspend-global) (`usbsuspend`)
 - [Variable Refresh Rate (DirectX)](#variable-refresh-rate-directx) (`vrr`)
+- [Visual effects (best performance)](#visual-effects-best-performance) (`visualfx`)
 - [Windows Game Mode](#windows-game-mode) (`gamemode`)
+
+**Privacy**
+
+- [Activity History / Timeline](#activity-history---timeline) (`privacy.activityhistory`)
+- [Advertising ID](#advertising-id) (`privacy.advertisingid`)
+- [Cross-Device Platform (CDP)](#cross-device-platform-cdp) (`privacy.cdp`)
+- [Tailored experiences](#tailored-experiences) (`privacy.tailoredexp`)
+
+**Network**
+
+- [Nagle's algorithm (TCP no-delay)](#nagles-algorithm-tcp-no-delay) (`network.nagle`)
+- [NIC power management](#nic-power-management) (`network.nicpower`)
 
 **Windows AI policies**
 
@@ -50,9 +66,11 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 - [Delivery Optimization](#delivery-optimization) (`service:DoSvc`)
 - [Downloaded Maps Manager](#downloaded-maps-manager) (`service:MapsBroker`)
 - [Retail Demo Service](#retail-demo-service) (`service:RetailDemo`)
+- [Routing and Remote Access](#routing-and-remote-access) (`service:RemoteAccess`)
 - [Superfetch / SysMain](#superfetch---sysmain) (`service:SysMain`)
 - [Windows AI Fabric Service](#windows-ai-fabric-service) (`service:WSAIFabricSvc`)
 - [Windows Error Reporting Service](#windows-error-reporting-service) (`service:WerSvc`)
+- [Windows Insider Service](#windows-insider-service) (`service:wisvc`)
 - [Windows Search](#windows-search) (`service:WSearch`)
 - [Xbox Accessory Management](#xbox-accessory-management) (`service:XboxGipSvc`)
 - [Xbox Live Auth Manager](#xbox-live-auth-manager) (`service:XblAuthManager`)
@@ -160,6 +178,53 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Reversible via.** Uncheck 'Monitor this setting' for Resolution on the display tab.
 
 
+### Dynamic Refresh Rate (DRR)
+
+`drr` &nbsp; **Recommended:** Personal preference -- Enabled saves power, Disabled is the most predictable
+
+**What it does.** Per-display Win11 22H2+ feature that dynamically boosts the refresh rate between a low 'virtual' rate (e.g. 60 Hz for static content, saving power) and the panel's physical max (e.g. 120/144 Hz for scrolling/ink). Read/written via the DisplayConfig CCD API (the BOOST_REFRESH_RATE path flag) -- user-mode, no elevation. Distinct from VRR (G-Sync/FreeSync).
+
+**Why you'd change it.** DRR is mostly a laptop power feature. Some gamers prefer a fixed maximum refresh for consistent latency and disable DRR; others keep it on for battery. It needs a VRR-capable panel and a recent driver, so the toggle only appears on displays that actually support it.
+
+**How it helps.** Monitoring keeps DRR at your chosen state -- Windows can reset it after driver updates, sleep, or display reconnects. The drift-guard re-asserts your preference.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Laptop, wants battery savings | Enabled |
+| Wants a fixed predictable refresh | Disabled |
+| Display without DRR support | n/a -- the control is hidden |
+| Desktop high-refresh gaming | Personal taste; many leave it off for consistency |
+
+**Risks.** Very low -- DRR only engages on supported panels. Verify reflects the path flag, not a guarantee the boost engaged in every app (same honest limitation as VRR).
+
+**Reversible via.** Settings > System > Display > Advanced display > 'Choose a refresh rate' > pick Dynamic / a fixed rate. GamerGuardian toggles the same DisplayConfig flag.
+
+
+### Fast Startup (hybrid boot)
+
+`faststartup` &nbsp; **Recommended:** Disabled (gaming)
+
+**What it does.** Saves the kernel session to the hiberfile on shutdown so the next boot skips part of initialization. Driven by HKLM\...\Session Manager\Power\HiberbootEnabled=0 to disable (requires elevation and a reboot to take effect).
+
+**Why you'd change it.** Fast Startup means 'shutdown' isn't a true cold boot -- drivers and hardware can carry stale state across restarts, which occasionally causes USB/GPU/peripheral quirks. Turning it off makes every shutdown a clean boot.
+
+**How it helps.** Cleaner, more predictable boots; resolves a class of intermittent driver/peripheral issues that 'a real restart fixes'. Low drift -- mostly a set-once toggle.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Troubleshooting flaky USB/GPU state | Disabled (gaming) |
+| Wants the fastest possible boot, no quirks | Default (leave on) |
+| Dual-boot with another OS | Disabled (gaming) -- Fast Startup locks the disk |
+
+**Risks.** Boots are slightly slower (a true cold boot). No stability risk -- this is the pre-Win8 default behavior.
+
+**Reversible via.** Set HiberbootEnabled = 1 in HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power (Control Panel > Power Options > Choose what the power buttons do > Turn on fast startup).
+
+
 ### Fullscreen optimizations (global)
 
 `fso` &nbsp; **Recommended:** On (Windows default)
@@ -188,7 +253,7 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 
 `gamedvr` &nbsp; **Recommended:** Off
 
-**What it does.** Windows Game Bar's continuous rolling-buffer recording of the active game. While enabled, the OS encodes and buffers game video so you can press Win+Alt+G to save the last X seconds.
+**What it does.** Windows Game Bar's continuous rolling-buffer recording of the active game. While enabled, the OS encodes and buffers game video so you can press Win+Alt+G to save the last X seconds. GamerGuardian covers the two per-user capture toggles AND the machine-wide AllowGameDVR policy -- the part Windows re-enables after feature updates -- so the lockdown holds.
 
 **Why you'd change it.** Continuous encoding is a constant tax on framerate and GPU. On older systems it's noticeable (5-10%). On modern GPUs the cost is small but nonzero. Most serious players already use NVIDIA App / OBS for clips and don't need the OS buffer.
 
@@ -205,7 +270,7 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 
 **Risks.** You lose the 'save last 30s' shortcut. Game Bar itself (overlay, FPS counter, performance widgets) still works.
 
-**Reversible via.** Set HKCU\System\GameConfigStore\GameDVR_Enabled = 1 and HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR\AppCaptureEnabled = 1.
+**Reversible via.** Set HKCU\System\GameConfigStore\GameDVR_Enabled = 1 and HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR\AppCaptureEnabled = 1, and delete AllowGameDVR from HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR (the app does all three when you set it back to On).
 
 
 ### Games multimedia task profile
@@ -354,6 +419,29 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Reversible via.** Set HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\NetworkThrottlingIndex = 10.
 
 
+### Power Throttling
+
+`powerthrottling` &nbsp; **Recommended:** Disabled (gaming) on a desktop; Default on battery
+
+**What it does.** Windows Power Throttling reduces the clock/power of threads it considers background or idle to save energy. Disabled via HKLM\...\Power\PowerThrottling\PowerThrottlingOff=1 (requires elevation). Absence means the Windows default (throttling on). This is a registry setting, not a power-scheme change.
+
+**Why you'd change it.** On a desktop chasing sustained performance, throttling can clip background/helper threads a game relies on. Turning it off keeps all threads at full clock.
+
+**How it helps.** More consistent performance for multi-threaded games and background helpers; no surprise downclocking under the OS's idle heuristics.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Desktop / plugged-in gaming | Disabled (gaming) |
+| Laptop on battery | Default -- throttling saves real battery |
+| Streaming + game | Disabled (gaming) |
+
+**Risks.** Higher power draw and heat, especially on laptops on battery. No stability risk.
+
+**Reversible via.** Delete PowerThrottlingOff from HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling to restore the Windows default.
+
+
 ### System Responsiveness
 
 `sysresponse` &nbsp; **Recommended:** 10
@@ -426,6 +514,29 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Reversible via.** Delete VRROptimizeEnable from HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers.
 
 
+### Visual effects (best performance)
+
+`visualfx` &nbsp; **Recommended:** Best performance (gaming) for a snappy desktop; Default if you like the animations
+
+**What it does.** The Windows UI animation/effects profile. 'Adjust for best performance' (VisualFXSetting=2) disables window animations, menu fades, smooth-scrolling, and shadows. GamerGuardian writes VisualFXSetting=2 plus the matching best-performance UserPreferencesMask; the per-effect changes finish applying on the next sign-out.
+
+**Why you'd change it.** Disabling desktop animations removes compositor work and makes window/menu interactions instant. The gain is mostly desktop snappiness rather than in-game FPS, but some users prefer the zero-animation feel.
+
+**How it helps.** Instant window/menu response, no animation delays, slightly less idle GPU compositor work.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Wants the snappiest desktop | Best performance (gaming) |
+| Likes Windows animations / fluent effects | Default |
+| Low-end / integrated GPU | Best performance (gaming) |
+
+**Risks.** Purely cosmetic -- the desktop looks flatter (no fades/animations). No stability or functionality impact. Full effect applies after sign-out.
+
+**Reversible via.** Set VisualFXSetting = 0 in HKCU\...\Explorer\VisualEffects (System Properties > Performance > 'Let Windows choose' or 'Adjust for best appearance'). GamerGuardian sets it to 0 when you choose Default.
+
+
 ### Windows Game Mode
 
 `gamemode` &nbsp; **Recommended:** On (Windows default)
@@ -448,6 +559,146 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Risks.** Some users report frame-rate stuttering or capture glitches on specific GPU/driver/game combos. If you only see stuttering with Game Mode on, turn it off and re-test.
 
 **Reversible via.** Set HKCU\Software\Microsoft\GameBar\AutoGameModeEnabled = 1 (or delete the value).
+
+## Privacy
+
+### Activity History / Timeline
+
+`privacy.activityhistory` &nbsp; **Recommended:** Disabled (gaming)
+
+**What it does.** Collection and publishing of your activity feed (Timeline). Disabled via three HKLM policy values set to 0 together: EnableActivityFeed, PublishUserActivities, UploadUserActivities (requires elevation, one prompt). Absence means the Windows default (on).
+
+**Why you'd change it.** Activity History records what you do across apps and (when signed in) uploads it. Most gamers don't use Timeline, and Windows can re-enable the feed after feature updates.
+
+**How it helps.** Stops the activity feed from collecting and publishing. Reasserted automatically after updates that turn it back on.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Doesn't use Timeline | Disabled (gaming) |
+| Uses Timeline / cross-device activity resume | Default (leave on) |
+| Privacy-conscious | Disabled (gaming) |
+
+**Risks.** Timeline stops showing your recent activities and cross-device resume won't work. No effect on app/game functionality.
+
+**Reversible via.** Delete EnableActivityFeed, PublishUserActivities, and UploadUserActivities from HKLM\SOFTWARE\Policies\Microsoft\Windows\System to restore the Windows default.
+
+
+### Advertising ID
+
+`privacy.advertisingid` &nbsp; **Recommended:** Disabled
+
+**What it does.** A per-user identifier (HKCU\...\AdvertisingInfo\Enabled) that apps can read to build a cross-session advertising profile of you. Direct HKCU value -- no elevation needed.
+
+**Why you'd change it.** There's no gaming or functionality reason to keep the advertising ID on. Disabling it stops apps from correlating your activity under a stable ad identity.
+
+**How it helps.** Apps fall back to requesting a fresh, non-correlatable ID (or none). No effect on app functionality.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Privacy-conscious | Disabled |
+| Gaming setup | Disabled -- no downside |
+| Doesn't care about ad targeting | Either; Disabled is the safe default |
+
+**Risks.** None functional. Ads you see may be slightly less 'relevant' -- which is the point.
+
+**Reversible via.** Set HKCU\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo\Enabled = 1 (Settings > Privacy & security > General > 'Let apps show me personalized ads').
+
+
+### Cross-Device Platform (CDP)
+
+`privacy.cdp` &nbsp; **Recommended:** Disabled (gaming) if you don't use cross-device features
+
+**What it does.** The 'Continue experiences on this device' / shared-experiences subsystem that lets nearby and account-linked devices hand off activities, share the clipboard, and discover each other. Disabled via the HKLM policy EnableCdp=0 (requires elevation). Absence of the value means the Windows default (CDP on).
+
+**Why you'd change it.** CDP runs background discovery/sync that most desktop gamers don't use, and Windows re-enables it after feature updates -- exactly the drift the monitor re-asserts.
+
+**How it helps.** Stops the cross-device discovery/sync background activity. Reasserted automatically if a feature update turns it back on.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Single desktop, no device handoff | Disabled (gaming) |
+| Uses Phone Link / cross-device clipboard | Default (leave on) |
+| Privacy-conscious | Disabled (gaming) |
+
+**Risks.** Cross-device features (handoff, shared clipboard with phones/other PCs, nearby-device discovery) stop working. Phone Link's deeper integrations may be affected.
+
+**Reversible via.** Delete EnableCdp from HKLM\SOFTWARE\Policies\Microsoft\Windows\System to restore the Windows default.
+
+
+### Tailored experiences
+
+`privacy.tailoredexp` &nbsp; **Recommended:** Disabled
+
+**What it does.** Lets Windows use your diagnostic data to personalize tips, ads, and recommendations (HKCU\...\Privacy\TailoredExperiencesWithDiagnosticDataEnabled). Direct HKCU value -- no elevation.
+
+**Why you'd change it.** Removes Microsoft's use of your diagnostic data to target suggestions and promotional content in the Start menu, Settings, and lock screen.
+
+**How it helps.** Fewer suggested/promoted items surfaced by the OS. No effect on app or game functionality.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Privacy-conscious | Disabled |
+| Gaming setup | Disabled -- no downside |
+| Likes Windows tips/suggestions | Enabled |
+
+**Risks.** None functional. You stop seeing personalized Windows tips and suggestions.
+
+**Reversible via.** Set HKCU\Software\Microsoft\Windows\CurrentVersion\Privacy\TailoredExperiencesWithDiagnosticDataEnabled = 1 (Settings > Privacy & security > Diagnostics & feedback).
+
+## Network
+
+### Nagle's algorithm (TCP no-delay)
+
+`network.nagle` &nbsp; **Recommended:** Default unless you've measured a benefit -- this is a contested, per-hardware tweak
+
+**What it does.** Nagle's algorithm batches small outgoing TCP packets to reduce overhead. Disabling it (TcpAckFrequency=1, TCPNoDelay=1 under each network adapter's interface key) sends small packets immediately. GamerGuardian asserts this on every active physical adapter in one elevation prompt; reversal deletes the values to restore the Windows default.
+
+**Why you'd change it.** For latency-sensitive online games, batching can add a few ms of delay to small input/state packets. Turning Nagle off can shave that -- but the benefit is genuinely contested and per-hardware.
+
+**How it helps.** Potentially lower, more consistent latency for small-packet game netcode. On many setups the difference is unmeasurable; on a few it helps.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive online shooter | Disabled (gaming) -- try it, measure, revert if worse |
+| Stable connection, no latency issues | Default -- don't fix what isn't broken |
+| Wi-Fi / high-latency link | Default -- more likely to hurt than help here |
+
+**Risks.** Real: disabling Nagle can INCREASE bufferbloat-related latency or harm throughput on some links (especially Wi-Fi or congested connections). It is not a guaranteed win. Revert if your latency or stability gets worse.
+
+**Reversible via.** Delete TcpAckFrequency and TCPNoDelay from each HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\{GUID} (GamerGuardian does this across all adapters when you choose Default).
+
+
+### NIC power management
+
+`network.nicpower` &nbsp; **Recommended:** Disabled (gaming) on a desktop; Default on a laptop on battery
+
+**What it does.** The per-adapter 'Allow the computer to turn off this device to save power' setting (PnPCapabilities under the adapter's network-class instance). Disabling it keeps the NIC fully powered. GamerGuardian asserts this on every active physical adapter in one elevation prompt; reversal clears the bits to restore the default. A reboot (or adapter disable/enable) is needed for it to take effect.
+
+**Why you'd change it.** Letting Windows power down the NIC can cause brief stalls or micro-disconnects when it wakes -- noticeable as a hitch in online games. Keeping it powered avoids that.
+
+**How it helps.** No NIC sleep/wake cycles, so no wake-from-idle network stalls. Most useful on desktops.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Desktop online gaming | Disabled (gaming) |
+| Laptop on battery | Default -- the NIC power saving matters more |
+| Stable wired connection with no hitches | Personal taste; Default is fine |
+
+**Risks.** Slightly higher idle power draw. On laptops on battery, measurably worse battery life. Contested per-hardware -- some adapters are unaffected either way. Needs a reboot to apply.
+
+**Reversible via.** Clear the 0x18 bits from PnPCapabilities under the adapter's class instance, or check 'Allow the computer to turn off this device' in Device Manager > the adapter > Power Management (GamerGuardian clears the bits across all adapters when you choose Default).
 
 ## Windows AI policies
 
@@ -853,6 +1104,30 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Reversible via.** Set-Service -Name RetailDemo -StartupType Manual
 
 
+### Routing and Remote Access
+
+`service:RemoteAccess` &nbsp; **Recommended:** Default (stays Disabled)
+
+**What it does.** Provides LAN/WAN routing and dial-up/VPN server functionality. Disabled by default on client Windows.
+
+**Why you'd change it.** Already disabled on a default install -- this entry is a drift-guard so you can confirm nothing silently re-enables it.
+
+**How it helps.** No change on a default machine; catches an unexpected re-enable.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive FPS | Default (stays Disabled) |
+| Streaming + game | Default (stays Disabled) |
+| Casual single-player | Default (stays Disabled) |
+| Productivity / mixed-use | Default (stays Disabled) |
+
+**Risks.** If you intentionally run the Windows routing / RRAS VPN server role (rare on a gaming desktop), leave it alone.
+
+**Reversible via.** Set-Service -Name RemoteAccess -StartupType Disabled (its default), or Manual if you need it.
+
+
 ### Superfetch / SysMain
 
 `service:SysMain` &nbsp; **Recommended:** Default (leave on -- current Microsoft guidance)
@@ -923,6 +1198,30 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Risks.** Crash dump collection stops. If you ever need to share a crash report with Microsoft support, re-enable first.
 
 **Reversible via.** Set-Service -Name WerSvc -StartupType Manual
+
+
+### Windows Insider Service
+
+`service:wisvc` &nbsp; **Recommended:** Disabled (Manual if you run Insider builds)
+
+**What it does.** Backs the Windows Insider Program: preview-build enrollment, flighting configuration, and the diagnostic flow Insider builds use. Idle on a machine not enrolled in the Insider Program.
+
+**Why you'd change it.** If you're on the stable channel (the vast majority of users), this service has nothing to do. Disabling removes one more idle background service.
+
+**How it helps.** Removes an idle service. No effect on stable Windows.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive FPS | Disabled (Manual if you run Insider builds) |
+| Streaming + game | Disabled (Manual if you run Insider builds) |
+| Casual single-player | Disabled (Manual if you run Insider builds) |
+| Productivity / mixed-use | Disabled (Manual if you run Insider builds) |
+
+**Risks.** If you are an Insider or plan to enroll, leave it on -- with it disabled, the Insider Program settings page won't enroll or flight new builds. Re-enable before joining.
+
+**Reversible via.** Set-Service -Name wisvc -StartupType Manual
 
 
 ### Windows Search
