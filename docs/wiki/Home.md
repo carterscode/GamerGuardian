@@ -4,14 +4,21 @@ A Windows 11 tray app that watches gaming-related display and system settings, a
 
 ## What it looks like
 
-Settings is split into four tabs:
+Settings is split into nine tabs. See the **[Settings & tabs guide](Settings-and-tabs)** for what every tab and setting does and means.
 
-| Tab | Screenshot |
+| Tab | Covers |
 |---|---|
-| **General** — theme, startup, change log, polling interval, update check | [![General](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-general.png)](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-general.png) |
-| **Global gaming** — Game Mode, HAGS, Memory Integrity, MMCSS, USB Selective Suspend, power plan, etc. | [![Global gaming](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-global-gaming.png)](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-global-gaming.png) |
-| **Windows services** — curated catalog with one-click Gaming-optimized preset, per-service Default/Manual/Disabled | [![Windows services](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-windows-services.png)](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-windows-services.png) |
-| **Display** — per-display HDR, refresh rate, resolution | [![Display](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-display.png)](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-display.png) |
+| **General** | Theme, launch-at-startup, polling interval, update check, change log, one-click Recommended setup |
+| **Global gaming** | Game Mode, Game DVR, HAGS, Memory Integrity/VBS, MMCSS, USB Selective Suspend, VRR, Fast Startup, Visual effects, power plan |
+| **Privacy** | Advertising ID, Tailored experiences, Cross-Device Platform, Activity History |
+| **Network** | Network Throttling, Nagle's algorithm, NIC power management |
+| **Windows services** | Curated catalog with one-click Gaming-optimized preset, per-service Default/Manual/Disabled |
+| **Windows AI** | Policy disables for Copilot, Recall, Click-to-Do, Edge AI, Notepad/Paint AI, search AI, AI Actions, Office Copilot + optional AI UWP removal |
+| **Display** | Per-display HDR, Dynamic Refresh Rate (DRR), refresh rate, resolution |
+| **CPU / Power** | Detected CPU, Power Throttling, CPU-aware gaming power plan, dual-CCD routing dependencies |
+| **Recommended BIOS** | Firmware checklist (guidance only) |
+
+Screenshots: [General](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-general.png) · [Global gaming](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-global-gaming.png) · [Windows services](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-windows-services.png) · [Display](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-display.png)
 
 ## Getting started
 
