@@ -15,6 +15,11 @@ public sealed class MemoryIntegrityMonitor : IMonitoredSetting
     {
         var pref = config.Global.MemoryIntegrity;
 
+        // VBS-off is a strict superset of Memory-Integrity-off: while the VBS monitor
+        // is actively holding the whole stack disabled it owns the HVCI key, and this
+        // monitor must not fight it (alternating writes + UAC prompts every poll).
+        if (config.Global.Vbs is { Monitor: true, DesiredOn: false }) yield break;
+
         using var k = Registry.LocalMachine.OpenSubKey(SubKey, writable: false);
         if (k?.GetValue(ValueName) is not int rawValue) yield break;
         var current = rawValue != 0;

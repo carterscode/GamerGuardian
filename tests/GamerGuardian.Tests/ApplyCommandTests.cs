@@ -57,6 +57,7 @@ public class ApplyCommandTests
     [InlineData("usbsuspend")]
     [InlineData("vrr")]
     [InlineData("memintegrity")]
+    [InlineData("vbs")]
     public void ApplyCommandFor_RegistryToggleSettings_EmitSetItemProperty(string id)
     {
         var cmd = SettingDocs.ApplyCommandFor(id);

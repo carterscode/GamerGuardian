@@ -94,6 +94,7 @@ public partial class App : WpfApplication
             new VrrMonitor(),
             new HagsMonitor(),
             new MemoryIntegrityMonitor(),
+            new VbsMonitor(),
             new SystemResponsivenessMonitor(),
             new NetworkThrottlingMonitor(),
             new UsbSelectiveSuspendMonitor(),

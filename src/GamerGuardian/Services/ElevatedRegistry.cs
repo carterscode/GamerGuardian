@@ -78,6 +78,37 @@ public static class ElevatedRegistry
     }
 
     /// <summary>
+    /// Mixed add + delete batch in a single elevation prompt. Used when one logical
+    /// setting both writes values and removes others (e.g. the VBS disable: zeros
+    /// across DeviceGuard plus deletion of the HVCI re-enable metadata). Adds run
+    /// before deletes; cmd.exe chains with <c>&amp;&amp;</c>, so callers must only
+    /// pass deletes for values confirmed present (a failed delete aborts the rest).
+    /// </summary>
+    public static bool ApplyHklmBatch(
+        IEnumerable<(string subkey, string name, string kind, string data)> adds,
+        IEnumerable<(string subkey, string name)> deletes)
+    {
+        var cmd = BuildHklmBatch(adds, deletes);
+        return cmd.Length == 0 || Run(cmd, useCmd: true);
+    }
+
+    /// <summary>
+    /// Builds the chained command string for <see cref="ApplyHklmBatch"/> (adds first,
+    /// then deletes). Exposed for unit testing the command shape and the injection
+    /// guard without spawning an elevated process.
+    /// </summary>
+    public static string BuildHklmBatch(
+        IEnumerable<(string subkey, string name, string kind, string data)> adds,
+        IEnumerable<(string subkey, string name)> deletes)
+    {
+        var add = BuildHklmMultiAdd(adds);
+        var del = BuildHklmMultiDelete(deletes);
+        if (add.Length == 0) return del;
+        if (del.Length == 0) return add;
+        return add + " && " + del;
+    }
+
+    /// <summary>
     /// Builds the chained <c>reg add</c> command string for <see cref="SetHklmMulti"/>.
     /// Exposed for unit testing the command shape and the injection guard without
     /// spawning an elevated process. Throws if any segment contains a shell metacharacter.
