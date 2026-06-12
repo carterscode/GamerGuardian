@@ -39,12 +39,7 @@ public partial class ApplyResultsWindow : FluentWindow
 
     private void RebootButton_Click(object sender, RoutedEventArgs e)
     {
-        try
-        {
-            Process.Start("shutdown.exe",
-                "/r /t 30 /c \"Rebooting for GamerGuardian settings. Cancel: shutdown /a\"");
-        }
-        catch { }
+        GamerGuardian.Services.RebootHelper.ForceRebootNow();
         Close();
     }
 
