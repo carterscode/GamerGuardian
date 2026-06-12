@@ -14,7 +14,8 @@ cases registry writes cannot fix (UEFI lock).
 VBS itself keeps running via any other enabled scenario:
 
 - **Credential Guard** (`Lsa\LsaCfgFlags`, `Scenarios\CredentialGuard`) — enabled by default
-  on Windows 11 22H2+ Enterprise/Education (and Pro machines that previously ran it).
+  on domain-joined Windows 11 22H2+ Enterprise/Education machines (and Pro machines that
+  previously ran it).
 - **System Guard Secure Launch** (`Scenarios\SystemGuard`).
 - **Kernel-mode Hardware-enforced Stack Protection** (`Scenarios\KernelShadowStacks`).
 - **Windows Hello** (`Scenarios\WindowsHello`, 24H2+) — community-confirmed to keep VBS
@@ -36,8 +37,11 @@ zeros set before an upgrade survive it.
 | `HKLM\SYSTEM\CurrentControlSet\Control\Lsa` | `LsaCfgFlags` |
 | `HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard` | `EnableVirtualizationBasedSecurity`, `LsaCfgFlags`, `HypervisorEnforcedCodeIntegrity` |
 
-Plus deletes (only when present) of the HVCI/KernelShadowStacks upgrade re-enable
-metadata: `WasEnabledBy`, `EnabledBootId`, `ChangedInBootCycle`.
+Plus deletes (only when present) of the upgrade re-enable metadata `WasEnabledBy`,
+`EnabledBootId`, `ChangedInBootCycle` from **every** scenario subkey. Presence of
+`WasEnabledBy`/`EnabledBootId` counts as drift (they re-arm upgrade re-enablement);
+`ChangedInBootCycle` is boot-cycle bookkeeping Windows may rewrite on its own, so it
+is cleaned up during an apply but never treated as drift by itself.
 
 Writing the Policies mirror intentionally greys out the Windows Security "Memory
 integrity" toggle ("managed by your administrator") — that closes the Windows-Security-app
@@ -67,10 +71,12 @@ the HVCI key (30s poll, alternating writes, UAC spam). Rules:
   Hyper-V / Windows Hello ESS, and it is not required: with every scenario zeroed, VBS
   stops at next reboot. Documented in Learn More as an optional manual step.
 - **UEFI-locked VBS/Credential Guard** (`Locked=1` or `LsaCfgFlags=1`): clearing the
-  firmware variable requires mounting the EFI partition, a bcdedit boot-sequence entry and
-  a *physical-presence* confirmation at boot — far too dangerous to automate from a tray
-  app. The monitor detects the lock, flags it in the drift description, and Learn More
-  carries Microsoft's documented opt-out procedure.
+  firmware variable requires mounting the EFI partition, a bcdedit boot-sequence entry
+  (`loadoptions DISABLE-LSA-ISO`; older DG_Readiness_Tool releases also passed
+  `DISABLE-VBS`, which current Microsoft docs no longer list) and a *physical-presence*
+  confirmation at boot — far too dangerous to automate from a tray app. The monitor
+  detects the lock, flags it in the drift description, and Learn More carries
+  Microsoft's documented opt-out procedure.
 - **Windows Security "memory integrity is off" nag suppression** (`HvciKeyDismissed`) —
   cosmetic, and hiding security nags is against the app's transparency stance.
 

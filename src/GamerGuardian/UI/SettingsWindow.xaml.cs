@@ -555,7 +555,8 @@ public partial class SettingsWindow : FluentWindow
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Memory Integrity / VBS (Core Isolation)",
             description: "Hypervisor-Enforced Code Integrity. Disabling recovers ~5–15% gaming perf but reduces malware protection.",
-            currentText: $"Current: {OnOffText(SafeRead(MemoryIntegrityMonitor.ReadCurrent))}",
+            currentText: $"Current: {OnOffText(SafeRead(MemoryIntegrityMonitor.ReadCurrent))}"
+                + (MemoryIntegrityMonitor.DefersToVbs(_draft) ? " — overridden by the VBS full-stack toggle below" : ""),
             defaultText: "Default: Enabled (Win11)",
             onLabel: "Enabled", offLabel: "Disabled",
             requiresReboot: true,
@@ -566,7 +567,7 @@ public partial class SettingsWindow : FluentWindow
         GlobalToggleRows.Add(new GlobalToggleRow(
             name: "Virtualization-Based Security (full stack)",
             description: "Superset of Memory Integrity: disables ALL VBS scenarios (HVCI, Credential Guard, System Guard, kernel stack protection) plus the policy keys Windows uses to re-enable them. Breaks Valorant — Vanguard requires Memory Integrity.",
-            currentText: $"Current: {OnOffText(SafeRead(VbsMonitor.ReadCurrent))}",
+            currentText: $"Current: {VbsMonitor.ReadCurrentText()}",
             defaultText: "Default: Enabled (Win11)",
             onLabel: "Enabled", offLabel: "Disabled",
             requiresReboot: true,

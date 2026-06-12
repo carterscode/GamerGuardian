@@ -10,7 +10,8 @@ namespace GamerGuardian.Monitors;
 /// the DeviceGuard root values, every <c>DeviceGuard\Scenarios\*</c> subkey (known
 /// list plus whatever exists at runtime), <c>Lsa\LsaCfgFlags</c> (Credential Guard)
 /// and the Group Policy mirror under <c>SOFTWARE\Policies</c>, and deletes the
-/// HVCI upgrade re-enable metadata (WasEnabledBy / EnabledBootId / ChangedInBootCycle).
+/// per-scenario upgrade re-enable metadata (WasEnabledBy / EnabledBootId /
+/// ChangedInBootCycle) wherever present.
 ///
 /// <para>Explicit zeros, never deletes: Microsoft documents that absent values are
 /// re-defaulted by feature updates (Credential Guard default enablement on 22H2+,
@@ -25,8 +26,9 @@ namespace GamerGuardian.Monitors;
 /// <para>Interaction with <see cref="MemoryIntegrityMonitor"/>: VBS-off is a strict
 /// superset of Memory-Integrity-off. While VBS is monitored with DesiredOn = false,
 /// the Memory Integrity monitor defers (it yields no drift) so the two never fight
-/// over the HVCI key; conversely VBS re-enable skips the HVCI restore when Memory
-/// Integrity is monitored with DesiredOn = false.</para>
+/// over the HVCI key; conversely a VBS restore skips the HVCI part whenever the
+/// Memory Integrity preference is off (the pref tracks the live system state while
+/// unmonitored, so this respects both an explicit choice and the machine state).</para>
 ///
 /// <para>UEFI lock (<c>Locked = 1</c> or <c>LsaCfgFlags = 1</c>): registry writes
 /// still land but firmware keeps VBS until the lock is cleared — that procedure
@@ -46,7 +48,8 @@ public sealed class VbsMonitor : IMonitoredSetting
 
     /// <summary>Scenario subkeys we always pin to Enabled=0 on disable, even when the
     /// subkey doesn't exist yet (explicit suppression for the ones Windows creates
-    /// later: Credential Guard on 22H2+, WindowsHello on 24H2+).</summary>
+    /// later: Credential Guard on 22H2+; WindowsHello is the 24H2+ scenario that is
+    /// community-reported — not formally documented — to keep VBS alive).</summary>
     public static readonly string[] KnownScenarios =
     {
         HvciScenario,
@@ -56,9 +59,13 @@ public sealed class VbsMonitor : IMonitoredSetting
         "WindowsHello",
     };
 
-    /// <summary>Per-scenario re-enable metadata that must be deleted on disable —
-    /// Windows uses these to restore HVCI after upgrades/boot-failure probation.</summary>
+    /// <summary>Per-scenario metadata deleted on disable. WasEnabledBy/EnabledBootId
+    /// re-arm the upgrade re-enable path, so their presence counts as drift.
+    /// ChangedInBootCycle is boot-cycle bookkeeping Windows may rewrite on its own:
+    /// deleted when an apply runs, but never drift by itself (treating it as drift
+    /// would mean a corrective apply + UAC prompt every boot).</summary>
     private static readonly string[] ScenarioMetaValues = { "WasEnabledBy", "EnabledBootId", "ChangedInBootCycle" };
+    private static readonly string[] ReenableMetaValues = { "WasEnabledBy", "EnabledBootId" };
 
     /// <summary>State of one <c>DeviceGuard\Scenarios\*</c> subkey.</summary>
     public sealed record ScenarioState(int? Enabled, int? Locked, IReadOnlyList<string> MetaValuesPresent)
@@ -88,11 +95,13 @@ public sealed class VbsMonitor : IMonitoredSetting
         catch { yield break; }
 
         bool desired = pref.DesiredOn;
-        bool compliant = desired ? HasNoDisableMarkers(snap) : IsFullyDisabled(snap);
-        if (compliant) yield break;
+        if (IsCompliant(snap, desired, pref.Monitor)) yield break;
 
-        // The user's standalone Memory-Integrity-off choice wins over a VBS restore.
-        bool skipHvci = desired && config.Global.MemoryIntegrity is { Monitor: true, DesiredOn: false };
+        // The user's Memory-Integrity-off choice wins over a VBS restore. The pref
+        // tracks the live system state while that row is unmonitored
+        // (SyncIfUnmonitored), so this respects an explicit preference and the
+        // current machine state alike.
+        bool skipHvci = desired && !config.Global.MemoryIntegrity.DesiredOn;
 
         var lockWarning = !desired && UefiLockDetected(snap)
             ? " — UEFI lock detected: registry disable applies, but firmware keeps VBS until the lock is cleared (see Learn More)"
@@ -114,25 +123,47 @@ public sealed class VbsMonitor : IMonitoredSetting
             IsMonitored: pref.Monitor,
             RawBefore: Summarize(snap),
             RawDesired: desired
-                ? "EnableVirtualizationBasedSecurity=1; HVCI Enabled=1, WasEnabledBy=2; disable markers removed"
-                : "DeviceGuard {EVBS, RequirePlatformSecurityFeatures, Mandatory, HVCI}=0; Scenarios\\*\\Enabled=0; LsaCfgFlags=0; policy {EVBS, LsaCfgFlags, HVCI}=0; HVCI meta deleted");
+                ? (skipHvci
+                    ? "EnableVirtualizationBasedSecurity=1; disable markers removed (HVCI left to the Memory Integrity toggle)"
+                    : "EnableVirtualizationBasedSecurity=1; HVCI Enabled=1, WasEnabledBy=2; disable markers removed")
+                : "DeviceGuard {EVBS, RequirePlatformSecurityFeatures, Mandatory, HVCI}=0; Scenarios\\*\\Enabled=0; LsaCfgFlags=0; policy {EVBS, LsaCfgFlags, HVCI}=0; re-enable metadata deleted");
     }
 
-    /// <summary>UI sync/row text. True = not explicitly disabled (on a modern Win11
-    /// install that means VBS is on or free to turn on); false = fully disabled.
-    /// Registry alone can't see firmware state — the verify snippet (WMI) shows the
-    /// runtime truth.</summary>
+    /// <summary>UI sync/row boolean. True = not explicitly disabled; false = fully
+    /// disabled. Intentionally deviates from the usual null-on-absence monitor rule:
+    /// Windows 11 runs VBS by default with NO registry values present, so absence
+    /// means "Windows defaults (on)", not "feature not present on this SKU".
+    /// (Limitation: on hardware where VBS genuinely can't run, this still reads
+    /// "On"; the verify snippet's WMI check shows the runtime truth.)</summary>
     public static bool? ReadCurrent()
     {
         try { return !IsFullyDisabled(ReadSnapshot()); }
         catch { return null; }
     }
 
+    /// <summary>Three-state row text — the binary <see cref="ReadCurrent"/> would
+    /// show a half-disabled machine (e.g. EVBS=0 left by another tool) as plain
+    /// "On", hiding exactly the state a user most needs to see.</summary>
+    public static string ReadCurrentText()
+    {
+        try
+        {
+            return Classify(ReadSnapshot()) switch
+            {
+                "Off" => "Off",
+                "On" => "On",
+                _ => "Partially off",
+            };
+        }
+        catch { return "not detected"; }
+    }
+
     public static void Apply(bool on, bool skipHvci = false)
     {
         // Re-read at apply time: the ops are a diff against current state, so the
-        // batched deletes only target values that exist (reg.exe chains with && and
-        // a failed delete would abort the rest).
+        // batched deletes only target values that existed moments ago (and the
+        // delete chain is failure-tolerant for the TOCTOU window — see
+        // ElevatedRegistry.BuildHklmBatch).
         var snap = ReadSnapshot();
         var (adds, deletes) = on ? BuildEnableOps(snap, skipHvci) : BuildDisableOps(snap);
         ElevatedRegistry.ApplyHklmBatch(adds, deletes);
@@ -140,8 +171,19 @@ public sealed class VbsMonitor : IMonitoredSetting
 
     // ---- Pure state functions (unit-tested headlessly) ---------------------
 
+    /// <summary>The drift predicate. Monitored-Enabled enforces the strict
+    /// restore contract (<see cref="HasNoDisableMarkers"/>); unmonitored-Enabled
+    /// must round-trip with <see cref="ReadCurrent"/> so SyncIfUnmonitored keeps
+    /// the row inert — a machine that is only partially disabled (e.g. EVBS=0
+    /// from another tool) must never be "restored" as a side effect of an
+    /// unrelated Apply the user never asked for.</summary>
+    public static bool IsCompliant(VbsSnapshot s, bool desiredOn, bool monitored) =>
+        desiredOn
+            ? (monitored ? HasNoDisableMarkers(s) : !IsFullyDisabled(s))
+            : IsFullyDisabled(s);
+
     /// <summary>The complete-disable contract: every relevant value explicitly 0 and
-    /// the per-scenario re-enable metadata gone.</summary>
+    /// the upgrade re-enable metadata (WasEnabledBy/EnabledBootId) gone.</summary>
     public static bool IsFullyDisabled(VbsSnapshot s)
     {
         if (s.Evbs != 0 || s.RequirePlatformSecurityFeatures != 0 || s.Mandatory != 0 || s.RootHvci != 0)
@@ -149,8 +191,12 @@ public sealed class VbsMonitor : IMonitoredSetting
         if (s.LsaCfgFlags != 0 || s.PolicyEvbs != 0 || s.PolicyLsaCfgFlags != 0 || s.PolicyHvci != 0)
             return false;
         foreach (var name in KnownScenarios)
-            if (!s.Scenarios.TryGetValue(name, out var sc) || sc.Enabled != 0 || sc.MetaValuesPresent.Count > 0)
+        {
+            if (!s.Scenarios.TryGetValue(name, out var sc) || sc.Enabled != 0)
                 return false;
+            if (sc.MetaValuesPresent.Any(m => ReenableMetaValues.Contains(m)))
+                return false;
+        }
         // Future scenario subkeys Windows may add: anything with Enabled != 0 keeps VBS alive.
         foreach (var (_, sc) in s.Scenarios)
             if (sc.Enabled is int e && e != 0)
@@ -169,6 +215,27 @@ public sealed class VbsMonitor : IMonitoredSetting
             if (name != HvciScenario && sc.Enabled == 0)
                 return false;
         return true;
+    }
+
+    /// <summary>VBS-disable markers that render a standalone Memory Integrity
+    /// re-enable inert: the policy mirror overrides the scenario key, and the
+    /// master switch must be on for HVCI to start. Used by
+    /// <see cref="MemoryIntegrityMonitor"/> so a "Verified" HVCI enable can't be
+    /// silently defeated by this monitor's earlier disable.</summary>
+    public static bool HvciBlocked(VbsSnapshot s) =>
+        s.Evbs == 0 || s.PolicyEvbs == 0 || s.PolicyHvci == 0;
+
+    /// <summary>The minimal ops that clear <see cref="HvciBlocked"/> markers without
+    /// touching Credential Guard or the other scenarios.</summary>
+    public static (List<(string subkey, string name, string kind, string data)> adds,
+                   List<(string subkey, string name)> deletes) BuildHvciUnblockOps(VbsSnapshot s)
+    {
+        var adds = new List<(string, string, string, string)>();
+        var deletes = new List<(string, string)>();
+        if (s.Evbs == 0) adds.Add((RootKey, "EnableVirtualizationBasedSecurity", "REG_DWORD", "1"));
+        if (s.PolicyEvbs == 0) deletes.Add((PolicyKey, "EnableVirtualizationBasedSecurity"));
+        if (s.PolicyHvci == 0) deletes.Add((PolicyKey, "HypervisorEnforcedCodeIntegrity"));
+        return (adds, deletes);
     }
 
     /// <summary>VBS or Credential Guard enabled with UEFI lock — registry writes alone
@@ -230,6 +297,15 @@ public sealed class VbsMonitor : IMonitoredSetting
         }
 
         if (s.Evbs == 0) adds.Add((RootKey, "EnableVirtualizationBasedSecurity", "REG_DWORD", "1"));
+
+        // Policy-mirror zeros first: they are what greys out Windows Security and
+        // blocks every other re-enable path, so they must be the least likely
+        // deletes to be skipped if anything goes wrong mid-batch.
+        RemoveIfZero(PolicyKey, "EnableVirtualizationBasedSecurity", s.PolicyEvbs);
+        RemoveIfZero(PolicyKey, "LsaCfgFlags", s.PolicyLsaCfgFlags);
+        RemoveIfZero(PolicyKey, "HypervisorEnforcedCodeIntegrity", s.PolicyHvci);
+        RemoveIfZero(LsaKey, "LsaCfgFlags", s.LsaCfgFlags);
+
         RemoveIfZero(RootKey, "RequirePlatformSecurityFeatures", s.RequirePlatformSecurityFeatures);
         RemoveIfZero(RootKey, "Mandatory", s.Mandatory);
         RemoveIfZero(RootKey, "HypervisorEnforcedCodeIntegrity", s.RootHvci);
@@ -248,11 +324,6 @@ public sealed class VbsMonitor : IMonitoredSetting
             if (!hvci.MetaValuesPresent.Contains("WasEnabledBy"))
                 adds.Add(($@"{ScenariosKey}\{HvciScenario}", "WasEnabledBy", "REG_DWORD", "2"));
         }
-
-        RemoveIfZero(LsaKey, "LsaCfgFlags", s.LsaCfgFlags);
-        RemoveIfZero(PolicyKey, "EnableVirtualizationBasedSecurity", s.PolicyEvbs);
-        RemoveIfZero(PolicyKey, "LsaCfgFlags", s.PolicyLsaCfgFlags);
-        RemoveIfZero(PolicyKey, "HypervisorEnforcedCodeIntegrity", s.PolicyHvci);
 
         return (adds, deletes);
     }
@@ -305,25 +376,35 @@ public sealed class VbsMonitor : IMonitoredSetting
                     if (sub is null) continue;
                     var meta = ScenarioMetaValues.Where(m => sub.GetValue(m) is not null).ToArray();
                     scenarios[name] = new ScenarioState(
-                        sub.GetValue("Enabled") as int?,
-                        sub.GetValue("Locked") as int?,
+                        ToInt(sub.GetValue("Enabled")),
+                        ToInt(sub.GetValue("Locked")),
                         meta);
                 }
             }
         }
 
         return new VbsSnapshot(
-            Evbs: root?.GetValue("EnableVirtualizationBasedSecurity") as int?,
-            RequirePlatformSecurityFeatures: root?.GetValue("RequirePlatformSecurityFeatures") as int?,
-            Mandatory: root?.GetValue("Mandatory") as int?,
-            RootHvci: root?.GetValue("HypervisorEnforcedCodeIntegrity") as int?,
-            RootLocked: root?.GetValue("Locked") as int?,
+            Evbs: ToInt(root?.GetValue("EnableVirtualizationBasedSecurity")),
+            RequirePlatformSecurityFeatures: ToInt(root?.GetValue("RequirePlatformSecurityFeatures")),
+            Mandatory: ToInt(root?.GetValue("Mandatory")),
+            RootHvci: ToInt(root?.GetValue("HypervisorEnforcedCodeIntegrity")),
+            RootLocked: ToInt(root?.GetValue("Locked")),
             Scenarios: scenarios,
-            LsaCfgFlags: lsa?.GetValue("LsaCfgFlags") as int?,
-            PolicyEvbs: pol?.GetValue("EnableVirtualizationBasedSecurity") as int?,
-            PolicyLsaCfgFlags: pol?.GetValue("LsaCfgFlags") as int?,
-            PolicyHvci: pol?.GetValue("HypervisorEnforcedCodeIntegrity") as int?);
+            LsaCfgFlags: ToInt(lsa?.GetValue("LsaCfgFlags")),
+            PolicyEvbs: ToInt(pol?.GetValue("EnableVirtualizationBasedSecurity")),
+            PolicyLsaCfgFlags: ToInt(pol?.GetValue("LsaCfgFlags")),
+            PolicyHvci: ToInt(pol?.GetValue("HypervisorEnforcedCodeIntegrity")));
     }
+
+    /// <summary>Registry values written by third-party tools are sometimes typed
+    /// REG_QWORD (boxed long) instead of REG_DWORD; a plain <c>as int?</c> would
+    /// read those as absent and, worst case, suppress the UEFI-lock warning.</summary>
+    public static int? ToInt(object? value) => value switch
+    {
+        int i => i,
+        long l when l >= int.MinValue && l <= int.MaxValue => (int)l,
+        _ => null,
+    };
 
     public static bool IsSafeKeyName(string name)
     {

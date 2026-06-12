@@ -88,8 +88,25 @@ public class ElevatedRegistryTests
 
         Assert.Equal(
             "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\" /v \"EnableVirtualizationBasedSecurity\" /t REG_DWORD /d 0 /f" +
-            " && " +
-            "reg delete \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity\" /v \"WasEnabledBy\" /f",
+            " && (" +
+            "reg delete \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity\" /v \"WasEnabledBy\" /f" +
+            ")",
+            cmd);
+    }
+
+    [Fact]
+    public void BuildHklmBatch_DeletesAreFailureTolerant_SingleAmpersand()
+    {
+        // A value deleted out from under us between snapshot and UAC approval
+        // must not abort the remaining cleanup — deletes chain with '&', not '&&'.
+        var cmd = ElevatedRegistry.BuildHklmBatch(
+            Array.Empty<(string, string, string, string)>(),
+            new[] { (@"SOFTWARE\Key", "A"), (@"SOFTWARE\Key", "B") });
+
+        Assert.Equal(
+            "reg delete \"HKLM\\SOFTWARE\\Key\" /v \"A\" /f" +
+            " & " +
+            "reg delete \"HKLM\\SOFTWARE\\Key\" /v \"B\" /f",
             cmd);
     }
 
@@ -127,5 +144,27 @@ public class ElevatedRegistryTests
         Assert.Throws<ArgumentException>(() => ElevatedRegistry.BuildHklmBatch(
             Array.Empty<(string, string, string, string)>(),
             new[] { (@"SOFTWARE\Key", "Name && calc") }));
+    }
+
+    [Theory]
+    [InlineData("REG_DWORD && calc")]
+    [InlineData("REG_TYPO")]
+    [InlineData("")]
+    public void BuildHklmMultiAdd_RejectsKindOutsideWhitelist(string kind)
+    {
+        // The /t type token is interpolated unquoted — it is the one segment the
+        // metacharacter blocklist used to skip, so it gets a strict REG_* whitelist.
+        Assert.Throws<ArgumentException>(() =>
+            ElevatedRegistry.BuildHklmMultiAdd(new[] { (@"SOFTWARE\Key", "Name", kind, "0") }));
+    }
+
+    [Fact]
+    public void BuildHklmMultiAdd_AcceptsAllWhitelistedKinds()
+    {
+        foreach (var kind in new[] { "REG_DWORD", "REG_QWORD", "REG_SZ", "REG_EXPAND_SZ", "REG_MULTI_SZ", "REG_BINARY" })
+        {
+            var cmd = ElevatedRegistry.BuildHklmMultiAdd(new[] { (@"SOFTWARE\Key", "Name", kind, "0") });
+            Assert.Contains($"/t {kind}", cmd);
+        }
     }
 }

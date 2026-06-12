@@ -64,6 +64,24 @@ public class RecommendedPresetTests
     }
 
     [Fact]
+    public void Apply_LeavesVbsAlone()
+    {
+        // The full-VBS-stack toggle is deliberately not in the preset, same as
+        // MemoryIntegrity: a one-button preset that disables Credential Guard and
+        // breaks Valorant would surprise users.
+        var cfg = new AppConfig();
+        cfg.Global.Vbs.DesiredOn = true;
+        cfg.Global.Vbs.Monitor = true;
+        cfg.Global.Vbs.AutoApply = false;
+
+        RecommendedPreset.ApplyToDraft(cfg);
+
+        Assert.True(cfg.Global.Vbs.DesiredOn);
+        Assert.True(cfg.Global.Vbs.Monitor);
+        Assert.False(cfg.Global.Vbs.AutoApply);
+    }
+
+    [Fact]
     public void Apply_IsIdempotent()
     {
         var cfg = new AppConfig();
