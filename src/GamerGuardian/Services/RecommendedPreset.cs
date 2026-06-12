@@ -16,9 +16,10 @@ namespace GamerGuardian.Services;
 /// <para><b>Conservative.</b> Two categories are intentionally NOT in the
 /// preset:
 /// <list type="bullet">
-///   <item><b>Memory Integrity / VBS</b> -- security toggle. Some anti-cheat
-///     requires it on; flipping it off via a one-button preset would surprise
-///     users. They can flip it individually if they want.</item>
+///   <item><b>Memory Integrity and the full VBS-stack toggle</b> -- security
+///     toggles. Some anti-cheat requires them on (Riot Vanguard mandates
+///     Memory Integrity); flipping them off via a one-button preset would
+///     surprise users. They can flip them individually if they want.</item>
 ///   <item><b>UWP AI app removal</b> -- irreversible without the Microsoft
 ///     Store. Policy toggles are sufficient to disable Copilot; opt-in only
 ///     for actual uninstall.</item>
@@ -71,7 +72,7 @@ public static class RecommendedPreset
         Count(SetToggle(g.GamesTaskProfile,       "Games Task Profile",            desiredOn: true,  changes));
         Count(SetToggle(g.MousePrecision,         "Mouse Precision",               desiredOn: false, changes));
         Count(SetToggle(g.FullscreenOptimizations,"Fullscreen Optimizations",      desiredOn: true,  changes));
-        // MemoryIntegrity intentionally omitted (security tradeoff -- see class doc)
+        // MemoryIntegrity + Vbs intentionally omitted (security tradeoff -- see class doc)
 
         // ---- Windows AI toggles (all off for gaming -- minimize background work) ----
         Count(SetToggle(g.Copilot,         "Windows Copilot",                desiredOn: false, changes));

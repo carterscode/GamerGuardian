@@ -57,6 +57,7 @@ public class ApplyCommandTests
     [InlineData("usbsuspend")]
     [InlineData("vrr")]
     [InlineData("memintegrity")]
+    [InlineData("vbs")]
     public void ApplyCommandFor_RegistryToggleSettings_EmitSetItemProperty(string id)
     {
         var cmd = SettingDocs.ApplyCommandFor(id);
@@ -73,5 +74,36 @@ public class ApplyCommandTests
         // surfaced verbatim so users can see exactly what the app wrote.
         Assert.Contains("Value 2", def);
         Assert.Contains("Value 1", custom);
+    }
+
+    [Fact]
+    public void ApplyCommandFor_Vbs_IsDirectionAware()
+    {
+        // The copyable command must match the direction actually applied — a user
+        // verifying a VBS re-enable must not be handed the full-disable script.
+        var disable = SettingDocs.ApplyCommandFor("vbs");
+        Assert.Contains("Disable the full VBS stack", disable);
+        Assert.Contains("-Name LsaCfgFlags -Value 0", disable);
+
+        var restore = SettingDocs.ApplyCommandFor("vbs",
+            rawDesired: "EnableVirtualizationBasedSecurity=1; HVCI Enabled=1, WasEnabledBy=2; disable markers removed");
+        Assert.Contains("Restore VBS to Windows defaults", restore);
+        Assert.Contains("EnableVirtualizationBasedSecurity -Value 1", restore);
+        Assert.Contains("WasEnabledBy -Value 2", restore);
+        Assert.DoesNotContain("-Name LsaCfgFlags -Value 0", restore);
+    }
+
+    [Fact]
+    public void ApplyCommandFor_Vbs_SnippetCoversEveryKnownScenario()
+    {
+        // The PowerShell snippet duplicates VbsMonitor.KnownScenarios as string
+        // literals; when the known list grows, the copyable "prove it" snippet
+        // must grow with it (both directions).
+        foreach (var scenario in GamerGuardian.Monitors.VbsMonitor.KnownScenarios)
+        {
+            Assert.Contains(scenario, SettingDocs.ApplyCommandFor("vbs"));
+            Assert.Contains(scenario, SettingDocs.ApplyCommandFor("vbs",
+                rawDesired: "EnableVirtualizationBasedSecurity=1; disable markers removed"));
+        }
     }
 }

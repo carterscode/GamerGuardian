@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 
 namespace GamerGuardian.Services;
@@ -22,6 +23,18 @@ public static class ElevatedRegistry
         if (segment.IndexOfAny(ShellMeta) >= 0)
             throw new ArgumentException(
                 $"Registry segment '{paramName}' contains a disallowed shell metacharacter.", paramName);
+    }
+
+    // The /t type token is interpolated unquoted, so it gets a strict whitelist
+    // instead of the metacharacter blocklist — it is the one segment where a
+    // fixed value set is known up front.
+    private static readonly string[] AllowedKinds =
+        { "REG_DWORD", "REG_QWORD", "REG_SZ", "REG_EXPAND_SZ", "REG_MULTI_SZ", "REG_BINARY" };
+
+    private static void GuardKind(string kind)
+    {
+        if (!AllowedKinds.Contains(kind))
+            throw new ArgumentException($"Registry value kind '{kind}' is not an allowed REG_* type.", nameof(kind));
     }
 
     public static bool SetHklmDword(string subkey, string value, uint data)
@@ -78,6 +91,48 @@ public static class ElevatedRegistry
     }
 
     /// <summary>
+    /// Mixed add + delete batch in a single elevation prompt. Used when one logical
+    /// setting both writes values and removes others (e.g. the VBS disable: zeros
+    /// across DeviceGuard plus deletion of the re-enable metadata). Adds run first
+    /// and are fail-fast (<c>&amp;&amp;</c>); deletes are chained with <c>&amp;</c>
+    /// so a value deleted out from under us between the caller's snapshot and the
+    /// UAC approval cannot abort the remaining cleanup. Success is determined by
+    /// the caller re-reading state (ChangeApplier re-runs CheckDrift), not by the
+    /// exit code.
+    /// </summary>
+    public static bool ApplyHklmBatch(
+        IEnumerable<(string subkey, string name, string kind, string data)> adds,
+        IEnumerable<(string subkey, string name)> deletes)
+    {
+        var cmd = BuildHklmBatch(adds, deletes);
+        return cmd.Length == 0 || Run(cmd, useCmd: true);
+    }
+
+    /// <summary>
+    /// Builds the chained command string for <see cref="ApplyHklmBatch"/> (fail-fast
+    /// adds first, then failure-tolerant deletes). Exposed for unit testing the
+    /// command shape and the injection guard without spawning an elevated process.
+    /// </summary>
+    public static string BuildHklmBatch(
+        IEnumerable<(string subkey, string name, string kind, string data)> adds,
+        IEnumerable<(string subkey, string name)> deletes)
+    {
+        var add = BuildHklmMultiAdd(adds);
+        var sb = new StringBuilder();
+        foreach (var (subkey, name) in deletes)
+        {
+            GuardSegment(subkey, nameof(deletes));
+            GuardSegment(name, nameof(deletes));
+            if (sb.Length > 0) sb.Append(" & ");
+            sb.Append($"reg delete \"HKLM\\{subkey}\" /v \"{name}\" /f");
+        }
+        var del = sb.ToString();
+        if (add.Length == 0) return del;
+        if (del.Length == 0) return add;
+        return $"{add} && ({del})";
+    }
+
+    /// <summary>
     /// Builds the chained <c>reg add</c> command string for <see cref="SetHklmMulti"/>.
     /// Exposed for unit testing the command shape and the injection guard without
     /// spawning an elevated process. Throws if any segment contains a shell metacharacter.
@@ -89,6 +144,7 @@ public static class ElevatedRegistry
         {
             GuardSegment(subkey, nameof(subkey));
             GuardSegment(name, nameof(name));
+            GuardKind(kind);
             GuardSegment(data, nameof(data));
             if (sb.Length > 0) sb.Append(" && ");
             var d = kind == "REG_SZ" ? $"\"{data}\"" : data;
@@ -117,10 +173,18 @@ public static class ElevatedRegistry
 
     private static bool Run(string args, bool useCmd = false)
     {
+        // Absolute System32 paths + a System32 working directory: the app's own
+        // install dir is user-writable (%LOCALAPPDATA%\Programs), so resolving
+        // cmd.exe/reg.exe by bare name would let an unprivileged process plant a
+        // binary that runs with the elevation the user just granted. cmd.exe also
+        // resolves the chained bare "reg" tokens from its working directory first,
+        // which the System32 WorkingDirectory pins to the real reg.exe.
+        var system32 = Environment.SystemDirectory;
         var psi = new ProcessStartInfo
         {
-            FileName = useCmd ? "cmd.exe" : "reg.exe",
+            FileName = Path.Combine(system32, useCmd ? "cmd.exe" : "reg.exe"),
             Arguments = useCmd ? $"/c {args}" : args,
+            WorkingDirectory = system32,
             Verb = "runas",
             UseShellExecute = true,
             CreateNoWindow = true,

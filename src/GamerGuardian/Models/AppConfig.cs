@@ -93,6 +93,14 @@ public sealed class GlobalPreferences
     public ToggleSettingPref FullscreenOptimizations { get; set; } = new() { DesiredOn = true };
     public ToggleSettingPref Vrr { get; set; } = new() { DesiredOn = true };
     public ToggleSettingPref MemoryIntegrity { get; set; } = new() { DesiredOn = false };
+    /// <summary>Full VBS stack (superset of MemoryIntegrity — all DeviceGuard
+    /// scenarios + Credential Guard + policy mirror). Monitor=false default: zero
+    /// behavior change until the user opts in; the UI syncs DesiredOn from the
+    /// live system state while unmonitored. DesiredOn follows literal feature
+    /// state (true = VBS enabled/secure), matching the MemoryIntegrity precedent —
+    /// an intentional exception to the DesiredOn=gaming-optimized convention for
+    /// security toggles.</summary>
+    public ToggleSettingPref Vbs { get; set; } = new() { DesiredOn = false };
     public ToggleSettingPref SystemResponsiveness { get; set; } = new() { DesiredOn = true };
     public ToggleSettingPref NetworkThrottling { get; set; } = new() { DesiredOn = true };
     public ToggleSettingPref UsbSelectiveSuspend { get; set; } = new() { DesiredOn = true };

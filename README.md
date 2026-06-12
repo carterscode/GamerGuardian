@@ -30,7 +30,7 @@ It's also paranoid about not making your gaming worse. Polling pauses entirely d
 
 ## Highlights
 
-- 🎯 **28+ monitored settings** spanning display, security, performance, capture, input, privacy/telemetry, network latency, system tuning, and Windows services
+- 🎯 **29+ monitored settings** spanning display, security, performance, capture, input, privacy/telemetry, network latency, system tuning, and Windows services
 - ⚙️ **One-click Recommended preset** -- General tab button stages the gaming-optimized configuration across every setting (Want + Monitor + Auto-apply). Idempotent, so re-running it after a future update picks up only the new settings.
 - 🎮 **Pauses during gameplay** — fullscreen, borderless, *and* during benchmark runs (3DMark, Cinebench, Geekbench, etc.)
 - ⚡ **One-click apply** with a per-setting auto-apply opt-in
@@ -74,6 +74,7 @@ Settings live across **nine tabs**. The lists below cover the monitored settings
 |---|---|:---:|
 | [**HAGS**](https://devblogs.microsoft.com/directx/hardware-accelerated-gpu-scheduling/) | Lets the GPU manage its own command queue. Lower latency on supported GPUs. | ✓ |
 | [**Memory Integrity / VBS**](https://support.microsoft.com/en-us/windows/core-isolation-e30ed737-17d8-42f3-a2a9-87521df09b78) | HVCI. Disabling recovers ~5–15% gaming perf at the cost of reduced malware protection. | ✓ |
+| [**Virtualization-Based Security (full stack)**](https://learn.microsoft.com/en-us/windows/security/hardware-security/enable-virtualization-based-protection-of-code-integrity) | Superset of Memory Integrity: disables every VBS scenario (HVCI, Credential Guard, System Guard, kernel stack protection) plus the policy keys Windows uses to re-enable them. Registry-only — WSL2/Docker keep working. Breaks Valorant. | ✓ |
 | [**Game Mode**](https://support.xbox.com/en-US/help/games-apps/game-setup-and-play/use-game-mode-gaming-on-pc) | Tells Windows to prioritize the running game and suppress background work. | |
 | [**Game DVR background recording**](https://support.xbox.com/help/games-apps/game-dvr/game-dvr-windows-10) | Always-on game capture. Costs CPU/GPU during gameplay. | |
 | [**Mouse "Enhance pointer precision"**](https://support.microsoft.com/en-us/windows/change-mouse-settings-e81356a4-0e74-fe38-7d01-9d79fbf8712b) | Acceleration curve applied to mouse movement. | |

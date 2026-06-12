@@ -13,6 +13,7 @@ public class SettingDocsCatalogTests
     [InlineData("gamedvr")]
     [InlineData("hags")]
     [InlineData("memintegrity")]
+    [InlineData("vbs")]
     [InlineData("sysresponse")]
     [InlineData("netthrottle")]
     [InlineData("usbsuspend")]
