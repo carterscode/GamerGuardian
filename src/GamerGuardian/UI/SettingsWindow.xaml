@@ -214,43 +214,6 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-
-                            <ui:Card Padding="16" Margin="0,0,0,8">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
-                                        <TextBlock Text="Power plan" FontWeight="SemiBold"/>
-                                        <TextBlock Text="Active Windows power scheme — High Performance keeps CPU clocks elevated."
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                   FontSize="12" Margin="0,3,0,0"
-                                                   TextWrapping="Wrap"/>
-                                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                                            <TextBlock x:Name="PowerPlanCurrentText"
-                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                       FontSize="11" Margin="0,0,12,0"/>
-                                            <TextBlock Text="Default: Balanced"
-                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                       FontSize="11"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1" Orientation="Vertical">
-                                        <CheckBox x:Name="PowerPlanMonitorCheck" Content="Monitor"
-                                                  Checked="PowerPlanMonitorCheck_Changed"
-                                                  Unchecked="PowerPlanMonitorCheck_Changed"/>
-                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
-                                            <TextBlock Text="Want:" Margin="0,6,8,0"/>
-                                            <ComboBox x:Name="PowerPlanCombo" Width="240"
-                                                      SelectionChanged="PowerPlanCombo_SelectionChanged"/>
-                                        </StackPanel>
-                                        <CheckBox x:Name="PowerPlanAutoApplyCheck" Content="Auto-apply silently"
-                                                  Checked="PowerPlanAutoApplyCheck_Changed"
-                                                  Unchecked="PowerPlanAutoApplyCheck_Changed"/>
-                                    </StackPanel>
-                                </Grid>
-                            </ui:Card>
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>
@@ -759,6 +722,43 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <TextBlock Text="Power plan" FontWeight="SemiBold"/>
+                                        <TextBlock Text="Active Windows power scheme — High Performance keeps CPU clocks elevated."
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   FontSize="12" Margin="0,3,0,0"
+                                                   TextWrapping="Wrap"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                            <TextBlock x:Name="PowerPlanCurrentText"
+                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                       FontSize="11" Margin="0,0,12,0"/>
+                                            <TextBlock Text="Default: Balanced"
+                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                       FontSize="11"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Vertical">
+                                        <CheckBox x:Name="PowerPlanMonitorCheck" Content="Monitor"
+                                                  Checked="PowerPlanMonitorCheck_Changed"
+                                                  Unchecked="PowerPlanMonitorCheck_Changed"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
+                                            <TextBlock Text="Want:" Margin="0,6,8,0"/>
+                                            <ComboBox x:Name="PowerPlanCombo" Width="240"
+                                                      SelectionChanged="PowerPlanCombo_SelectionChanged"/>
+                                        </StackPanel>
+                                        <CheckBox x:Name="PowerPlanAutoApplyCheck" Content="Auto-apply silently"
+                                                  Checked="PowerPlanAutoApplyCheck_Changed"
+                                                  Unchecked="PowerPlanAutoApplyCheck_Changed"/>
+                                    </StackPanel>
+                                </Grid>
+                            </ui:Card>
 
                             <ui:Card Padding="16" Margin="0,0,0,12">
                                 <Grid>
