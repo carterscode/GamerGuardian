@@ -135,6 +135,23 @@ public sealed class GlobalPreferences
     public ToggleSettingPref Cdp { get; set; } = new() { DesiredOn = true };
     public ToggleSettingPref ActivityHistory { get; set; } = new() { DesiredOn = true };
 
+    // ---- Privacy data-collection toggles (Privacy tab). Intuitive Enabled/Disabled;
+    // DesiredOn=feature enabled, so the privacy-optimized default is DesiredOn=false. ----
+    public ToggleSettingPref OnlineSpeech { get; set; } = new() { DesiredOn = false };
+    public ToggleSettingPref InkingTyping { get; set; } = new() { DesiredOn = false };
+
+    // ---- Debloat toggles (Debloat tab). Intuitive Enabled/Disabled; DesiredOn maps
+    // to the bloat feature being enabled, so the debloated default is DesiredOn=false.
+    // Monitor=false by default: zero behavior change until the user opts in. ----
+    public ToggleSettingPref SuggestedContent { get; set; } = new() { DesiredOn = false };
+    public ToggleSettingPref LockScreenSpotlight { get; set; } = new() { DesiredOn = false };
+    public ToggleSettingPref FinishSetupNag { get; set; } = new() { DesiredOn = false };
+    public ToggleSettingPref StartRecommendations { get; set; } = new() { DesiredOn = false };
+    public ToggleSettingPref ExplorerAds { get; set; } = new() { DesiredOn = false };
+    public ToggleSettingPref FeedbackNag { get; set; } = new() { DesiredOn = false };
+    public ToggleSettingPref Widgets { get; set; } = new() { DesiredOn = false };
+    public ToggleSettingPref EdgeBackground { get; set; } = new() { DesiredOn = false };
+
     // ---- System toggles (inverted Gaming/Default; DesiredOn=true = gaming) ----
     public ToggleSettingPref PowerThrottling { get; set; } = new() { DesiredOn = true };
     public ToggleSettingPref FastStartup { get; set; } = new() { DesiredOn = true };

@@ -35,7 +35,20 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 - [Activity History / Timeline](#activity-history---timeline) (`privacy.activityhistory`)
 - [Advertising ID](#advertising-id) (`privacy.advertisingid`)
 - [Cross-Device Platform (CDP)](#cross-device-platform-cdp) (`privacy.cdp`)
+- [Inking & typing personalization](#inking--typing-personalization) (`privacy.inking`)
+- [Online (cloud) speech recognition](#online-cloud-speech-recognition) (`privacy.speech`)
 - [Tailored experiences](#tailored-experiences) (`privacy.tailoredexp`)
+
+**Debloat (ads, nags & background bloat)**
+
+- ["Finish setting up your device" nag](#finish-setting-up-your-device-nag) (`debloat.finishsetup`)
+- [Edge startup boost & background mode](#edge-startup-boost--background-mode) (`debloat.edge`)
+- [File Explorer ad banners](#file-explorer-ad-banners) (`debloat.explorerads`)
+- [Lock screen tips, fun facts & ads](#lock-screen-tips-fun-facts--ads) (`debloat.spotlight`)
+- [Start menu recommendations & recent files](#start-menu-recommendations--recent-files) (`debloat.startrecommend`)
+- [Suggested content & silent app installs](#suggested-content--silent-app-installs) (`debloat.suggestedcontent`)
+- [Widgets / News and interests](#widgets---news-and-interests) (`debloat.widgets`)
+- [Windows feedback request popups](#windows-feedback-request-popups) (`debloat.feedback`)
 
 **Network**
 
@@ -664,6 +677,52 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Reversible via.** Delete EnableCdp from HKLM\SOFTWARE\Policies\Microsoft\Windows\System to restore the Windows default.
 
 
+### Inking & typing personalization
+
+`privacy.inking` &nbsp; **Recommended:** Disabled (privacy)
+
+**What it does.** Windows building a personal dictionary from your handwriting samples and contact names to improve suggestions -- and uploading some of it. Covers the master AcceptedPrivacyPolicy opt-in plus implicit ink collection and contact harvesting. (The typing-text side is the separate 'Typing / input insights' toggle on the Windows AI tab.)
+
+**Why you'd change it.** It's a data-collection feature; turning it off stops the harvesting. Autocorrect still works, just less personalized.
+
+**How it helps.** Stops handwriting/contact data collection. Minimal day-to-day impact.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Privacy-conscious | Disabled |
+| Heavy pen / handwriting user who wants better recognition | Enabled |
+| Typical keyboard user | Disabled |
+
+**Risks.** Handwriting recognition and word suggestions become less personalized. No functional breakage.
+
+**Reversible via.** Settings > Privacy & security > Inking & typing personalization (or set AcceptedPrivacyPolicy = 1).
+
+
+### Online (cloud) speech recognition
+
+`privacy.speech` &nbsp; **Recommended:** Disabled (privacy)
+
+**What it does.** When enabled, Windows sends your voice audio to Microsoft's cloud for recognition (used by some dictation and voice features). Controlled by the per-user HasAccepted flag.
+
+**Why you'd change it.** It's a privacy trade-off: your audio leaves the machine. Offline recognition / Voice Access keeps working without it.
+
+**How it helps.** Keeps voice audio on-device. No functional loss for offline voice typing and Voice Access.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Privacy-conscious / don't use voice | Disabled |
+| Use cloud dictation heavily | Enabled |
+| Mixed use | Disabled -- offline recognition still works |
+
+**Risks.** Cloud-powered voice features lose accuracy or stop working. Offline Windows speech / Voice Access is unaffected.
+
+**Reversible via.** Settings > Privacy & security > Speech > Online speech recognition (or set HasAccepted = 1).
+
+
 ### Tailored experiences
 
 `privacy.tailoredexp` &nbsp; **Recommended:** Disabled
@@ -685,6 +744,189 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Risks.** None functional. You stop seeing personalized Windows tips and suggestions.
 
 **Reversible via.** Set HKCU\Software\Microsoft\Windows\CurrentVersion\Privacy\TailoredExperiencesWithDiagnosticDataEnabled = 1 (Settings > Privacy & security > Diagnostics & feedback).
+
+## Debloat (ads, nags & background bloat)
+
+### "Finish setting up your device" nag
+
+`debloat.finishsetup` &nbsp; **Recommended:** Disabled
+
+**What it does.** The full-screen / notification SCOOBE prompts that nag you to set up OneDrive, a Microsoft account, or a Microsoft 365 subscription -- and resurface after feature updates. Controlled by UserProfileEngagement + a ContentDeliveryManager notification flag.
+
+**Why you'd change it.** It's a recurring nag screen, not a feature. Most users have already decided and don't want to be asked again.
+
+**How it helps.** Suppresses the post-update 'finish setup' interruption.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Annoyed by the setup nag | Disabled |
+| Want Windows' setup reminders | Enabled |
+| Managed/clean setup | Disabled |
+
+**Risks.** You won't be prompted to finish optional account/OneDrive setup. Some newer build variants add prompt types this doesn't fully cover.
+
+**Reversible via.** Settings > System > Notifications > 'Suggest ways to get the most out of Windows' (or set ScoobeSystemSettingEnabled = 1).
+
+
+### Edge startup boost & background mode
+
+`debloat.edge` &nbsp; **Recommended:** Disabled
+
+**What it does.** Two Microsoft Edge behaviors: 'startup boost' keeps Edge processes resident from boot, and 'background mode' keeps it running after every window is closed. Set via HKLM Edge enterprise policies that survive Edge updates.
+
+**Why you'd change it.** On a machine where Edge isn't the daily browser, these keep 150-500 MB of Edge resident for no benefit.
+
+**How it helps.** Edge stops pre-launching at boot and exits when you close it, freeing idle RAM/CPU. Edge still opens on demand.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Edge isn't your main browser | Disabled |
+| Edge is your daily driver and you want fast launches | Enabled |
+| Minimal background processes | Disabled |
+
+**Risks.** Edge cold-starts a little slower (no prelaunch). Does NOT block Edge or WebView2 -- apps that embed WebView2 keep working. Policy write needs one UAC prompt.
+
+**Reversible via.** Edge > Settings > System and performance (Startup boost / 'Continue running background extensions'), or delete the two Edge policy values.
+
+
+### File Explorer ad banners
+
+`debloat.explorerads` &nbsp; **Recommended:** Disabled
+
+**What it does.** The 'sync provider notifications' in File Explorer -- the OneDrive / Microsoft 365 upsell banners shown in the navigation pane and status bar. Single per-user Explorer\Advanced flag.
+
+**Why you'd change it.** They're advertising inside the file manager. Disabling them is purely cosmetic with no downside.
+
+**How it helps.** Removes the promo banners from File Explorer.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Dislike ads in Explorer | Disabled |
+| Want OneDrive sync prompts | Enabled |
+
+**Risks.** You won't see OneDrive/Office promotional banners. Genuine sync-status icons on files are unaffected.
+
+**Reversible via.** File Explorer > View > Options > View tab > 'Show sync provider notifications' (or set ShowSyncProviderNotifications = 1).
+
+
+### Lock screen tips, fun facts & ads
+
+`debloat.spotlight` &nbsp; **Recommended:** Disabled
+
+**What it does.** The Windows Spotlight overlay that shows 'fun facts', tips, and ad-like captions on the lock screen. Controlled by per-user ContentDeliveryManager flags.
+
+**Why you'd change it.** Many users find the lock-screen captions and tips intrusive or ad-like.
+
+**How it helps.** Removes the tips/ad overlay from the lock screen.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Dislike lock-screen tips/ads | Disabled |
+| Enjoy the Spotlight facts | Enabled |
+| Use a custom lock-screen image | Disabled |
+
+**Risks.** Only suppresses the tips/ads overlay. If your lock-screen background is set to 'Windows Spotlight', switch it to Picture/Slideshow in Settings for a full opt-out.
+
+**Reversible via.** Settings > Personalization > Lock screen (or delete the ContentDeliveryManager overlay values).
+
+
+### Start menu recommendations & recent files
+
+`debloat.startrecommend` &nbsp; **Recommended:** Disabled
+
+**What it does.** The Start menu 'Recommended' section: AI/Iris-driven app and web suggestions plus the list of recently opened files. Per-user Explorer\Advanced flags.
+
+**Why you'd change it.** The recommendations are often ads/suggestions, and the recent-files list is a privacy leak on a shared screen.
+
+**How it helps.** Quiets the Recommended section and stops surfacing recently opened files in Start/jump lists.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Privacy on a shared screen | Disabled |
+| Rely on recent files in Start | Enabled |
+| Minimal Start menu | Disabled |
+
+**Risks.** Recently opened files stop appearing in Start and jump lists. On Windows 11 Home the Recommended section can't be fully emptied -- this removes the suggestions/recents that it can.
+
+**Reversible via.** Settings > Personalization > Start (toggles for recommendations and recently opened items), or delete the two Explorer\Advanced values.
+
+
+### Suggested content & silent app installs
+
+`debloat.suggestedcontent` &nbsp; **Recommended:** Disabled
+
+**What it does.** Windows 11's 'suggested content' machinery: silently installed promo apps (the Candy-Crush-style installs), Start-menu app suggestions, and 'tips, tricks & suggestions' cards. All live under the per-user ContentDeliveryManager key.
+
+**Why you'd change it.** These are ads and unsolicited installs, not features. They cost disk, clutter Start, and re-appear after major updates.
+
+**How it helps.** Stops silent third-party app installs and removes Start/Settings suggestion cards.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Anyone who dislikes ads in the OS | Disabled |
+| Want Microsoft's app suggestions | Enabled |
+| Clean/minimal setup | Disabled |
+
+**Risks.** You stop seeing Microsoft's app/feature suggestions. No functional impact. Windows may re-enable some after a feature update -- tick Auto-apply to hold it.
+
+**Reversible via.** Settings > Personalization > Start and > Privacy > General toggles (or delete the ContentDeliveryManager values GamerGuardian set to 0).
+
+
+### Widgets / News and interests
+
+`debloat.widgets` &nbsp; **Recommended:** Disabled
+
+**What it does.** The Windows 11 Widgets board (the left-edge weather button) that opens a web-connected MSN feed and fetches data in the background. Disabled machine-wide via the HKLM Dsh policy plus the per-user taskbar button flag.
+
+**Why you'd change it.** It's a background web feed many users never open; the panel and its updater consume RAM/CPU and bandwidth.
+
+**How it helps.** Stops the Widgets process/feed and removes the taskbar button. Frees idle resources.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Never use Widgets | Disabled |
+| Use the weather/news board daily | Enabled |
+| Latency-sensitive gaming | Disabled |
+
+**Risks.** The Widgets board and its taskbar button disappear. The machine-wide policy write needs one UAC prompt.
+
+**Reversible via.** Settings > Personalization > Taskbar > Widgets (or delete the Dsh\AllowNewsAndInterests policy value).
+
+
+### Windows feedback request popups
+
+`debloat.feedback` &nbsp; **Recommended:** Disabled
+
+**What it does.** The periodic 'rate your experience' dialogs Windows pops. Controlled by the per-user Siuf\Rules\NumberOfSIUFInPeriod count (0 = never).
+
+**Why you'd change it.** On fresh installs these can fire frequently and interrupt you. Most users never want to be asked.
+
+**How it helps.** Stops the periodic feedback-request dialogs.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Don't want to be asked for feedback | Disabled |
+| Windows Insider who submits feedback | Enabled |
+
+**Risks.** Windows stops prompting for feedback. You can still open Feedback Hub manually any time. Telemetry level is unaffected.
+
+**Reversible via.** Settings > Privacy & security > Diagnostics & feedback > Feedback frequency (or delete NumberOfSIUFInPeriod).
 
 ## Network
 

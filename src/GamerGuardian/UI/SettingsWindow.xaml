@@ -10,6 +10,62 @@
         WindowBackdropType="Mica"
         ExtendsContentIntoTitleBar="True"
         WindowCornerPreference="Round">
+    <ui:FluentWindow.Resources>
+        <!-- Shared row template for the Debloat tab's two sections (same shape
+             as the inline toggle templates on the other tabs). -->
+        <DataTemplate x:Key="ToggleRowTemplate">
+            <ui:Card Padding="16" Margin="0,0,0,8">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                            <Border Visibility="{Binding RebootBadgeVisibility}"
+                                    Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                                    CornerRadius="3" Padding="6,1"
+                                    HorizontalAlignment="Left"
+                                    Margin="0,4,0,0">
+                                <TextBlock Text="reboot required"
+                                           Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                           FontSize="10" FontWeight="SemiBold"/>
+                            </Border>
+                            <TextBlock Text="{Binding Description}"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       FontSize="12" Margin="0,3,0,0"
+                                       TextWrapping="Wrap"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                <TextBlock Text="{Binding CurrentText}"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                           FontSize="11" Margin="0,0,12,0"/>
+                                <TextBlock Text="{Binding DefaultText}"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                           FontSize="11"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Vertical">
+                            <CheckBox Content="Monitor" IsChecked="{Binding Monitor}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
+                                <TextBlock Text="Want:" Margin="0,4,8,0"/>
+                                <RadioButton GroupName="{Binding GroupName}" Content="{Binding OnLabel}" IsChecked="{Binding DesiredOn}" Margin="0,0,8,0"/>
+                                <RadioButton GroupName="{Binding GroupName}" Content="{Binding OffLabel}" IsChecked="{Binding DesiredOff}"/>
+                            </StackPanel>
+                            <CheckBox Content="Auto-apply silently" IsChecked="{Binding AutoApply}"/>
+                        </StackPanel>
+                    </Grid>
+                    <Expander Header="Learn more" Margin="0,8,0,0"
+                              Visibility="{Binding LearnMoreVisibility}">
+                        <TextBlock Text="{Binding LearnMoreContent}"
+                                   TextWrapping="Wrap" FontSize="12"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Margin="8,8,8,8"/>
+                    </Expander>
+                </StackPanel>
+            </ui:Card>
+        </DataTemplate>
+    </ui:FluentWindow.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -284,6 +340,32 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <TabItem Header="Debloat"
+                         HorizontalContentAlignment="Stretch"
+                         VerticalContentAlignment="Stretch">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,8,8,0">
+                        <StackPanel>
+                            <ui:Card Padding="16" Margin="0,0,0,8">
+                                <TextBlock Text="Turn off Windows 11's ads, nags, suggested content, and idle background features. Every toggle is reversible and off by default until you opt in. None of these affect Windows Update, security, or networking."
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                            </ui:Card>
+
+                            <TextBlock Text="Ads, nags &amp; suggested content"
+                                       FontWeight="SemiBold" FontSize="14"
+                                       Margin="2,4,0,6"/>
+                            <ItemsControl x:Name="DebloatAdsList" Margin="0,0,0,8"
+                                          ItemTemplate="{StaticResource ToggleRowTemplate}"/>
+
+                            <TextBlock Text="Background bloat (needs admin to apply)"
+                                       FontWeight="SemiBold" FontSize="14"
+                                       Margin="2,8,0,6"/>
+                            <ItemsControl x:Name="DebloatBackgroundList" Margin="0,0,0,8"
+                                          ItemTemplate="{StaticResource ToggleRowTemplate}"/>
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>
