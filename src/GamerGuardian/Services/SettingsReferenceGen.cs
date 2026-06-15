@@ -25,10 +25,11 @@ public static class SettingsReferenceGen
 
         bool IsGlobal(string id) =>
             !id.StartsWith("service:") && !id.StartsWith("ai.app:") && !id.StartsWith("ai.")
-            && !id.StartsWith("privacy.") && !id.StartsWith("network.");
+            && !id.StartsWith("privacy.") && !id.StartsWith("network.") && !id.StartsWith("debloat.");
 
         var globals = Order(SettingDocsCatalog.All.Where(d => IsGlobal(d.SettingId)));
         var privacy = Order(SettingDocsCatalog.All.Where(d => d.SettingId.StartsWith("privacy.")));
+        var debloat = Order(SettingDocsCatalog.All.Where(d => d.SettingId.StartsWith("debloat.")));
         var network = Order(SettingDocsCatalog.All.Where(d => d.SettingId.StartsWith("network.")));
         var ai = Order(SettingDocsCatalog.All.Where(d => d.SettingId.StartsWith("ai.") && !d.SettingId.StartsWith("ai.app:")));
         var aiApps = Order(SettingDocsCatalog.All.Where(d => d.SettingId.StartsWith("ai.app:")));
@@ -36,6 +37,7 @@ public static class SettingsReferenceGen
 
         Toc(sb, "Global gaming + display", globals);
         Toc(sb, "Privacy", privacy);
+        Toc(sb, "Debloat (ads, nags & background bloat)", debloat);
         Toc(sb, "Network", network);
         Toc(sb, "Windows AI policies", ai);
         Toc(sb, "Windows AI UWP packages", aiApps);
@@ -46,6 +48,7 @@ public static class SettingsReferenceGen
         sb.AppendLine();
         Section(sb, "Global gaming + display", globals);
         Section(sb, "Privacy", privacy);
+        Section(sb, "Debloat (ads, nags & background bloat)", debloat);
         Section(sb, "Network", network);
         Section(sb, "Windows AI policies", ai);
         Section(sb, "Windows AI UWP packages", aiApps);

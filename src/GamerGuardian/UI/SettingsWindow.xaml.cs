@@ -31,6 +31,8 @@ public partial class SettingsWindow : FluentWindow
     public ObservableCollection<DisplayRow> DisplayRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> GlobalToggleRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> PrivacyToggleRows { get; } = new();
+    public ObservableCollection<GlobalToggleRow> DebloatAdsRows { get; } = new();
+    public ObservableCollection<GlobalToggleRow> DebloatBackgroundRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> NetworkToggleRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> PowerToggleRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> WindowsAiRowsCollection { get; } = new();
@@ -78,6 +80,8 @@ public partial class SettingsWindow : FluentWindow
         DisplaysList.ItemsSource = DisplayRows;
         GlobalTogglesList.ItemsSource = GlobalToggleRows;
         PrivacyTogglesList.ItemsSource = PrivacyToggleRows;
+        DebloatAdsList.ItemsSource = DebloatAdsRows;
+        DebloatBackgroundList.ItemsSource = DebloatBackgroundRows;
         NetworkTogglesList.ItemsSource = NetworkToggleRows;
         PowerTogglesList.ItemsSource = PowerToggleRows;
         ServicesList.ItemsSource = ServiceRows;
@@ -89,6 +93,7 @@ public partial class SettingsWindow : FluentWindow
         LoadServices();
         LoadWindowsAi();
         LoadPrivacy();
+        LoadDebloat();
         LoadNetwork();
         LoadCpuTabs();
         UpdatePendingStatus();
@@ -418,6 +423,8 @@ public partial class SettingsWindow : FluentWindow
         SyncIfUnmonitored(g.TailoredExperiences, TailoredExperiencesMonitor.ReadCurrent);
         SyncIfUnmonitored(g.Cdp, CdpMonitor.ReadCurrent);
         SyncIfUnmonitored(g.ActivityHistory, ActivityHistoryMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.OnlineSpeech, OnlineSpeechMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.InkingTyping, InkingTypingMonitor.ReadCurrent);
 
         PrivacyToggleRows.Add(new GlobalToggleRow(
             name: "Advertising ID",
@@ -458,6 +465,124 @@ public partial class SettingsWindow : FluentWindow
             pref: g.ActivityHistory, groupName: "pv_activity",
             onPrefChanged: OnRowPrefChanged,
             settingId: "privacy.activityhistory"));
+
+        PrivacyToggleRows.Add(new GlobalToggleRow(
+            name: "Online (cloud) speech recognition",
+            description: "When on, Windows sends your voice audio to Microsoft for processing. Offline recognition / Voice Access still work with this off.",
+            currentText: $"Current: {OnOffText(SafeRead(OnlineSpeechMonitor.ReadCurrent))}",
+            defaultText: "Default: Enabled",
+            onLabel: "Enabled", offLabel: "Disabled",
+            pref: g.OnlineSpeech, groupName: "pv_speech",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "privacy.speech"));
+
+        PrivacyToggleRows.Add(new GlobalToggleRow(
+            name: "Inking & typing personalization",
+            description: "Windows building (and uploading) a personal dictionary from your handwriting and contacts. Distinct from the Windows AI tab's typing-insights toggle.",
+            currentText: $"Current: {OnOffText(SafeRead(InkingTypingMonitor.ReadCurrent))}",
+            defaultText: "Default: Enabled",
+            onLabel: "Enabled", offLabel: "Disabled",
+            pref: g.InkingTyping, groupName: "pv_inking",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "privacy.inking"));
+    }
+
+    private void LoadDebloat()
+    {
+        DebloatAdsRows.Clear();
+        DebloatBackgroundRows.Clear();
+        var g = _draft.Global;
+
+        SyncIfUnmonitored(g.SuggestedContent, SuggestedContentMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.LockScreenSpotlight, LockScreenSpotlightMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.FinishSetupNag, FinishSetupNagMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.StartRecommendations, StartRecommendationsMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.ExplorerAds, ExplorerAdsMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.FeedbackNag, FeedbackNagMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.Widgets, WidgetsMonitor.ReadCurrent);
+        SyncIfUnmonitored(g.EdgeBackground, EdgeBackgroundMonitor.ReadCurrent);
+
+        // ---- Ads, nags & suggested content (all HKCU, no UAC) ----
+        DebloatAdsRows.Add(new GlobalToggleRow(
+            name: "Suggested content & silent app installs",
+            description: "Silently-installed promo apps, Start-menu app suggestions, and 'tips & suggestions' cards. Disabled = no ads / no surprise installs.",
+            currentText: $"Current: {OnOffText(SafeRead(SuggestedContentMonitor.ReadCurrent))}",
+            defaultText: "Default: Enabled",
+            onLabel: "Enabled", offLabel: "Disabled",
+            pref: g.SuggestedContent, groupName: "db_suggested",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "debloat.suggestedcontent"));
+
+        DebloatAdsRows.Add(new GlobalToggleRow(
+            name: "Lock screen tips, fun facts & ads",
+            description: "The Windows Spotlight overlay that shows tips and ad-like captions on the lock screen.",
+            currentText: $"Current: {OnOffText(SafeRead(LockScreenSpotlightMonitor.ReadCurrent))}",
+            defaultText: "Default: Enabled",
+            onLabel: "Enabled", offLabel: "Disabled",
+            pref: g.LockScreenSpotlight, groupName: "db_spotlight",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "debloat.spotlight"));
+
+        DebloatAdsRows.Add(new GlobalToggleRow(
+            name: "\"Finish setting up your device\" nag",
+            description: "The post-update prompts to set up OneDrive / a Microsoft account / Microsoft 365.",
+            currentText: $"Current: {OnOffText(SafeRead(FinishSetupNagMonitor.ReadCurrent))}",
+            defaultText: "Default: Enabled",
+            onLabel: "Enabled", offLabel: "Disabled",
+            pref: g.FinishSetupNag, groupName: "db_finishsetup",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "debloat.finishsetup"));
+
+        DebloatAdsRows.Add(new GlobalToggleRow(
+            name: "Start menu recommendations & recent files",
+            description: "AI/Iris app & web suggestions plus recently opened files in the Start 'Recommended' section.",
+            currentText: $"Current: {OnOffText(SafeRead(StartRecommendationsMonitor.ReadCurrent))}",
+            defaultText: "Default: Enabled",
+            onLabel: "Enabled", offLabel: "Disabled",
+            pref: g.StartRecommendations, groupName: "db_startrec",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "debloat.startrecommend"));
+
+        DebloatAdsRows.Add(new GlobalToggleRow(
+            name: "File Explorer ad banners",
+            description: "The OneDrive / Microsoft 365 upsell banners shown in the File Explorer nav pane and status bar.",
+            currentText: $"Current: {OnOffText(SafeRead(ExplorerAdsMonitor.ReadCurrent))}",
+            defaultText: "Default: Enabled",
+            onLabel: "Enabled", offLabel: "Disabled",
+            pref: g.ExplorerAds, groupName: "db_explorerads",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "debloat.explorerads"));
+
+        DebloatAdsRows.Add(new GlobalToggleRow(
+            name: "Windows feedback request popups",
+            description: "The periodic 'rate your experience' dialogs. Disabled = Windows never asks (Feedback Hub still opens manually).",
+            currentText: $"Current: {OnOffText(SafeRead(FeedbackNagMonitor.ReadCurrent))}",
+            defaultText: "Default: Enabled",
+            onLabel: "Enabled", offLabel: "Disabled",
+            pref: g.FeedbackNag, groupName: "db_feedback",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "debloat.feedback"));
+
+        // ---- Background bloat (HKLM policy -> one UAC prompt to apply) ----
+        DebloatBackgroundRows.Add(new GlobalToggleRow(
+            name: "Widgets / News and interests",
+            description: "The left-edge weather button and its background MSN web feed. Disabling needs admin (machine-wide policy) and removes the taskbar button.",
+            currentText: $"Current: {OnOffText(SafeRead(WidgetsMonitor.ReadCurrent))}",
+            defaultText: "Default: Enabled",
+            onLabel: "Enabled", offLabel: "Disabled",
+            pref: g.Widgets, groupName: "db_widgets",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "debloat.widgets"));
+
+        DebloatBackgroundRows.Add(new GlobalToggleRow(
+            name: "Edge startup boost & background mode",
+            description: "Keeps Edge resident from boot and after you close it. Disabling frees idle RAM/CPU; Edge still opens on demand and WebView2 keeps working. Needs admin.",
+            currentText: $"Current: {OnOffText(SafeRead(EdgeBackgroundMonitor.ReadCurrent))}",
+            defaultText: "Default: Enabled",
+            onLabel: "Enabled", offLabel: "Disabled",
+            pref: g.EdgeBackground, groupName: "db_edge",
+            onPrefChanged: OnRowPrefChanged,
+            settingId: "debloat.edge"));
     }
 
     private void LoadNetwork()
@@ -962,6 +1087,7 @@ public partial class SettingsWindow : FluentWindow
         LoadServices();
         LoadWindowsAi();
         LoadPrivacy();
+        LoadDebloat();
         LoadNetwork();
         LoadCpuTabs();
         UpdatePendingStatus();
@@ -1060,12 +1186,16 @@ public partial class SettingsWindow : FluentWindow
             DisplaysList.ItemsSource = null;
             GlobalTogglesList.ItemsSource = null;
             PrivacyTogglesList.ItemsSource = null;
+            DebloatAdsList.ItemsSource = null;
+            DebloatBackgroundList.ItemsSource = null;
             NetworkTogglesList.ItemsSource = null;
             PowerTogglesList.ItemsSource = null;
             ServicesList.ItemsSource = null;
             DisplayRows.Clear();
             GlobalToggleRows.Clear();
             PrivacyToggleRows.Clear();
+            DebloatAdsRows.Clear();
+            DebloatBackgroundRows.Clear();
             NetworkToggleRows.Clear();
             PowerToggleRows.Clear();
             ServiceRows.Clear();
@@ -1119,6 +1249,7 @@ public partial class SettingsWindow : FluentWindow
         LoadServices();
         LoadWindowsAi();
         LoadPrivacy();
+        LoadDebloat();
         LoadNetwork();
         LoadCpuTabs();
 

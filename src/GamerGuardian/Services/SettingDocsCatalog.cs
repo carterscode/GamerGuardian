@@ -440,6 +440,150 @@ public static class SettingDocsCatalog
             Risks: "Slightly higher idle power draw. On laptops on battery, measurably worse battery life. Contested per-hardware -- some adapters are unaffected either way. Needs a reboot to apply.",
             ReversibleVia: "Clear the 0x18 bits from PnPCapabilities under the adapter's class instance, or check 'Allow the computer to turn off this device' in Device Manager > the adapter > Power Management (GamerGuardian clears the bits across all adapters when you choose Default)."),
 
+        // ---- Privacy data collection --------------------------------------
+
+        ["privacy.speech"] = new(
+            SettingId: "privacy.speech",
+            DisplayName: "Online (cloud) speech recognition",
+            What: "When enabled, Windows sends your voice audio to Microsoft's cloud for recognition (used by some dictation and voice features). Controlled by the per-user HasAccepted flag.",
+            Why: "It's a privacy trade-off: your audio leaves the machine. Offline recognition / Voice Access keeps working without it.",
+            HowItHelps: "Keeps voice audio on-device. No functional loss for offline voice typing and Voice Access.",
+            Scenarios: Scenarios(
+                ("Privacy-conscious / don't use voice", "Disabled"),
+                ("Use cloud dictation heavily", "Enabled"),
+                ("Mixed use", "Disabled -- offline recognition still works")),
+            Recommended: "Disabled (privacy)",
+            Risks: "Cloud-powered voice features lose accuracy or stop working. Offline Windows speech / Voice Access is unaffected.",
+            ReversibleVia: "Settings > Privacy & security > Speech > Online speech recognition (or set HasAccepted = 1)."),
+
+        ["privacy.inking"] = new(
+            SettingId: "privacy.inking",
+            DisplayName: "Inking & typing personalization",
+            What: "Windows building a personal dictionary from your handwriting samples and contact names to improve suggestions -- and uploading some of it. Covers the master AcceptedPrivacyPolicy opt-in plus implicit ink collection and contact harvesting. (The typing-text side is the separate 'Typing / input insights' toggle on the Windows AI tab.)",
+            Why: "It's a data-collection feature; turning it off stops the harvesting. Autocorrect still works, just less personalized.",
+            HowItHelps: "Stops handwriting/contact data collection. Minimal day-to-day impact.",
+            Scenarios: Scenarios(
+                ("Privacy-conscious", "Disabled"),
+                ("Heavy pen / handwriting user who wants better recognition", "Enabled"),
+                ("Typical keyboard user", "Disabled")),
+            Recommended: "Disabled (privacy)",
+            Risks: "Handwriting recognition and word suggestions become less personalized. No functional breakage.",
+            ReversibleVia: "Settings > Privacy & security > Inking & typing personalization (or set AcceptedPrivacyPolicy = 1)."),
+
+        // ---- Debloat: ads, nags & suggested content -----------------------
+
+        ["debloat.suggestedcontent"] = new(
+            SettingId: "debloat.suggestedcontent",
+            DisplayName: "Suggested content & silent app installs",
+            What: "Windows 11's 'suggested content' machinery: silently installed promo apps (the Candy-Crush-style installs), Start-menu app suggestions, and 'tips, tricks & suggestions' cards. All live under the per-user ContentDeliveryManager key.",
+            Why: "These are ads and unsolicited installs, not features. They cost disk, clutter Start, and re-appear after major updates.",
+            HowItHelps: "Stops silent third-party app installs and removes Start/Settings suggestion cards.",
+            Scenarios: Scenarios(
+                ("Anyone who dislikes ads in the OS", "Disabled"),
+                ("Want Microsoft's app suggestions", "Enabled"),
+                ("Clean/minimal setup", "Disabled")),
+            Recommended: "Disabled",
+            Risks: "You stop seeing Microsoft's app/feature suggestions. No functional impact. Windows may re-enable some after a feature update -- tick Auto-apply to hold it.",
+            ReversibleVia: "Settings > Personalization > Start and > Privacy > General toggles (or delete the ContentDeliveryManager values GamerGuardian set to 0)."),
+
+        ["debloat.spotlight"] = new(
+            SettingId: "debloat.spotlight",
+            DisplayName: "Lock screen tips, fun facts & ads",
+            What: "The Windows Spotlight overlay that shows 'fun facts', tips, and ad-like captions on the lock screen. Controlled by per-user ContentDeliveryManager flags.",
+            Why: "Many users find the lock-screen captions and tips intrusive or ad-like.",
+            HowItHelps: "Removes the tips/ad overlay from the lock screen.",
+            Scenarios: Scenarios(
+                ("Dislike lock-screen tips/ads", "Disabled"),
+                ("Enjoy the Spotlight facts", "Enabled"),
+                ("Use a custom lock-screen image", "Disabled")),
+            Recommended: "Disabled",
+            Risks: "Only suppresses the tips/ads overlay. If your lock-screen background is set to 'Windows Spotlight', switch it to Picture/Slideshow in Settings for a full opt-out.",
+            ReversibleVia: "Settings > Personalization > Lock screen (or delete the ContentDeliveryManager overlay values)."),
+
+        ["debloat.finishsetup"] = new(
+            SettingId: "debloat.finishsetup",
+            DisplayName: "\"Finish setting up your device\" nag",
+            What: "The full-screen / notification SCOOBE prompts that nag you to set up OneDrive, a Microsoft account, or a Microsoft 365 subscription -- and resurface after feature updates. Controlled by UserProfileEngagement + a ContentDeliveryManager notification flag.",
+            Why: "It's a recurring nag screen, not a feature. Most users have already decided and don't want to be asked again.",
+            HowItHelps: "Suppresses the post-update 'finish setup' interruption.",
+            Scenarios: Scenarios(
+                ("Annoyed by the setup nag", "Disabled"),
+                ("Want Windows' setup reminders", "Enabled"),
+                ("Managed/clean setup", "Disabled")),
+            Recommended: "Disabled",
+            Risks: "You won't be prompted to finish optional account/OneDrive setup. Some newer build variants add prompt types this doesn't fully cover.",
+            ReversibleVia: "Settings > System > Notifications > 'Suggest ways to get the most out of Windows' (or set ScoobeSystemSettingEnabled = 1)."),
+
+        ["debloat.startrecommend"] = new(
+            SettingId: "debloat.startrecommend",
+            DisplayName: "Start menu recommendations & recent files",
+            What: "The Start menu 'Recommended' section: AI/Iris-driven app and web suggestions plus the list of recently opened files. Per-user Explorer\\Advanced flags.",
+            Why: "The recommendations are often ads/suggestions, and the recent-files list is a privacy leak on a shared screen.",
+            HowItHelps: "Quiets the Recommended section and stops surfacing recently opened files in Start/jump lists.",
+            Scenarios: Scenarios(
+                ("Privacy on a shared screen", "Disabled"),
+                ("Rely on recent files in Start", "Enabled"),
+                ("Minimal Start menu", "Disabled")),
+            Recommended: "Disabled",
+            Risks: "Recently opened files stop appearing in Start and jump lists. On Windows 11 Home the Recommended section can't be fully emptied -- this removes the suggestions/recents that it can.",
+            ReversibleVia: "Settings > Personalization > Start (toggles for recommendations and recently opened items), or delete the two Explorer\\Advanced values."),
+
+        ["debloat.explorerads"] = new(
+            SettingId: "debloat.explorerads",
+            DisplayName: "File Explorer ad banners",
+            What: "The 'sync provider notifications' in File Explorer -- the OneDrive / Microsoft 365 upsell banners shown in the navigation pane and status bar. Single per-user Explorer\\Advanced flag.",
+            Why: "They're advertising inside the file manager. Disabling them is purely cosmetic with no downside.",
+            HowItHelps: "Removes the promo banners from File Explorer.",
+            Scenarios: Scenarios(
+                ("Dislike ads in Explorer", "Disabled"),
+                ("Want OneDrive sync prompts", "Enabled")),
+            Recommended: "Disabled",
+            Risks: "You won't see OneDrive/Office promotional banners. Genuine sync-status icons on files are unaffected.",
+            ReversibleVia: "File Explorer > View > Options > View tab > 'Show sync provider notifications' (or set ShowSyncProviderNotifications = 1)."),
+
+        ["debloat.feedback"] = new(
+            SettingId: "debloat.feedback",
+            DisplayName: "Windows feedback request popups",
+            What: "The periodic 'rate your experience' dialogs Windows pops. Controlled by the per-user Siuf\\Rules\\NumberOfSIUFInPeriod count (0 = never).",
+            Why: "On fresh installs these can fire frequently and interrupt you. Most users never want to be asked.",
+            HowItHelps: "Stops the periodic feedback-request dialogs.",
+            Scenarios: Scenarios(
+                ("Don't want to be asked for feedback", "Disabled"),
+                ("Windows Insider who submits feedback", "Enabled")),
+            Recommended: "Disabled",
+            Risks: "Windows stops prompting for feedback. You can still open Feedback Hub manually any time. Telemetry level is unaffected.",
+            ReversibleVia: "Settings > Privacy & security > Diagnostics & feedback > Feedback frequency (or delete NumberOfSIUFInPeriod)."),
+
+        // ---- Debloat: background bloat ------------------------------------
+
+        ["debloat.widgets"] = new(
+            SettingId: "debloat.widgets",
+            DisplayName: "Widgets / News and interests",
+            What: "The Windows 11 Widgets board (the left-edge weather button) that opens a web-connected MSN feed and fetches data in the background. Disabled machine-wide via the HKLM Dsh policy plus the per-user taskbar button flag.",
+            Why: "It's a background web feed many users never open; the panel and its updater consume RAM/CPU and bandwidth.",
+            HowItHelps: "Stops the Widgets process/feed and removes the taskbar button. Frees idle resources.",
+            Scenarios: Scenarios(
+                ("Never use Widgets", "Disabled"),
+                ("Use the weather/news board daily", "Enabled"),
+                ("Latency-sensitive gaming", "Disabled")),
+            Recommended: "Disabled",
+            Risks: "The Widgets board and its taskbar button disappear. The machine-wide policy write needs one UAC prompt.",
+            ReversibleVia: "Settings > Personalization > Taskbar > Widgets (or delete the Dsh\\AllowNewsAndInterests policy value)."),
+
+        ["debloat.edge"] = new(
+            SettingId: "debloat.edge",
+            DisplayName: "Edge startup boost & background mode",
+            What: "Two Microsoft Edge behaviors: 'startup boost' keeps Edge processes resident from boot, and 'background mode' keeps it running after every window is closed. Set via HKLM Edge enterprise policies that survive Edge updates.",
+            Why: "On a machine where Edge isn't the daily browser, these keep 150-500 MB of Edge resident for no benefit.",
+            HowItHelps: "Edge stops pre-launching at boot and exits when you close it, freeing idle RAM/CPU. Edge still opens on demand.",
+            Scenarios: Scenarios(
+                ("Edge isn't your main browser", "Disabled"),
+                ("Edge is your daily driver and you want fast launches", "Enabled"),
+                ("Minimal background processes", "Disabled")),
+            Recommended: "Disabled",
+            Risks: "Edge cold-starts a little slower (no prelaunch). Does NOT block Edge or WebView2 -- apps that embed WebView2 keep working. Policy write needs one UAC prompt.",
+            ReversibleVia: "Edge > Settings > System and performance (Startup boost / 'Continue running background extensions'), or delete the two Edge policy values."),
+
         // ---- Windows AI ---------------------------------------------------
 
         ["ai.copilot"] = new(
@@ -679,6 +823,20 @@ public static class SettingDocsCatalog
             Recommended: "Remove if you don't use Windows AI features",
             Risks: "AI Settings panel disappears. Re-provisioned by Windows Update.",
             ReversibleVia: "Install via Microsoft Store or wait for Windows Update to re-provision."),
+
+        ["Microsoft.MicrosoftOfficeHub"] = new(
+            SettingId: "ai.app:Microsoft.MicrosoftOfficeHub",
+            DisplayName: "Microsoft 365 Copilot (launcher app)",
+            What: "The standalone 'Microsoft 365 Copilot' Store app -- formerly the 'Office' / 'Microsoft 365' hub launcher (package Microsoft.MicrosoftOfficeHub). Microsoft renamed it and auto-pushed it onto Windows 11 machines in 2025, prompting a wave of 'why is this here' complaints. It's a thin web wrapper that promotes Copilot and the Office suite; it is NOT Word/Excel/PowerPoint themselves.",
+            Why: "If you don't use the launcher tile -- and most people open Word/Excel directly -- it's dead weight that re-pins itself to Start and nags about Copilot. Removing it reclaims the tile and the background app.",
+            HowItHelps: "Removes the launcher from Start and stops its Copilot promotion. Your actual Office programs keep working.",
+            Scenarios: Scenarios(
+                ("Open Word/Excel directly, never use the hub", "Remove"),
+                ("Use the Microsoft 365 launcher to find docs", "Don't remove"),
+                ("Worried Windows Update re-pins it", "Remove + tick Auto-apply")),
+            Recommended: "Remove (it does not affect installed Office apps)",
+            Risks: "The Microsoft 365 launcher tile disappears. Windows Update / Store may re-provision it after major updates -- the AutoApply tick re-removes it. Reinstall via the Microsoft Store ('Microsoft 365 Copilot').",
+            ReversibleVia: "Install 'Microsoft 365 Copilot' from the Microsoft Store."),
     };
 
     // ---- Services (one entry per ServiceCatalog.Name) ---------------------
@@ -828,6 +986,66 @@ public static class SettingDocsCatalog
             recommended: "Disabled (Manual if you run Insider builds)",
             risks: "If you are an Insider or plan to enroll, leave it on -- with it disabled, the Insider Program settings page won't enroll or flight new builds. Re-enable before joining.",
             reversibleVia: "Set-Service -Name wisvc -StartupType Manual"),
+
+        ["SEMgrSvc"] = SvcRec(
+            "SEMgrSvc",
+            "Payments and NFC/SE Manager",
+            "Manages tap-to-pay and the NFC secure element used for contactless payments.",
+            "A gaming desktop almost never has NFC payment hardware, so this service has nothing to manage.",
+            "Removes an idle background service on machines without NFC.",
+            recommended: "Disabled (if you have no NFC reader on this PC)",
+            risks: "If you do use tap-to-pay / NFC on this machine (some laptops), leave it on -- payments and NFC apps will fail without it.",
+            reversibleVia: "Set-Service -Name SEMgrSvc -StartupType Manual"),
+
+        ["PhoneSvc"] = SvcRec(
+            "PhoneSvc",
+            "Phone Service",
+            "Manages the telephony/cellular device state for machines with a cellular modem or phone-calling integration.",
+            "On a desktop with no cellular hardware this service is idle.",
+            "Removes an idle background service on non-cellular machines.",
+            recommended: "Disabled (no cellular hardware) / Manual otherwise",
+            risks: "If you make calls through Windows or use a cellular modem, leave it on.",
+            reversibleVia: "Set-Service -Name PhoneSvc -StartupType Manual"),
+
+        ["stisvc"] = SvcRec(
+            "stisvc",
+            "Windows Image Acquisition (WIA)",
+            "Provides image-acquisition services for scanners and digital still cameras.",
+            "If you don't own a scanner or a WIA-class camera, nothing ever calls this service.",
+            "Removes an idle service on machines with no imaging hardware.",
+            recommended: "Disabled (no scanner/camera) / Manual otherwise",
+            risks: "Scanning software and some camera-import flows will fail to acquire images with this disabled. Re-enable before scanning.",
+            reversibleVia: "Set-Service -Name stisvc -StartupType Manual"),
+
+        ["WpcMonSvc"] = SvcRec(
+            "WpcMonSvc",
+            "Parental Controls",
+            "Enforces Microsoft Family Safety parental-control restrictions (time limits, content filters).",
+            "If you don't have child accounts or Family Safety configured on this PC, the service has nothing to enforce.",
+            "Removes an idle service on machines with no parental controls.",
+            recommended: "Disabled (no Family Safety on this PC)",
+            risks: "If a child account on this PC relies on Family Safety enforcement, do NOT disable -- restrictions would stop applying.",
+            reversibleVia: "Set-Service -Name WpcMonSvc -StartupType Manual"),
+
+        ["AssignedAccessManagerSvc"] = SvcRec(
+            "AssignedAccessManagerSvc",
+            "Kiosk Mode (Assigned Access)",
+            "Backs single-app 'kiosk' / assigned-access mode used on shared or public terminals.",
+            "A personal gaming PC is not a kiosk, so this service is unused.",
+            "Removes an idle service that personal machines never use.",
+            recommended: "Disabled",
+            risks: "Only relevant if you actually configure Assigned Access / kiosk mode -- rare on a home PC.",
+            reversibleVia: "Set-Service -Name AssignedAccessManagerSvc -StartupType Manual"),
+
+        ["TrkWks"] = SvcRec(
+            "TrkWks",
+            "Distributed Link Tracking Client",
+            "Maintains links between NTFS files when their targets move across volumes or a domain (e.g. keeping a shortcut valid after the file moves).",
+            "Runs automatically but is rarely exercised on a standalone home PC; most users never notice it being off.",
+            "Removes a small always-on background service.",
+            recommended: "Disabled (Manual if you rely on shortcut auto-repair across drives)",
+            risks: "Shortcuts/links won't auto-repair if their target moves between volumes. Minor and rarely noticed.",
+            reversibleVia: "Set-Service -Name TrkWks -StartupType Automatic"),
 
         ["RemoteAccess"] = SvcRec(
             "RemoteAccess",

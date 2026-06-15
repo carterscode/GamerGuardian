@@ -35,7 +35,20 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 - [Activity History / Timeline](#activity-history---timeline) (`privacy.activityhistory`)
 - [Advertising ID](#advertising-id) (`privacy.advertisingid`)
 - [Cross-Device Platform (CDP)](#cross-device-platform-cdp) (`privacy.cdp`)
+- [Inking & typing personalization](#inking--typing-personalization) (`privacy.inking`)
+- [Online (cloud) speech recognition](#online-cloud-speech-recognition) (`privacy.speech`)
 - [Tailored experiences](#tailored-experiences) (`privacy.tailoredexp`)
+
+**Debloat (ads, nags & background bloat)**
+
+- ["Finish setting up your device" nag](#finish-setting-up-your-device-nag) (`debloat.finishsetup`)
+- [Edge startup boost & background mode](#edge-startup-boost--background-mode) (`debloat.edge`)
+- [File Explorer ad banners](#file-explorer-ad-banners) (`debloat.explorerads`)
+- [Lock screen tips, fun facts & ads](#lock-screen-tips-fun-facts--ads) (`debloat.spotlight`)
+- [Start menu recommendations & recent files](#start-menu-recommendations--recent-files) (`debloat.startrecommend`)
+- [Suggested content & silent app installs](#suggested-content--silent-app-installs) (`debloat.suggestedcontent`)
+- [Widgets / News and interests](#widgets---news-and-interests) (`debloat.widgets`)
+- [Windows feedback request popups](#windows-feedback-request-popups) (`debloat.feedback`)
 
 **Network**
 
@@ -56,6 +69,7 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 
 **Windows AI UWP packages**
 
+- [Microsoft 365 Copilot (launcher app)](#microsoft-365-copilot-launcher-app) (`ai.app:Microsoft.MicrosoftOfficeHub`)
 - [Microsoft Copilot (UWP)](#microsoft-copilot-uwp) (`ai.app:Microsoft.Copilot`)
 - [Windows AI Copilot Provider](#windows-ai-copilot-provider) (`ai.app:Microsoft.Windows.Ai.Copilot.Provider`)
 - [Windows AI Experience](#windows-ai-experience) (`ai.app:MicrosoftWindows.Client.AIX`)
@@ -65,12 +79,18 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 - [Agent Activation Runtime Service](#agent-activation-runtime-service) (`service:AarSvc`)
 - [Connected User Experiences and Telemetry](#connected-user-experiences-and-telemetry) (`service:DiagTrack`)
 - [Delivery Optimization](#delivery-optimization) (`service:DoSvc`)
+- [Distributed Link Tracking Client](#distributed-link-tracking-client) (`service:TrkWks`)
 - [Downloaded Maps Manager](#downloaded-maps-manager) (`service:MapsBroker`)
+- [Kiosk Mode (Assigned Access)](#kiosk-mode-assigned-access) (`service:AssignedAccessManagerSvc`)
+- [Parental Controls](#parental-controls) (`service:WpcMonSvc`)
+- [Payments and NFC/SE Manager](#payments-and-nfc-se-manager) (`service:SEMgrSvc`)
+- [Phone Service](#phone-service) (`service:PhoneSvc`)
 - [Retail Demo Service](#retail-demo-service) (`service:RetailDemo`)
 - [Routing and Remote Access](#routing-and-remote-access) (`service:RemoteAccess`)
 - [Superfetch / SysMain](#superfetch---sysmain) (`service:SysMain`)
 - [Windows AI Fabric Service](#windows-ai-fabric-service) (`service:WSAIFabricSvc`)
 - [Windows Error Reporting Service](#windows-error-reporting-service) (`service:WerSvc`)
+- [Windows Image Acquisition (WIA)](#windows-image-acquisition-wia) (`service:stisvc`)
 - [Windows Insider Service](#windows-insider-service) (`service:wisvc`)
 - [Windows Search](#windows-search) (`service:WSearch`)
 - [Xbox Accessory Management](#xbox-accessory-management) (`service:XboxGipSvc`)
@@ -657,6 +677,52 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Reversible via.** Delete EnableCdp from HKLM\SOFTWARE\Policies\Microsoft\Windows\System to restore the Windows default.
 
 
+### Inking & typing personalization
+
+`privacy.inking` &nbsp; **Recommended:** Disabled (privacy)
+
+**What it does.** Windows building a personal dictionary from your handwriting samples and contact names to improve suggestions -- and uploading some of it. Covers the master AcceptedPrivacyPolicy opt-in plus implicit ink collection and contact harvesting. (The typing-text side is the separate 'Typing / input insights' toggle on the Windows AI tab.)
+
+**Why you'd change it.** It's a data-collection feature; turning it off stops the harvesting. Autocorrect still works, just less personalized.
+
+**How it helps.** Stops handwriting/contact data collection. Minimal day-to-day impact.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Privacy-conscious | Disabled |
+| Heavy pen / handwriting user who wants better recognition | Enabled |
+| Typical keyboard user | Disabled |
+
+**Risks.** Handwriting recognition and word suggestions become less personalized. No functional breakage.
+
+**Reversible via.** Settings > Privacy & security > Inking & typing personalization (or set AcceptedPrivacyPolicy = 1).
+
+
+### Online (cloud) speech recognition
+
+`privacy.speech` &nbsp; **Recommended:** Disabled (privacy)
+
+**What it does.** When enabled, Windows sends your voice audio to Microsoft's cloud for recognition (used by some dictation and voice features). Controlled by the per-user HasAccepted flag.
+
+**Why you'd change it.** It's a privacy trade-off: your audio leaves the machine. Offline recognition / Voice Access keeps working without it.
+
+**How it helps.** Keeps voice audio on-device. No functional loss for offline voice typing and Voice Access.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Privacy-conscious / don't use voice | Disabled |
+| Use cloud dictation heavily | Enabled |
+| Mixed use | Disabled -- offline recognition still works |
+
+**Risks.** Cloud-powered voice features lose accuracy or stop working. Offline Windows speech / Voice Access is unaffected.
+
+**Reversible via.** Settings > Privacy & security > Speech > Online speech recognition (or set HasAccepted = 1).
+
+
 ### Tailored experiences
 
 `privacy.tailoredexp` &nbsp; **Recommended:** Disabled
@@ -678,6 +744,189 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Risks.** None functional. You stop seeing personalized Windows tips and suggestions.
 
 **Reversible via.** Set HKCU\Software\Microsoft\Windows\CurrentVersion\Privacy\TailoredExperiencesWithDiagnosticDataEnabled = 1 (Settings > Privacy & security > Diagnostics & feedback).
+
+## Debloat (ads, nags & background bloat)
+
+### "Finish setting up your device" nag
+
+`debloat.finishsetup` &nbsp; **Recommended:** Disabled
+
+**What it does.** The full-screen / notification SCOOBE prompts that nag you to set up OneDrive, a Microsoft account, or a Microsoft 365 subscription -- and resurface after feature updates. Controlled by UserProfileEngagement + a ContentDeliveryManager notification flag.
+
+**Why you'd change it.** It's a recurring nag screen, not a feature. Most users have already decided and don't want to be asked again.
+
+**How it helps.** Suppresses the post-update 'finish setup' interruption.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Annoyed by the setup nag | Disabled |
+| Want Windows' setup reminders | Enabled |
+| Managed/clean setup | Disabled |
+
+**Risks.** You won't be prompted to finish optional account/OneDrive setup. Some newer build variants add prompt types this doesn't fully cover.
+
+**Reversible via.** Settings > System > Notifications > 'Suggest ways to get the most out of Windows' (or set ScoobeSystemSettingEnabled = 1).
+
+
+### Edge startup boost & background mode
+
+`debloat.edge` &nbsp; **Recommended:** Disabled
+
+**What it does.** Two Microsoft Edge behaviors: 'startup boost' keeps Edge processes resident from boot, and 'background mode' keeps it running after every window is closed. Set via HKLM Edge enterprise policies that survive Edge updates.
+
+**Why you'd change it.** On a machine where Edge isn't the daily browser, these keep 150-500 MB of Edge resident for no benefit.
+
+**How it helps.** Edge stops pre-launching at boot and exits when you close it, freeing idle RAM/CPU. Edge still opens on demand.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Edge isn't your main browser | Disabled |
+| Edge is your daily driver and you want fast launches | Enabled |
+| Minimal background processes | Disabled |
+
+**Risks.** Edge cold-starts a little slower (no prelaunch). Does NOT block Edge or WebView2 -- apps that embed WebView2 keep working. Policy write needs one UAC prompt.
+
+**Reversible via.** Edge > Settings > System and performance (Startup boost / 'Continue running background extensions'), or delete the two Edge policy values.
+
+
+### File Explorer ad banners
+
+`debloat.explorerads` &nbsp; **Recommended:** Disabled
+
+**What it does.** The 'sync provider notifications' in File Explorer -- the OneDrive / Microsoft 365 upsell banners shown in the navigation pane and status bar. Single per-user Explorer\Advanced flag.
+
+**Why you'd change it.** They're advertising inside the file manager. Disabling them is purely cosmetic with no downside.
+
+**How it helps.** Removes the promo banners from File Explorer.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Dislike ads in Explorer | Disabled |
+| Want OneDrive sync prompts | Enabled |
+
+**Risks.** You won't see OneDrive/Office promotional banners. Genuine sync-status icons on files are unaffected.
+
+**Reversible via.** File Explorer > View > Options > View tab > 'Show sync provider notifications' (or set ShowSyncProviderNotifications = 1).
+
+
+### Lock screen tips, fun facts & ads
+
+`debloat.spotlight` &nbsp; **Recommended:** Disabled
+
+**What it does.** The Windows Spotlight overlay that shows 'fun facts', tips, and ad-like captions on the lock screen. Controlled by per-user ContentDeliveryManager flags.
+
+**Why you'd change it.** Many users find the lock-screen captions and tips intrusive or ad-like.
+
+**How it helps.** Removes the tips/ad overlay from the lock screen.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Dislike lock-screen tips/ads | Disabled |
+| Enjoy the Spotlight facts | Enabled |
+| Use a custom lock-screen image | Disabled |
+
+**Risks.** Only suppresses the tips/ads overlay. If your lock-screen background is set to 'Windows Spotlight', switch it to Picture/Slideshow in Settings for a full opt-out.
+
+**Reversible via.** Settings > Personalization > Lock screen (or delete the ContentDeliveryManager overlay values).
+
+
+### Start menu recommendations & recent files
+
+`debloat.startrecommend` &nbsp; **Recommended:** Disabled
+
+**What it does.** The Start menu 'Recommended' section: AI/Iris-driven app and web suggestions plus the list of recently opened files. Per-user Explorer\Advanced flags.
+
+**Why you'd change it.** The recommendations are often ads/suggestions, and the recent-files list is a privacy leak on a shared screen.
+
+**How it helps.** Quiets the Recommended section and stops surfacing recently opened files in Start/jump lists.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Privacy on a shared screen | Disabled |
+| Rely on recent files in Start | Enabled |
+| Minimal Start menu | Disabled |
+
+**Risks.** Recently opened files stop appearing in Start and jump lists. On Windows 11 Home the Recommended section can't be fully emptied -- this removes the suggestions/recents that it can.
+
+**Reversible via.** Settings > Personalization > Start (toggles for recommendations and recently opened items), or delete the two Explorer\Advanced values.
+
+
+### Suggested content & silent app installs
+
+`debloat.suggestedcontent` &nbsp; **Recommended:** Disabled
+
+**What it does.** Windows 11's 'suggested content' machinery: silently installed promo apps (the Candy-Crush-style installs), Start-menu app suggestions, and 'tips, tricks & suggestions' cards. All live under the per-user ContentDeliveryManager key.
+
+**Why you'd change it.** These are ads and unsolicited installs, not features. They cost disk, clutter Start, and re-appear after major updates.
+
+**How it helps.** Stops silent third-party app installs and removes Start/Settings suggestion cards.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Anyone who dislikes ads in the OS | Disabled |
+| Want Microsoft's app suggestions | Enabled |
+| Clean/minimal setup | Disabled |
+
+**Risks.** You stop seeing Microsoft's app/feature suggestions. No functional impact. Windows may re-enable some after a feature update -- tick Auto-apply to hold it.
+
+**Reversible via.** Settings > Personalization > Start and > Privacy > General toggles (or delete the ContentDeliveryManager values GamerGuardian set to 0).
+
+
+### Widgets / News and interests
+
+`debloat.widgets` &nbsp; **Recommended:** Disabled
+
+**What it does.** The Windows 11 Widgets board (the left-edge weather button) that opens a web-connected MSN feed and fetches data in the background. Disabled machine-wide via the HKLM Dsh policy plus the per-user taskbar button flag.
+
+**Why you'd change it.** It's a background web feed many users never open; the panel and its updater consume RAM/CPU and bandwidth.
+
+**How it helps.** Stops the Widgets process/feed and removes the taskbar button. Frees idle resources.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Never use Widgets | Disabled |
+| Use the weather/news board daily | Enabled |
+| Latency-sensitive gaming | Disabled |
+
+**Risks.** The Widgets board and its taskbar button disappear. The machine-wide policy write needs one UAC prompt.
+
+**Reversible via.** Settings > Personalization > Taskbar > Widgets (or delete the Dsh\AllowNewsAndInterests policy value).
+
+
+### Windows feedback request popups
+
+`debloat.feedback` &nbsp; **Recommended:** Disabled
+
+**What it does.** The periodic 'rate your experience' dialogs Windows pops. Controlled by the per-user Siuf\Rules\NumberOfSIUFInPeriod count (0 = never).
+
+**Why you'd change it.** On fresh installs these can fire frequently and interrupt you. Most users never want to be asked.
+
+**How it helps.** Stops the periodic feedback-request dialogs.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Don't want to be asked for feedback | Disabled |
+| Windows Insider who submits feedback | Enabled |
+
+**Risks.** Windows stops prompting for feedback. You can still open Feedback Hub manually any time. Telemetry level is unaffected.
+
+**Reversible via.** Settings > Privacy & security > Diagnostics & feedback > Feedback frequency (or delete NumberOfSIUFInPeriod).
 
 ## Network
 
@@ -940,6 +1189,29 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 
 ## Windows AI UWP packages
 
+### Microsoft 365 Copilot (launcher app)
+
+`ai.app:Microsoft.MicrosoftOfficeHub` &nbsp; **Recommended:** Remove (it does not affect installed Office apps)
+
+**What it does.** The standalone 'Microsoft 365 Copilot' Store app -- formerly the 'Office' / 'Microsoft 365' hub launcher (package Microsoft.MicrosoftOfficeHub). Microsoft renamed it and auto-pushed it onto Windows 11 machines in 2025, prompting a wave of 'why is this here' complaints. It's a thin web wrapper that promotes Copilot and the Office suite; it is NOT Word/Excel/PowerPoint themselves.
+
+**Why you'd change it.** If you don't use the launcher tile -- and most people open Word/Excel directly -- it's dead weight that re-pins itself to Start and nags about Copilot. Removing it reclaims the tile and the background app.
+
+**How it helps.** Removes the launcher from Start and stops its Copilot promotion. Your actual Office programs keep working.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Open Word/Excel directly, never use the hub | Remove |
+| Use the Microsoft 365 launcher to find docs | Don't remove |
+| Worried Windows Update re-pins it | Remove + tick Auto-apply |
+
+**Risks.** The Microsoft 365 launcher tile disappears. Windows Update / Store may re-provision it after major updates -- the AutoApply tick re-removes it. Reinstall via the Microsoft Store ('Microsoft 365 Copilot').
+
+**Reversible via.** Install 'Microsoft 365 Copilot' from the Microsoft Store.
+
+
 ### Microsoft Copilot (UWP)
 
 `ai.app:Microsoft.Copilot` &nbsp; **Recommended:** Remove (only after the system policy is set to Off)
@@ -1082,6 +1354,30 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Reversible via.** Delete the DODownloadMode value from HKLM\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization.
 
 
+### Distributed Link Tracking Client
+
+`service:TrkWks` &nbsp; **Recommended:** Disabled (Manual if you rely on shortcut auto-repair across drives)
+
+**What it does.** Maintains links between NTFS files when their targets move across volumes or a domain (e.g. keeping a shortcut valid after the file moves).
+
+**Why you'd change it.** Runs automatically but is rarely exercised on a standalone home PC; most users never notice it being off.
+
+**How it helps.** Removes a small always-on background service.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive FPS | Disabled (Manual if you rely on shortcut auto-repair across drives) |
+| Streaming + game | Disabled (Manual if you rely on shortcut auto-repair across drives) |
+| Casual single-player | Disabled (Manual if you rely on shortcut auto-repair across drives) |
+| Productivity / mixed-use | Disabled (Manual if you rely on shortcut auto-repair across drives) |
+
+**Risks.** Shortcuts/links won't auto-repair if their target moves between volumes. Minor and rarely noticed.
+
+**Reversible via.** Set-Service -Name TrkWks -StartupType Automatic
+
+
 ### Downloaded Maps Manager
 
 `service:MapsBroker` &nbsp; **Recommended:** Disabled
@@ -1104,6 +1400,102 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Risks.** If you do open the Maps app later, offline map functionality won't work until you re-enable.
 
 **Reversible via.** Set-Service -Name MapsBroker -StartupType AutomaticDelayed
+
+
+### Kiosk Mode (Assigned Access)
+
+`service:AssignedAccessManagerSvc` &nbsp; **Recommended:** Disabled
+
+**What it does.** Backs single-app 'kiosk' / assigned-access mode used on shared or public terminals.
+
+**Why you'd change it.** A personal gaming PC is not a kiosk, so this service is unused.
+
+**How it helps.** Removes an idle service that personal machines never use.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive FPS | Disabled |
+| Streaming + game | Disabled |
+| Casual single-player | Disabled |
+| Productivity / mixed-use | Disabled |
+
+**Risks.** Only relevant if you actually configure Assigned Access / kiosk mode -- rare on a home PC.
+
+**Reversible via.** Set-Service -Name AssignedAccessManagerSvc -StartupType Manual
+
+
+### Parental Controls
+
+`service:WpcMonSvc` &nbsp; **Recommended:** Disabled (no Family Safety on this PC)
+
+**What it does.** Enforces Microsoft Family Safety parental-control restrictions (time limits, content filters).
+
+**Why you'd change it.** If you don't have child accounts or Family Safety configured on this PC, the service has nothing to enforce.
+
+**How it helps.** Removes an idle service on machines with no parental controls.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive FPS | Disabled (no Family Safety on this PC) |
+| Streaming + game | Disabled (no Family Safety on this PC) |
+| Casual single-player | Disabled (no Family Safety on this PC) |
+| Productivity / mixed-use | Disabled (no Family Safety on this PC) |
+
+**Risks.** If a child account on this PC relies on Family Safety enforcement, do NOT disable -- restrictions would stop applying.
+
+**Reversible via.** Set-Service -Name WpcMonSvc -StartupType Manual
+
+
+### Payments and NFC/SE Manager
+
+`service:SEMgrSvc` &nbsp; **Recommended:** Disabled (if you have no NFC reader on this PC)
+
+**What it does.** Manages tap-to-pay and the NFC secure element used for contactless payments.
+
+**Why you'd change it.** A gaming desktop almost never has NFC payment hardware, so this service has nothing to manage.
+
+**How it helps.** Removes an idle background service on machines without NFC.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive FPS | Disabled (if you have no NFC reader on this PC) |
+| Streaming + game | Disabled (if you have no NFC reader on this PC) |
+| Casual single-player | Disabled (if you have no NFC reader on this PC) |
+| Productivity / mixed-use | Disabled (if you have no NFC reader on this PC) |
+
+**Risks.** If you do use tap-to-pay / NFC on this machine (some laptops), leave it on -- payments and NFC apps will fail without it.
+
+**Reversible via.** Set-Service -Name SEMgrSvc -StartupType Manual
+
+
+### Phone Service
+
+`service:PhoneSvc` &nbsp; **Recommended:** Disabled (no cellular hardware) / Manual otherwise
+
+**What it does.** Manages the telephony/cellular device state for machines with a cellular modem or phone-calling integration.
+
+**Why you'd change it.** On a desktop with no cellular hardware this service is idle.
+
+**How it helps.** Removes an idle background service on non-cellular machines.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive FPS | Disabled (no cellular hardware) / Manual otherwise |
+| Streaming + game | Disabled (no cellular hardware) / Manual otherwise |
+| Casual single-player | Disabled (no cellular hardware) / Manual otherwise |
+| Productivity / mixed-use | Disabled (no cellular hardware) / Manual otherwise |
+
+**Risks.** If you make calls through Windows or use a cellular modem, leave it on.
+
+**Reversible via.** Set-Service -Name PhoneSvc -StartupType Manual
 
 
 ### Retail Demo Service
@@ -1224,6 +1616,30 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Risks.** Crash dump collection stops. If you ever need to share a crash report with Microsoft support, re-enable first.
 
 **Reversible via.** Set-Service -Name WerSvc -StartupType Manual
+
+
+### Windows Image Acquisition (WIA)
+
+`service:stisvc` &nbsp; **Recommended:** Disabled (no scanner/camera) / Manual otherwise
+
+**What it does.** Provides image-acquisition services for scanners and digital still cameras.
+
+**Why you'd change it.** If you don't own a scanner or a WIA-class camera, nothing ever calls this service.
+
+**How it helps.** Removes an idle service on machines with no imaging hardware.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive FPS | Disabled (no scanner/camera) / Manual otherwise |
+| Streaming + game | Disabled (no scanner/camera) / Manual otherwise |
+| Casual single-player | Disabled (no scanner/camera) / Manual otherwise |
+| Productivity / mixed-use | Disabled (no scanner/camera) / Manual otherwise |
+
+**Risks.** Scanning software and some camera-import flows will fail to acquire images with this disabled. Re-enable before scanning.
+
+**Reversible via.** Set-Service -Name stisvc -StartupType Manual
 
 
 ### Windows Insider Service

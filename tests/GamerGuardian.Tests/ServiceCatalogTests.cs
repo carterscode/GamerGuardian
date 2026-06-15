@@ -60,6 +60,12 @@ public class ServiceCatalogTests
     [InlineData("iphlpsvc")]
     [InlineData("wisvc")]
     [InlineData("RemoteAccess")]
+    [InlineData("SEMgrSvc")]
+    [InlineData("PhoneSvc")]
+    [InlineData("stisvc")]
+    [InlineData("WpcMonSvc")]
+    [InlineData("AssignedAccessManagerSvc")]
+    [InlineData("TrkWks")]
     public void All_IncludesExpectedServices(string serviceName)
     {
         Assert.Contains(ServiceCatalog.All, d =>

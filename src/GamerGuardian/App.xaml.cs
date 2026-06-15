@@ -122,6 +122,17 @@ public partial class App : WpfApplication
             new TailoredExperiencesMonitor(),
             new CdpMonitor(),
             new ActivityHistoryMonitor(),
+            new OnlineSpeechMonitor(),
+            new InkingTypingMonitor(),
+            // Debloat tab -- ads, nags, suggested content & background bloat:
+            new SuggestedContentMonitor(),
+            new LockScreenSpotlightMonitor(),
+            new FinishSetupNagMonitor(),
+            new StartRecommendationsMonitor(),
+            new ExplorerAdsMonitor(),
+            new FeedbackNagMonitor(),
+            new WidgetsMonitor(),
+            new EdgeBackgroundMonitor(),
             // System toggles:
             new PowerThrottlingMonitor(),  // CPU/Power tab
             new FastStartupMonitor(),       // Global gaming tab

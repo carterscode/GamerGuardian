@@ -126,6 +126,47 @@ public static class ServiceCatalog
             Description: "IPv6 transition (Teredo, 6to4, ISATAP). Most home networks don't need it — Manual is the safer choice over Disabled if anything on your network ever uses IPv6 tunneling.",
             DefaultStartType: ServiceStartType.Automatic),
 
+        // ---------------- Device-feature services (NOT in preset) ----------------
+        // Background services tied to hardware/features a gaming desktop usually
+        // doesn't have. Left out of the one-click preset (RecommendedTarget = null)
+        // because the right answer depends on your hardware -- disable per-service
+        // only if you're sure you don't use the feature.
+        new(
+            Name: "SEMgrSvc",
+            DisplayName: "Payments and NFC/SE Manager",
+            Description: "Manages tap-to-pay and NFC secure-element hardware. Useless on a desktop with no NFC reader. Disable unless you actually use NFC payments on this PC.",
+            DefaultStartType: ServiceStartType.Manual),
+
+        new(
+            Name: "PhoneSvc",
+            DisplayName: "Phone Service",
+            Description: "Manages cellular/telephony device state. Only relevant on machines with a cellular modem or that pair with phones for calling. Idle on a normal desktop.",
+            DefaultStartType: ServiceStartType.Manual),
+
+        new(
+            Name: "stisvc",
+            DisplayName: "Windows Image Acquisition (WIA)",
+            Description: "Backs scanners and digital still cameras. Disable only if you have no scanner / WIA camera -- with it off, scanning software won't acquire images.",
+            DefaultStartType: ServiceStartType.Manual),
+
+        new(
+            Name: "WpcMonSvc",
+            DisplayName: "Parental Controls",
+            Description: "Enforces Microsoft Family parental-control restrictions. Does nothing if you don't have child accounts / Family Safety set up on this PC.",
+            DefaultStartType: ServiceStartType.Manual),
+
+        new(
+            Name: "AssignedAccessManagerSvc",
+            DisplayName: "Kiosk Mode (Assigned Access)",
+            Description: "Backs single-app 'kiosk' mode for shared/public terminals. No purpose on a personal gaming PC.",
+            DefaultStartType: ServiceStartType.Manual),
+
+        new(
+            Name: "TrkWks",
+            DisplayName: "Distributed Link Tracking Client",
+            Description: "Maintains links between NTFS files across volumes / a domain (e.g. fixing a shortcut after you move its target). Runs automatically but is rarely needed on a standalone home PC.",
+            DefaultStartType: ServiceStartType.Automatic),
+
         // ---------------- Xbox / gaming-related (NOT in preset) ----------------
         new(
             Name: "XboxGipSvc",
