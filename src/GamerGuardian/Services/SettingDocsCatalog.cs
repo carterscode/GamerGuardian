@@ -679,6 +679,20 @@ public static class SettingDocsCatalog
             Recommended: "Remove if you don't use Windows AI features",
             Risks: "AI Settings panel disappears. Re-provisioned by Windows Update.",
             ReversibleVia: "Install via Microsoft Store or wait for Windows Update to re-provision."),
+
+        ["Microsoft.MicrosoftOfficeHub"] = new(
+            SettingId: "ai.app:Microsoft.MicrosoftOfficeHub",
+            DisplayName: "Microsoft 365 Copilot (launcher app)",
+            What: "The standalone 'Microsoft 365 Copilot' Store app -- formerly the 'Office' / 'Microsoft 365' hub launcher (package Microsoft.MicrosoftOfficeHub). Microsoft renamed it and auto-pushed it onto Windows 11 machines in 2025, prompting a wave of 'why is this here' complaints. It's a thin web wrapper that promotes Copilot and the Office suite; it is NOT Word/Excel/PowerPoint themselves.",
+            Why: "If you don't use the launcher tile -- and most people open Word/Excel directly -- it's dead weight that re-pins itself to Start and nags about Copilot. Removing it reclaims the tile and the background app.",
+            HowItHelps: "Removes the launcher from Start and stops its Copilot promotion. Your actual Office programs keep working.",
+            Scenarios: Scenarios(
+                ("Open Word/Excel directly, never use the hub", "Remove"),
+                ("Use the Microsoft 365 launcher to find docs", "Don't remove"),
+                ("Worried Windows Update re-pins it", "Remove + tick Auto-apply")),
+            Recommended: "Remove (it does not affect installed Office apps)",
+            Risks: "The Microsoft 365 launcher tile disappears. Windows Update / Store may re-provision it after major updates -- the AutoApply tick re-removes it. Reinstall via the Microsoft Store ('Microsoft 365 Copilot').",
+            ReversibleVia: "Install 'Microsoft 365 Copilot' from the Microsoft Store."),
     };
 
     // ---- Services (one entry per ServiceCatalog.Name) ---------------------
@@ -828,6 +842,66 @@ public static class SettingDocsCatalog
             recommended: "Disabled (Manual if you run Insider builds)",
             risks: "If you are an Insider or plan to enroll, leave it on -- with it disabled, the Insider Program settings page won't enroll or flight new builds. Re-enable before joining.",
             reversibleVia: "Set-Service -Name wisvc -StartupType Manual"),
+
+        ["SEMgrSvc"] = SvcRec(
+            "SEMgrSvc",
+            "Payments and NFC/SE Manager",
+            "Manages tap-to-pay and the NFC secure element used for contactless payments.",
+            "A gaming desktop almost never has NFC payment hardware, so this service has nothing to manage.",
+            "Removes an idle background service on machines without NFC.",
+            recommended: "Disabled (if you have no NFC reader on this PC)",
+            risks: "If you do use tap-to-pay / NFC on this machine (some laptops), leave it on -- payments and NFC apps will fail without it.",
+            reversibleVia: "Set-Service -Name SEMgrSvc -StartupType Manual"),
+
+        ["PhoneSvc"] = SvcRec(
+            "PhoneSvc",
+            "Phone Service",
+            "Manages the telephony/cellular device state for machines with a cellular modem or phone-calling integration.",
+            "On a desktop with no cellular hardware this service is idle.",
+            "Removes an idle background service on non-cellular machines.",
+            recommended: "Disabled (no cellular hardware) / Manual otherwise",
+            risks: "If you make calls through Windows or use a cellular modem, leave it on.",
+            reversibleVia: "Set-Service -Name PhoneSvc -StartupType Manual"),
+
+        ["stisvc"] = SvcRec(
+            "stisvc",
+            "Windows Image Acquisition (WIA)",
+            "Provides image-acquisition services for scanners and digital still cameras.",
+            "If you don't own a scanner or a WIA-class camera, nothing ever calls this service.",
+            "Removes an idle service on machines with no imaging hardware.",
+            recommended: "Disabled (no scanner/camera) / Manual otherwise",
+            risks: "Scanning software and some camera-import flows will fail to acquire images with this disabled. Re-enable before scanning.",
+            reversibleVia: "Set-Service -Name stisvc -StartupType Manual"),
+
+        ["WpcMonSvc"] = SvcRec(
+            "WpcMonSvc",
+            "Parental Controls",
+            "Enforces Microsoft Family Safety parental-control restrictions (time limits, content filters).",
+            "If you don't have child accounts or Family Safety configured on this PC, the service has nothing to enforce.",
+            "Removes an idle service on machines with no parental controls.",
+            recommended: "Disabled (no Family Safety on this PC)",
+            risks: "If a child account on this PC relies on Family Safety enforcement, do NOT disable -- restrictions would stop applying.",
+            reversibleVia: "Set-Service -Name WpcMonSvc -StartupType Manual"),
+
+        ["AssignedAccessManagerSvc"] = SvcRec(
+            "AssignedAccessManagerSvc",
+            "Kiosk Mode (Assigned Access)",
+            "Backs single-app 'kiosk' / assigned-access mode used on shared or public terminals.",
+            "A personal gaming PC is not a kiosk, so this service is unused.",
+            "Removes an idle service that personal machines never use.",
+            recommended: "Disabled",
+            risks: "Only relevant if you actually configure Assigned Access / kiosk mode -- rare on a home PC.",
+            reversibleVia: "Set-Service -Name AssignedAccessManagerSvc -StartupType Manual"),
+
+        ["TrkWks"] = SvcRec(
+            "TrkWks",
+            "Distributed Link Tracking Client",
+            "Maintains links between NTFS files when their targets move across volumes or a domain (e.g. keeping a shortcut valid after the file moves).",
+            "Runs automatically but is rarely exercised on a standalone home PC; most users never notice it being off.",
+            "Removes a small always-on background service.",
+            recommended: "Disabled (Manual if you rely on shortcut auto-repair across drives)",
+            risks: "Shortcuts/links won't auto-repair if their target moves between volumes. Minor and rarely noticed.",
+            reversibleVia: "Set-Service -Name TrkWks -StartupType Automatic"),
 
         ["RemoteAccess"] = SvcRec(
             "RemoteAccess",

@@ -188,6 +188,7 @@ public class WindowsAiTests
         Assert.Contains("Microsoft.Copilot", names);
         Assert.Contains("Microsoft.Windows.Ai.Copilot.Provider", names);
         Assert.Contains("MicrosoftWindows.Client.AIX", names);
+        Assert.Contains("Microsoft.MicrosoftOfficeHub", names);
         // No duplicates -- would cause two monitors with the same Id and break drift detection
         Assert.Equal(WindowsAiAppCatalog.All.Count, names.Count);
     }

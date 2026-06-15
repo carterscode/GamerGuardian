@@ -56,6 +56,7 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 
 **Windows AI UWP packages**
 
+- [Microsoft 365 Copilot (launcher app)](#microsoft-365-copilot-launcher-app) (`ai.app:Microsoft.MicrosoftOfficeHub`)
 - [Microsoft Copilot (UWP)](#microsoft-copilot-uwp) (`ai.app:Microsoft.Copilot`)
 - [Windows AI Copilot Provider](#windows-ai-copilot-provider) (`ai.app:Microsoft.Windows.Ai.Copilot.Provider`)
 - [Windows AI Experience](#windows-ai-experience) (`ai.app:MicrosoftWindows.Client.AIX`)
@@ -65,12 +66,18 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 - [Agent Activation Runtime Service](#agent-activation-runtime-service) (`service:AarSvc`)
 - [Connected User Experiences and Telemetry](#connected-user-experiences-and-telemetry) (`service:DiagTrack`)
 - [Delivery Optimization](#delivery-optimization) (`service:DoSvc`)
+- [Distributed Link Tracking Client](#distributed-link-tracking-client) (`service:TrkWks`)
 - [Downloaded Maps Manager](#downloaded-maps-manager) (`service:MapsBroker`)
+- [Kiosk Mode (Assigned Access)](#kiosk-mode-assigned-access) (`service:AssignedAccessManagerSvc`)
+- [Parental Controls](#parental-controls) (`service:WpcMonSvc`)
+- [Payments and NFC/SE Manager](#payments-and-nfc-se-manager) (`service:SEMgrSvc`)
+- [Phone Service](#phone-service) (`service:PhoneSvc`)
 - [Retail Demo Service](#retail-demo-service) (`service:RetailDemo`)
 - [Routing and Remote Access](#routing-and-remote-access) (`service:RemoteAccess`)
 - [Superfetch / SysMain](#superfetch---sysmain) (`service:SysMain`)
 - [Windows AI Fabric Service](#windows-ai-fabric-service) (`service:WSAIFabricSvc`)
 - [Windows Error Reporting Service](#windows-error-reporting-service) (`service:WerSvc`)
+- [Windows Image Acquisition (WIA)](#windows-image-acquisition-wia) (`service:stisvc`)
 - [Windows Insider Service](#windows-insider-service) (`service:wisvc`)
 - [Windows Search](#windows-search) (`service:WSearch`)
 - [Xbox Accessory Management](#xbox-accessory-management) (`service:XboxGipSvc`)
@@ -940,6 +947,29 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 
 ## Windows AI UWP packages
 
+### Microsoft 365 Copilot (launcher app)
+
+`ai.app:Microsoft.MicrosoftOfficeHub` &nbsp; **Recommended:** Remove (it does not affect installed Office apps)
+
+**What it does.** The standalone 'Microsoft 365 Copilot' Store app -- formerly the 'Office' / 'Microsoft 365' hub launcher (package Microsoft.MicrosoftOfficeHub). Microsoft renamed it and auto-pushed it onto Windows 11 machines in 2025, prompting a wave of 'why is this here' complaints. It's a thin web wrapper that promotes Copilot and the Office suite; it is NOT Word/Excel/PowerPoint themselves.
+
+**Why you'd change it.** If you don't use the launcher tile -- and most people open Word/Excel directly -- it's dead weight that re-pins itself to Start and nags about Copilot. Removing it reclaims the tile and the background app.
+
+**How it helps.** Removes the launcher from Start and stops its Copilot promotion. Your actual Office programs keep working.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Open Word/Excel directly, never use the hub | Remove |
+| Use the Microsoft 365 launcher to find docs | Don't remove |
+| Worried Windows Update re-pins it | Remove + tick Auto-apply |
+
+**Risks.** The Microsoft 365 launcher tile disappears. Windows Update / Store may re-provision it after major updates -- the AutoApply tick re-removes it. Reinstall via the Microsoft Store ('Microsoft 365 Copilot').
+
+**Reversible via.** Install 'Microsoft 365 Copilot' from the Microsoft Store.
+
+
 ### Microsoft Copilot (UWP)
 
 `ai.app:Microsoft.Copilot` &nbsp; **Recommended:** Remove (only after the system policy is set to Off)
@@ -1082,6 +1112,30 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Reversible via.** Delete the DODownloadMode value from HKLM\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization.
 
 
+### Distributed Link Tracking Client
+
+`service:TrkWks` &nbsp; **Recommended:** Disabled (Manual if you rely on shortcut auto-repair across drives)
+
+**What it does.** Maintains links between NTFS files when their targets move across volumes or a domain (e.g. keeping a shortcut valid after the file moves).
+
+**Why you'd change it.** Runs automatically but is rarely exercised on a standalone home PC; most users never notice it being off.
+
+**How it helps.** Removes a small always-on background service.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive FPS | Disabled (Manual if you rely on shortcut auto-repair across drives) |
+| Streaming + game | Disabled (Manual if you rely on shortcut auto-repair across drives) |
+| Casual single-player | Disabled (Manual if you rely on shortcut auto-repair across drives) |
+| Productivity / mixed-use | Disabled (Manual if you rely on shortcut auto-repair across drives) |
+
+**Risks.** Shortcuts/links won't auto-repair if their target moves between volumes. Minor and rarely noticed.
+
+**Reversible via.** Set-Service -Name TrkWks -StartupType Automatic
+
+
 ### Downloaded Maps Manager
 
 `service:MapsBroker` &nbsp; **Recommended:** Disabled
@@ -1104,6 +1158,102 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Risks.** If you do open the Maps app later, offline map functionality won't work until you re-enable.
 
 **Reversible via.** Set-Service -Name MapsBroker -StartupType AutomaticDelayed
+
+
+### Kiosk Mode (Assigned Access)
+
+`service:AssignedAccessManagerSvc` &nbsp; **Recommended:** Disabled
+
+**What it does.** Backs single-app 'kiosk' / assigned-access mode used on shared or public terminals.
+
+**Why you'd change it.** A personal gaming PC is not a kiosk, so this service is unused.
+
+**How it helps.** Removes an idle service that personal machines never use.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive FPS | Disabled |
+| Streaming + game | Disabled |
+| Casual single-player | Disabled |
+| Productivity / mixed-use | Disabled |
+
+**Risks.** Only relevant if you actually configure Assigned Access / kiosk mode -- rare on a home PC.
+
+**Reversible via.** Set-Service -Name AssignedAccessManagerSvc -StartupType Manual
+
+
+### Parental Controls
+
+`service:WpcMonSvc` &nbsp; **Recommended:** Disabled (no Family Safety on this PC)
+
+**What it does.** Enforces Microsoft Family Safety parental-control restrictions (time limits, content filters).
+
+**Why you'd change it.** If you don't have child accounts or Family Safety configured on this PC, the service has nothing to enforce.
+
+**How it helps.** Removes an idle service on machines with no parental controls.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive FPS | Disabled (no Family Safety on this PC) |
+| Streaming + game | Disabled (no Family Safety on this PC) |
+| Casual single-player | Disabled (no Family Safety on this PC) |
+| Productivity / mixed-use | Disabled (no Family Safety on this PC) |
+
+**Risks.** If a child account on this PC relies on Family Safety enforcement, do NOT disable -- restrictions would stop applying.
+
+**Reversible via.** Set-Service -Name WpcMonSvc -StartupType Manual
+
+
+### Payments and NFC/SE Manager
+
+`service:SEMgrSvc` &nbsp; **Recommended:** Disabled (if you have no NFC reader on this PC)
+
+**What it does.** Manages tap-to-pay and the NFC secure element used for contactless payments.
+
+**Why you'd change it.** A gaming desktop almost never has NFC payment hardware, so this service has nothing to manage.
+
+**How it helps.** Removes an idle background service on machines without NFC.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive FPS | Disabled (if you have no NFC reader on this PC) |
+| Streaming + game | Disabled (if you have no NFC reader on this PC) |
+| Casual single-player | Disabled (if you have no NFC reader on this PC) |
+| Productivity / mixed-use | Disabled (if you have no NFC reader on this PC) |
+
+**Risks.** If you do use tap-to-pay / NFC on this machine (some laptops), leave it on -- payments and NFC apps will fail without it.
+
+**Reversible via.** Set-Service -Name SEMgrSvc -StartupType Manual
+
+
+### Phone Service
+
+`service:PhoneSvc` &nbsp; **Recommended:** Disabled (no cellular hardware) / Manual otherwise
+
+**What it does.** Manages the telephony/cellular device state for machines with a cellular modem or phone-calling integration.
+
+**Why you'd change it.** On a desktop with no cellular hardware this service is idle.
+
+**How it helps.** Removes an idle background service on non-cellular machines.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive FPS | Disabled (no cellular hardware) / Manual otherwise |
+| Streaming + game | Disabled (no cellular hardware) / Manual otherwise |
+| Casual single-player | Disabled (no cellular hardware) / Manual otherwise |
+| Productivity / mixed-use | Disabled (no cellular hardware) / Manual otherwise |
+
+**Risks.** If you make calls through Windows or use a cellular modem, leave it on.
+
+**Reversible via.** Set-Service -Name PhoneSvc -StartupType Manual
 
 
 ### Retail Demo Service
@@ -1224,6 +1374,30 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 **Risks.** Crash dump collection stops. If you ever need to share a crash report with Microsoft support, re-enable first.
 
 **Reversible via.** Set-Service -Name WerSvc -StartupType Manual
+
+
+### Windows Image Acquisition (WIA)
+
+`service:stisvc` &nbsp; **Recommended:** Disabled (no scanner/camera) / Manual otherwise
+
+**What it does.** Provides image-acquisition services for scanners and digital still cameras.
+
+**Why you'd change it.** If you don't own a scanner or a WIA-class camera, nothing ever calls this service.
+
+**How it helps.** Removes an idle service on machines with no imaging hardware.
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive FPS | Disabled (no scanner/camera) / Manual otherwise |
+| Streaming + game | Disabled (no scanner/camera) / Manual otherwise |
+| Casual single-player | Disabled (no scanner/camera) / Manual otherwise |
+| Productivity / mixed-use | Disabled (no scanner/camera) / Manual otherwise |
+
+**Risks.** Scanning software and some camera-import flows will fail to acquire images with this disabled. Re-enable before scanning.
+
+**Reversible via.** Set-Service -Name stisvc -StartupType Manual
 
 
 ### Windows Insider Service
