@@ -49,12 +49,23 @@ Each `IMonitoredSetting` is ~30 lines — read raw, compute desired, yield a `Dr
 | [`TailoredExperiencesMonitor.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/TailoredExperiencesMonitor.cs) | Tailored experiences with diagnostic data (HKCU). Privacy tab. |
 | [`CdpMonitor.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/CdpMonitor.cs) | Cross-Device Platform `EnableCdp` policy (HKLM). Privacy tab. |
 | [`ActivityHistoryMonitor.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/ActivityHistoryMonitor.cs) | Activity History / Timeline policy — three HKLM values batched. Privacy tab. |
+| [`OnlineSpeechMonitor.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/OnlineSpeechMonitor.cs) | Online (cloud) speech recognition opt-out (`HasAccepted`, HKCU). Privacy tab. |
+| [`InkingTypingMonitor.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/InkingTypingMonitor.cs) | Inking & typing personalization opt-out — `AcceptedPrivacyPolicy` + implicit ink collection + contact harvesting (HKCU). Avoids the value owned by `InputInsightsMonitor`. Privacy tab. |
 | [`NagleMonitor.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/NagleMonitor.cs) | Nagle's algorithm per active interface (HKLM `TcpAckFrequency`/`TCPNoDelay`). Network tab. |
 | [`NicPowerMonitor.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/NicPowerMonitor.cs) | NIC power management (`PnPCapabilities` per adapter class instance, HKLM, reboot). Network tab. |
 | [`PowerThrottlingMonitor.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/PowerThrottlingMonitor.cs) | Windows Power Throttling off (HKLM). CPU/Power tab. |
 | [`FastStartupMonitor.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/FastStartupMonitor.cs) | Fast Startup / hybrid boot `HiberbootEnabled` (HKLM, reboot). |
 | [`VisualEffectsMonitor.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/VisualEffectsMonitor.cs) | Visual effects "best performance" (`VisualFXSetting` + binary `UserPreferencesMask`, HKCU). |
+| [`SuggestedContentMonitor.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/SuggestedContentMonitor.cs) | Suggested content + silent app installs — batch of `ContentDeliveryManager` values (HKCU). Debloat tab. |
+| [`LockScreenSpotlightMonitor.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/LockScreenSpotlightMonitor.cs) | Lock-screen Spotlight tips/ads overlay (HKCU). Debloat tab. |
+| [`FinishSetupNagMonitor.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/FinishSetupNagMonitor.cs) | "Finish setting up your device" SCOOBE nag (`ScoobeSystemSettingEnabled` + CDM notification, HKCU). Debloat tab. |
+| [`StartRecommendationsMonitor.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/StartRecommendationsMonitor.cs) | Start menu recommendations + recent files (`Start_IrisRecommendations`/`Start_TrackDocs`, HKCU). Debloat tab. |
+| [`ExplorerAdsMonitor.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/ExplorerAdsMonitor.cs) | File Explorer OneDrive/Office ad banners (`ShowSyncProviderNotifications`, HKCU). Debloat tab. |
+| [`FeedbackNagMonitor.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/FeedbackNagMonitor.cs) | Windows feedback request frequency (`NumberOfSIUFInPeriod`, HKCU). Debloat tab. |
+| [`WidgetsMonitor.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/WidgetsMonitor.cs) | Widgets / News and interests — `Dsh\AllowNewsAndInterests` policy (HKLM) + taskbar button (HKCU). Debloat tab. |
+| [`EdgeBackgroundMonitor.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/EdgeBackgroundMonitor.cs) | Edge startup boost + background mode — Edge enterprise policies (HKLM). Debloat tab. |
 | [`WindowsServiceMonitor.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/WindowsServiceMonitor.cs) | One instance per service in `ServiceCatalog`. Maps `ServicePref.Desired` (Default/Manual/Disabled) to the matching elevated `sc.exe` call. |
+| [`WindowsAiAppMonitor.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/WindowsAiAppMonitor.cs) | One instance per package in `WindowsAiAppCatalog` (Copilot, AI provider, AI Experience, Microsoft 365 Copilot). One-way `Remove-AppxPackage`. Windows AI tab. |
 
 ## `Native/`
 
@@ -90,7 +101,7 @@ Behavior — orchestration, polling, IPC, persistence.
 | [`ServiceCatalog.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Services/ServiceCatalog.cs) | The static list of Windows services GamerGuardian knows about. |
 | [`TempCleanup.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Services/TempCleanup.cs) | Sweeps stale auto-update installer EXEs from `%TEMP%` (>1 day old). |
 | [`ThemeService.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Services/ThemeService.cs) | Light/dark/system theme switch via `Wpf.Ui.Appearance.ApplicationThemeManager`. |
-| [`UpdateService.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Services/UpdateService.cs) | GitHub Releases API check + installer download. Strips prerelease suffixes when comparing semver. |
+| [`UpdateService.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Services/UpdateService.cs) | GitHub Releases API check + installer download. Enumerates **all** releases and picks the highest stable semver (drops drafts/prereleases) so it always upgrades to the newest version, never an intermediate one. Pure `ParseReleases`/`SelectBestUpdate` core. |
 | [`StartupRegistration.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Services/StartupRegistration.cs) | Adds/removes the `HKCU\...\Run\GamerGuardian` autostart entry. |
 | [`Notifier.cs`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Services/Notifier.cs) | Bottom-right drift popup window. |
 

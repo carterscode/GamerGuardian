@@ -68,6 +68,34 @@ Telemetry/privacy toggles Windows often re-enables after feature updates — the
 | **Tailored experiences** | Lets Windows use your diagnostic data to personalize tips, ads, and recommendations. Off stops the personalization. Per-user. |
 | **Cross-Device Platform (CDP)** | The "Continue experiences on this device" / shared-experiences subsystem (handoff, shared clipboard, nearby-device discovery). Off via machine policy if you don't use cross-device features. |
 | **Activity History / Timeline** | Collection and publishing of your activity feed. Off via machine policy (three values set together). |
+| **Online (cloud) speech recognition** | When on, Windows sends your voice audio to Microsoft for processing. Off keeps recognition on-device; offline speech / Voice Access still work. Per-user. |
+| **Inking & typing personalization** | Windows building (and uploading) a personal dictionary from your handwriting samples and contact names. Off stops the collection. Distinct from the Windows AI tab's typing-insights toggle (they own different registry values, so they don't conflict). Per-user. |
+
+---
+
+## Debloat
+
+Switches off Windows 11's ads, nags, suggested content, and idle background features. Every toggle is **reversible** and **off + unmonitored by default** — nothing changes until you opt in. None of these touch Windows Update, security, or networking.
+
+**Ads, nags & suggested content** (per-user, no elevation):
+
+| Setting | What it does / means |
+|---|---|
+| **Suggested content & silent app installs** | The silently-installed promo apps (Candy-Crush-style installs), Start-menu app suggestions, and "tips, tricks & suggestions" cards. Off stops the installs and removes the suggestion cards. |
+| **Lock screen tips, fun facts & ads** | The Windows Spotlight overlay that shows tips and ad-like captions on the lock screen. *(Suppresses the overlay; if your lock-screen background is set to Spotlight, switch it to Picture/Slideshow for a full opt-out.)* |
+| **"Finish setting up your device" nag** | The post-update SCOOBE prompts to set up OneDrive / a Microsoft account / Microsoft 365. |
+| **Start menu recommendations & recent files** | AI/Iris app & web suggestions plus recently opened files in the Start "Recommended" section (also a privacy win on a shared screen). |
+| **File Explorer ad banners** | The OneDrive / Microsoft 365 upsell banners in the Explorer nav pane and status bar. |
+| **Windows feedback request popups** | The periodic "rate your experience" dialogs. Off = Windows never asks (Feedback Hub still opens manually). |
+
+**Background bloat** (machine-wide policy — one UAC prompt to apply):
+
+| Setting | What it does / means |
+|---|---|
+| **Widgets / News and interests** | The left-edge weather button and its background MSN web feed. Off via the `Dsh` policy (stops the process) plus the taskbar-button flag. |
+| **Edge startup boost & background mode** | Keeps Edge resident from boot and after you close every window. Off frees idle RAM/CPU; Edge still opens on demand and WebView2-dependent apps keep working. Set via Edge enterprise policies so it survives Edge updates. |
+
+*Debloat toggles are intentionally **not** part of the one-click Recommended preset (same as the Privacy tab) — flip the ones you want individually.*
 
 ---
 
@@ -90,6 +118,7 @@ A curated catalog of Windows services GamerGuardian can stop and set to **Manual
 - **One-click presets** — "Gaming optimized" flips the safe-to-disable subset; "Default" restores them.
 - **Per-service control** — Default / Manual / Disabled, with honest risk notes on each.
 - Includes telemetry (`DiagTrack`), `MapsBroker`, `Fax`, `lfsvc` (Geolocation), `wisvc` (Windows Insider), Xbox services, `DoSvc` (Delivery Optimization, handled via Group Policy because Windows reverts the normal path), `iphlpsvc` (IP Helper), `RemoteAccess` / `RemoteRegistry` (drift-confirm), and more. Some (Print Spooler, Windows Search) are listed but opt-in because disabling them has real downsides.
+- **Device-feature services** (opt-in, not in the preset) for hardware/features a gaming desktop usually lacks: `SEMgrSvc` (Payments/NFC), `PhoneSvc`, `stisvc` (WIA scanners/cameras), `WpcMonSvc` (Parental Controls), `AssignedAccessManagerSvc` (Kiosk Mode), `TrkWks` (Distributed Link Tracking). Disable each only if you're sure you don't use the feature.
 
 ---
 
@@ -98,7 +127,7 @@ A curated catalog of Windows services GamerGuardian can stop and set to **Manual
 Policy-toggle disables for Windows/Microsoft AI features. `DesiredOn = true` keeps the Windows default; turning a row **off** writes the disable policy (reversible by deleting the same value).
 
 - **Lockdown policies** — Copilot, Recall + AI data analysis, Click-to-Do (Snipping Tool AI), Edge Copilot/Hubs/GenAI, Notepad Rewrite + Paint AI, search-box AI suggestions + taskbar companion, Windows AI Actions (right-click rewrite/summarize), typing/input-insights data collection, and Microsoft 365 Copilot in Word/Excel/OneNote.
-- **AI apps (UWP removal)** — optional one-way removal of AI UWP packages (`Microsoft.Copilot`, the AI Copilot provider, the AI Experience component), with an auto-apply opt-in in case Windows re-provisions them.
+- **AI apps (UWP removal)** — optional one-way removal of AI UWP packages (`Microsoft.Copilot`, the AI Copilot provider, the AI Experience component, and **Microsoft 365 Copilot** — the `Microsoft.MicrosoftOfficeHub` launcher Microsoft auto-pushed to Windows 11; removing it leaves your installed Office apps untouched), with an auto-apply opt-in in case Windows re-provisions them.
 
 Stays in the safe "policy toggle + service disable + opt-in UWP removal" lane — inspired by [zoicware/RemoveWindowsAI](https://github.com/zoicware/RemoveWindowsAI).
 
