@@ -105,7 +105,7 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 
 ### Active Windows power plan
 
-`powerplan` &nbsp; **Recommended:** High Performance
+`powerplan` &nbsp; **Recommended:** CPU-aware -- the best-matching prebuilt for your CPU (Balanced on modern CPUs, whose boost algorithm beats a pegged High Performance plan), or build the custom optimized plan on the CPU / Power tab
 
 **What it does.** The active Windows power scheme. Controls CPU throttling thresholds, sleep timers, hard-drive spindown, USB selective suspend, and dozens of other power-related defaults.
 
@@ -955,7 +955,7 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 
 ### NIC power management
 
-`network.nicpower` &nbsp; **Recommended:** Disabled (gaming) on a desktop; Default on a laptop on battery
+`network.nicpower` &nbsp; **Recommended:** Default -- GamerGuardian treats this as a contested, per-hardware tweak. Desktops on wired Ethernet may gain from Disabled (no NIC wake stalls); test it and keep it only if your latency/hitching improves. Leave Default on a laptop on battery.
 
 **What it does.** The per-adapter 'Allow the computer to turn off this device to save power' setting (PnPCapabilities under the adapter's network-class instance). Disabling it keeps the NIC fully powered. GamerGuardian asserts this on every active physical adapter in one elevation prompt; reversal clears the bits to restore the default. A reboot (or adapter disable/enable) is needed for it to take effect.
 

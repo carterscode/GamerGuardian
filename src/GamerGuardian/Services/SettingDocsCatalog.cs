@@ -289,7 +289,7 @@ public static class SettingDocsCatalog
                 ("Laptop on battery", "Balanced (saves power)"),
                 ("Laptop plugged in", "High Performance"),
                 ("Idle workstation", "Balanced (drops back to power-saving when idle)")),
-            Recommended: "High Performance",
+            Recommended: "CPU-aware -- the best-matching prebuilt for your CPU (Balanced on modern CPUs, whose boost algorithm beats a pegged High Performance plan), or build the custom optimized plan on the CPU / Power tab",
             Risks: "Higher idle power draw -- typically 10-30 W on desktop, more on high-end. Components run a few degrees warmer. Fan noise slightly higher. On laptops on battery: noticeably worse battery life.",
             ReversibleVia: "powercfg /setactive SCHEME_BALANCED (or pick another plan from Settings > System > Power)."),
 
@@ -436,7 +436,7 @@ public static class SettingDocsCatalog
                 ("Desktop online gaming", "Disabled (gaming)"),
                 ("Laptop on battery", "Default -- the NIC power saving matters more"),
                 ("Stable wired connection with no hitches", "Personal taste; Default is fine")),
-            Recommended: "Disabled (gaming) on a desktop; Default on a laptop on battery",
+            Recommended: "Default -- GamerGuardian treats this as a contested, per-hardware tweak. Desktops on wired Ethernet may gain from Disabled (no NIC wake stalls); test it and keep it only if your latency/hitching improves. Leave Default on a laptop on battery.",
             Risks: "Slightly higher idle power draw. On laptops on battery, measurably worse battery life. Contested per-hardware -- some adapters are unaffected either way. Needs a reboot to apply.",
             ReversibleVia: "Clear the 0x18 bits from PnPCapabilities under the adapter's class instance, or check 'Allow the computer to turn off this device' in Device Manager > the adapter > Power Management (GamerGuardian clears the bits across all adapters when you choose Default)."),
 
