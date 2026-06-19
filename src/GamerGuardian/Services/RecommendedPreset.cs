@@ -61,29 +61,32 @@ public static class RecommendedPreset
         void Count(bool didChange) { if (didChange) changed++; else alreadyCorrect++; }
 
         // ---- Global gaming toggles (gaming-recommended values) ----
+        // desiredOn for each comes from SettingRecommendations (the same map the
+        // Settings UI shows as "Recommended"), so the one-click preset and the
+        // per-row hint can never disagree.
         var g = draft.Global;
-        Count(SetToggle(g.GameMode,               "Game Mode",                     desiredOn: true,  changes));
-        Count(SetToggle(g.GameDvr,                "Game DVR background recording", desiredOn: false, changes));
-        Count(SetToggle(g.Hags,                   "HAGS",                          desiredOn: true,  changes));
-        Count(SetToggle(g.Vrr,                    "Variable Refresh Rate",         desiredOn: true,  changes));
-        Count(SetToggle(g.SystemResponsiveness,   "System Responsiveness",         desiredOn: true,  changes));
-        Count(SetToggle(g.NetworkThrottling,      "Network Throttling",            desiredOn: true,  changes));
-        Count(SetToggle(g.UsbSelectiveSuspend,    "USB Selective Suspend",         desiredOn: true,  changes));
-        Count(SetToggle(g.GamesTaskProfile,       "Games Task Profile",            desiredOn: true,  changes));
-        Count(SetToggle(g.MousePrecision,         "Mouse Precision",               desiredOn: false, changes));
-        Count(SetToggle(g.FullscreenOptimizations,"Fullscreen Optimizations",      desiredOn: true,  changes));
+        Count(SetToggle(g.GameMode,               "Game Mode",                     "gamemode",    changes));
+        Count(SetToggle(g.GameDvr,                "Game DVR background recording", "gamedvr",     changes));
+        Count(SetToggle(g.Hags,                   "HAGS",                          "hags",        changes));
+        Count(SetToggle(g.Vrr,                    "Variable Refresh Rate",         "vrr",         changes));
+        Count(SetToggle(g.SystemResponsiveness,   "System Responsiveness",         "sysresponse", changes));
+        Count(SetToggle(g.NetworkThrottling,      "Network Throttling",            "netthrottle", changes));
+        Count(SetToggle(g.UsbSelectiveSuspend,    "USB Selective Suspend",         "usbsuspend",  changes));
+        Count(SetToggle(g.GamesTaskProfile,       "Games Task Profile",            "gamestask",   changes));
+        Count(SetToggle(g.MousePrecision,         "Mouse Precision",               "mouseaccel",  changes));
+        Count(SetToggle(g.FullscreenOptimizations,"Fullscreen Optimizations",      "fso",         changes));
         // MemoryIntegrity + Vbs intentionally omitted (security tradeoff -- see class doc)
 
         // ---- Windows AI toggles (all off for gaming -- minimize background work) ----
-        Count(SetToggle(g.Copilot,         "Windows Copilot",                desiredOn: false, changes));
-        Count(SetToggle(g.Recall,          "Windows Recall + AI analysis",   desiredOn: false, changes));
-        Count(SetToggle(g.ClickToDo,       "Click-to-Do",                    desiredOn: false, changes));
-        Count(SetToggle(g.EdgeAi,          "Edge Copilot / Hubs / GenAI",    desiredOn: false, changes));
-        Count(SetToggle(g.NotepadPaintAi,  "Notepad Rewrite + Paint AI",     desiredOn: false, changes));
-        Count(SetToggle(g.SettingsSearchAi,"Search box AI + taskbar companion", desiredOn: false, changes));
-        Count(SetToggle(g.AiActions,       "Windows AI Actions",             desiredOn: false, changes));
-        Count(SetToggle(g.InputInsights,   "Typing / input insights",        desiredOn: false, changes));
-        Count(SetToggle(g.OfficeCopilot,   "Office 365 Copilot",             desiredOn: false, changes));
+        Count(SetToggle(g.Copilot,         "Windows Copilot",                "ai.copilot",        changes));
+        Count(SetToggle(g.Recall,          "Windows Recall + AI analysis",   "ai.recall",         changes));
+        Count(SetToggle(g.ClickToDo,       "Click-to-Do",                    "ai.clicktodo",      changes));
+        Count(SetToggle(g.EdgeAi,          "Edge Copilot / Hubs / GenAI",    "ai.edge",           changes));
+        Count(SetToggle(g.NotepadPaintAi,  "Notepad Rewrite + Paint AI",     "ai.notepadpaint",   changes));
+        Count(SetToggle(g.SettingsSearchAi,"Search box AI + taskbar companion", "ai.settingssearch", changes));
+        Count(SetToggle(g.AiActions,       "Windows AI Actions",             "ai.actions",        changes));
+        Count(SetToggle(g.InputInsights,   "Typing / input insights",        "ai.inputinsights",  changes));
+        Count(SetToggle(g.OfficeCopilot,   "Office 365 Copilot",             "ai.office",         changes));
 
         // ---- Power plan: CPU-aware recommended prebuilt (Balanced for modern) ----
         Count(SetPowerPlan(g.PowerPlan, recipe, installedPlans, changes));
@@ -116,8 +119,10 @@ public static class RecommendedPreset
         return new Result(changed, alreadyCorrect, changes);
     }
 
-    private static bool SetToggle(ToggleSettingPref pref, string label, bool desiredOn, List<string> changes)
+    private static bool SetToggle(ToggleSettingPref pref, string label, string settingId, List<string> changes)
     {
+        // Recommendation source of truth -- shared with the per-row UI hint.
+        var desiredOn = SettingRecommendations.ToggleDesiredOn[settingId];
         var (b1, b2, b3) = (pref.DesiredOn, pref.Monitor, pref.AutoApply);
         var a1 = desiredOn; var a2 = true; var a3 = true;
         if (b1 == a1 && b2 == a2 && b3 == a3) return false;

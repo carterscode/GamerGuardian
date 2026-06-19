@@ -787,10 +787,16 @@ public partial class SettingsWindow : FluentWindow
         var active = SafeRunGuid(PowerPlanMonitor.GetActivePlan);
         var activeName = active is not null && planNames.TryGetValue(active.Value, out var name) ? name : "unknown";
         PowerPlanCurrentText.Text = $"Current: {activeName}";
-        var planRec = SettingDocsCatalog.Get("powerplan")?.Recommended;
-        PowerPlanRecommendedText.Text = string.IsNullOrWhiteSpace(planRec) ? string.Empty : $"Recommended: {planRec}";
-        PowerPlanRecommendedText.Visibility = string.IsNullOrEmpty(PowerPlanRecommendedText.Text)
-            ? Visibility.Collapsed : Visibility.Visible;
+        // CPU-aware recommendation: the prebuilt plan the catalog picks for this
+        // CPU (Balanced on modern CPUs -- never blindly High Performance), shown
+        // by its installed plan name so it matches the dropdown. Mirrors what the
+        // one-click preset applies.
+        var planRecipe = CpuTuneCatalog.Resolve(CpuDetector.Current);
+        var recPlanGuid = PowerPlanMonitor.ToGuid(planRecipe.RecommendedPrebuilt);
+        var recPlanName = planNames.TryGetValue(recPlanGuid, out var rpn)
+            ? rpn
+            : planRecipe.RecommendedPrebuilt.ToString();
+        PowerPlanRecommendedText.Text = $"Recommended: {recPlanName}";
         PowerPlanMonitorCheck.IsChecked = g.PowerPlan.Monitor;
         PowerPlanAutoApplyCheck.IsChecked = g.PowerPlan.AutoApply;
 
@@ -1671,19 +1677,15 @@ public sealed class GlobalToggleRow : INotifyPropertyChanged
         string.IsNullOrEmpty(LearnMoreContent) ? Visibility.Collapsed : Visibility.Visible;
 
     /// <summary>
-    /// GamerGuardian's recommended value for this setting, pulled from the
-    /// per-setting docs catalog. Shown alongside Current/Default so the user can
-    /// see the suggested target at a glance. Empty (and hidden) when the setting
-    /// has no documented recommendation.
+    /// GamerGuardian's recommended choice for this setting, rendered in the row's
+    /// own vocabulary: the recommendation is stored as a target <c>DesiredOn</c>
+    /// in <see cref="SettingRecommendations"/>, and shown as the matching
+    /// <see cref="OnLabel"/>/<see cref="OffLabel"/> so it always lines up with the
+    /// actual Want options (Enabled/Disabled, Gaming/Default, On/Off). Empty (and
+    /// hidden) when the setting has no documented recommendation.
     /// </summary>
-    public string RecommendedText
-    {
-        get
-        {
-            var rec = SettingDocsCatalog.Get(SettingId)?.Recommended;
-            return string.IsNullOrWhiteSpace(rec) ? string.Empty : $"Recommended: {rec}";
-        }
-    }
+    public string RecommendedText =>
+        SettingRecommendations.FormatToggleHint(SettingId, OnLabel, OffLabel);
     public Visibility RecommendedTextVisibility =>
         string.IsNullOrEmpty(RecommendedText) ? Visibility.Collapsed : Visibility.Visible;
 
@@ -1785,18 +1787,13 @@ public sealed class ServiceRow : INotifyPropertyChanged
         string.IsNullOrEmpty(LearnMoreContent) ? Visibility.Collapsed : Visibility.Visible;
 
     /// <summary>
-    /// GamerGuardian's recommended startup state for this service, pulled from the
-    /// per-setting docs catalog. Shown alongside Current/Default. Empty (and
-    /// hidden) when the service has no documented recommendation.
+    /// GamerGuardian's recommended startup state for this service, rendered in the
+    /// row's radio vocabulary (Default / Manual / Disabled). Services we don't
+    /// actively recommend changing have no <c>RecommendedTarget</c> and fall back
+    /// to "Default" (i.e. leave it alone).
     /// </summary>
-    public string RecommendedText
-    {
-        get
-        {
-            var rec = SettingDocsCatalog.Get(SettingId)?.Recommended;
-            return string.IsNullOrWhiteSpace(rec) ? string.Empty : $"Recommended: {rec}";
-        }
-    }
+    public string RecommendedText =>
+        $"Recommended: {Definition.RecommendedTarget ?? ServiceTargetState.Default}";
     public Visibility RecommendedTextVisibility =>
         string.IsNullOrEmpty(RecommendedText) ? Visibility.Collapsed : Visibility.Visible;
 
