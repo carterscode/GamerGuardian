@@ -4,7 +4,7 @@
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         Title="GamerGuardian - Settings"
         Closing="OnWindowClosing"
-        Width="820" Height="720"
+        Width="900" Height="720"
         MinWidth="680" MinHeight="500"
         WindowStartupLocation="CenterScreen"
         WindowBackdropType="Mica"
@@ -36,18 +36,18 @@
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                        FontSize="12" Margin="0,3,0,0"
                                        TextWrapping="Wrap"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                            <WrapPanel Margin="0,6,0,0">
                                 <TextBlock Text="{Binding CurrentText}"
                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                           FontSize="11" Margin="0,0,12,0"/>
+                                           FontSize="11" Margin="0,0,12,2"/>
                                 <TextBlock Text="{Binding DefaultText}"
                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                           FontSize="11"/>
+                                           FontSize="11" Margin="0,0,12,2"/>
                                 <TextBlock Text="{Binding RecommendedText}"
                                            Visibility="{Binding RecommendedTextVisibility}"
                                            Foreground="{DynamicResource SystemFillColorSuccessBrush}"
-                                           FontSize="11" FontWeight="SemiBold" Margin="12,0,0,0"/>
-                            </StackPanel>
+                                           FontSize="11" FontWeight="SemiBold" Margin="0,0,0,2"/>
+                            </WrapPanel>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Orientation="Vertical">
                             <CheckBox Content="Monitor" IsChecked="{Binding Monitor}"/>
@@ -243,18 +243,18 @@
                                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                                    FontSize="12" Margin="0,3,0,0"
                                                                    TextWrapping="Wrap"/>
-                                                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                        <WrapPanel Margin="0,6,0,0">
                                                             <TextBlock Text="{Binding CurrentText}"
                                                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                                       FontSize="11" Margin="0,0,12,0"/>
+                                                                       FontSize="11" Margin="0,0,12,2"/>
                                                             <TextBlock Text="{Binding DefaultText}"
                                                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                                       FontSize="11"/>
+                                                                       FontSize="11" Margin="0,0,12,2"/>
                                                             <TextBlock Text="{Binding RecommendedText}"
                                                                        Visibility="{Binding RecommendedTextVisibility}"
                                                                        Foreground="{DynamicResource SystemFillColorSuccessBrush}"
-                                                                       FontSize="11" FontWeight="SemiBold" Margin="12,0,0,0"/>
-                                                        </StackPanel>
+                                                                       FontSize="11" FontWeight="SemiBold" Margin="0,0,0,2"/>
+                                                        </WrapPanel>
                                                     </StackPanel>
                                                     <StackPanel Grid.Column="1" Orientation="Vertical">
                                                         <CheckBox Content="Monitor" IsChecked="{Binding Monitor}"/>
@@ -317,18 +317,18 @@
                                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                                    FontSize="12" Margin="0,3,0,0"
                                                                    TextWrapping="Wrap"/>
-                                                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                        <WrapPanel Margin="0,6,0,0">
                                                             <TextBlock Text="{Binding CurrentText}"
                                                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                                       FontSize="11" Margin="0,0,12,0"/>
+                                                                       FontSize="11" Margin="0,0,12,2"/>
                                                             <TextBlock Text="{Binding DefaultText}"
                                                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                                       FontSize="11"/>
+                                                                       FontSize="11" Margin="0,0,12,2"/>
                                                             <TextBlock Text="{Binding RecommendedText}"
                                                                        Visibility="{Binding RecommendedTextVisibility}"
                                                                        Foreground="{DynamicResource SystemFillColorSuccessBrush}"
-                                                                       FontSize="11" FontWeight="SemiBold" Margin="12,0,0,0"/>
-                                                        </StackPanel>
+                                                                       FontSize="11" FontWeight="SemiBold" Margin="0,0,0,2"/>
+                                                        </WrapPanel>
                                                     </StackPanel>
                                                     <StackPanel Grid.Column="1" Orientation="Vertical">
                                                         <CheckBox Content="Monitor" IsChecked="{Binding Monitor}"/>
@@ -417,18 +417,18 @@
                                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                                    FontSize="12" Margin="0,3,0,0"
                                                                    TextWrapping="Wrap"/>
-                                                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                        <WrapPanel Margin="0,6,0,0">
                                                             <TextBlock Text="{Binding CurrentText}"
                                                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                                       FontSize="11" Margin="0,0,12,0"/>
+                                                                       FontSize="11" Margin="0,0,12,2"/>
                                                             <TextBlock Text="{Binding DefaultText}"
                                                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                                       FontSize="11"/>
+                                                                       FontSize="11" Margin="0,0,12,2"/>
                                                             <TextBlock Text="{Binding RecommendedText}"
                                                                        Visibility="{Binding RecommendedTextVisibility}"
                                                                        Foreground="{DynamicResource SystemFillColorSuccessBrush}"
-                                                                       FontSize="11" FontWeight="SemiBold" Margin="12,0,0,0"/>
-                                                        </StackPanel>
+                                                                       FontSize="11" FontWeight="SemiBold" Margin="0,0,0,2"/>
+                                                        </WrapPanel>
                                                     </StackPanel>
                                                     <StackPanel Grid.Column="1" Orientation="Vertical">
                                                         <CheckBox Content="Monitor" IsChecked="{Binding Monitor}"/>
@@ -525,18 +525,18 @@
                                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                                FontSize="12" Margin="0,3,0,0"
                                                                TextWrapping="Wrap"/>
-                                                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                    <WrapPanel Margin="0,6,0,0">
                                                         <TextBlock Text="{Binding CurrentText}"
                                                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                                   FontSize="11" Margin="0,0,12,0"/>
+                                                                   FontSize="11" Margin="0,0,12,2"/>
                                                         <TextBlock Text="{Binding DefaultText}"
                                                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                                   FontSize="11"/>
+                                                                   FontSize="11" Margin="0,0,12,2"/>
                                                         <TextBlock Text="{Binding RecommendedText}"
                                                                    Visibility="{Binding RecommendedTextVisibility}"
                                                                    Foreground="{DynamicResource SystemFillColorSuccessBrush}"
-                                                                   FontSize="11" FontWeight="SemiBold" Margin="12,0,0,0"/>
-                                                    </StackPanel>
+                                                                   FontSize="11" FontWeight="SemiBold" Margin="0,0,0,2"/>
+                                                    </WrapPanel>
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="1" Orientation="Vertical"
                                                             IsEnabled="{Binding IsInstalled}">
@@ -607,18 +607,18 @@
                                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                                    FontSize="12" Margin="0,3,0,0"
                                                                    TextWrapping="Wrap"/>
-                                                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                        <WrapPanel Margin="0,6,0,0">
                                                             <TextBlock Text="{Binding CurrentText}"
                                                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                                       FontSize="11" Margin="0,0,12,0"/>
+                                                                       FontSize="11" Margin="0,0,12,2"/>
                                                             <TextBlock Text="{Binding DefaultText}"
                                                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                                       FontSize="11"/>
+                                                                       FontSize="11" Margin="0,0,12,2"/>
                                                             <TextBlock Text="{Binding RecommendedText}"
                                                                        Visibility="{Binding RecommendedTextVisibility}"
                                                                        Foreground="{DynamicResource SystemFillColorSuccessBrush}"
-                                                                       FontSize="11" FontWeight="SemiBold" Margin="12,0,0,0"/>
-                                                        </StackPanel>
+                                                                       FontSize="11" FontWeight="SemiBold" Margin="0,0,0,2"/>
+                                                        </WrapPanel>
                                                     </StackPanel>
                                                     <StackPanel Grid.Column="1" Orientation="Vertical">
                                                         <CheckBox Content="Monitor" IsChecked="{Binding Monitor}"/>
@@ -797,18 +797,18 @@
                                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                                    FontSize="12" Margin="0,3,0,0"
                                                                    TextWrapping="Wrap"/>
-                                                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                        <WrapPanel Margin="0,6,0,0">
                                                             <TextBlock Text="{Binding CurrentText}"
                                                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                                       FontSize="11" Margin="0,0,12,0"/>
+                                                                       FontSize="11" Margin="0,0,12,2"/>
                                                             <TextBlock Text="{Binding DefaultText}"
                                                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                                       FontSize="11"/>
+                                                                       FontSize="11" Margin="0,0,12,2"/>
                                                             <TextBlock Text="{Binding RecommendedText}"
                                                                        Visibility="{Binding RecommendedTextVisibility}"
                                                                        Foreground="{DynamicResource SystemFillColorSuccessBrush}"
-                                                                       FontSize="11" FontWeight="SemiBold" Margin="12,0,0,0"/>
-                                                        </StackPanel>
+                                                                       FontSize="11" FontWeight="SemiBold" Margin="0,0,0,2"/>
+                                                        </WrapPanel>
                                                     </StackPanel>
                                                     <StackPanel Grid.Column="1" Orientation="Vertical">
                                                         <CheckBox Content="Monitor" IsChecked="{Binding Monitor}"/>
@@ -845,17 +845,17 @@
                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                    FontSize="12" Margin="0,3,0,0"
                                                    TextWrapping="Wrap"/>
-                                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                        <WrapPanel Margin="0,6,0,0">
                                             <TextBlock x:Name="PowerPlanCurrentText"
                                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                       FontSize="11" Margin="0,0,12,0"/>
+                                                       FontSize="11" Margin="0,0,12,2"/>
                                             <TextBlock Text="Default: Balanced"
                                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                       FontSize="11"/>
+                                                       FontSize="11" Margin="0,0,12,2"/>
                                             <TextBlock x:Name="PowerPlanRecommendedText"
                                                        Foreground="{DynamicResource SystemFillColorSuccessBrush}"
-                                                       FontSize="11" FontWeight="SemiBold" Margin="12,0,0,0"/>
-                                        </StackPanel>
+                                                       FontSize="11" FontWeight="SemiBold" Margin="0,0,0,2"/>
+                                        </WrapPanel>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Orientation="Vertical">
                                         <CheckBox x:Name="PowerPlanMonitorCheck" Content="Monitor"
