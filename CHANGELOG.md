@@ -10,6 +10,16 @@ Versions before 1.0.0 are pre-release: features and defaults may still change.
 ## [Unreleased]
 
 ### Changed
+- **Windows AI** tab now uses **Enabled / Disabled** for the *Want* choice, matching
+  every other tab (it previously said On / Off).
+- The **Current / Default / Recommended** line under each setting now wraps instead
+  of getting clipped, and the Settings window opens a little wider — so the full
+  **Recommended** value is always visible (Windows services, Global gaming, Privacy,
+  and CPU / Power tabs).
+
+## [0.1.53] - 2026-06-19
+
+### Changed
 - Release notes are now **curated and user-facing**: each GitHub Release shows a
   hand-written summary of what changed (from `CHANGELOG.md`) instead of a raw
   list of pull requests.
