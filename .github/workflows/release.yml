@@ -119,9 +119,27 @@ jobs:
         run: |
           Get-ChildItem -Recurse installer\Output, publish | Select-Object FullName, Length
 
-      - name: Initialize extra release notes
+      - name: Build release notes from CHANGELOG
         shell: pwsh
-        run: New-Item -ItemType File -Path release-notes-extra.md -Force | Out-Null
+        run: |
+          # Pull the section for this version out of CHANGELOG.md so the GitHub
+          # release shows curated, user-facing notes. Falls back to the
+          # [Unreleased] section (newest work not yet version-stamped), then to a
+          # generic line. GitHub's auto-generated "What's Changed" PR list is
+          # still appended after this (generate_release_notes: true).
+          $version = '${{ steps.ver.outputs.version }}'
+          $cl = Get-Content -Raw CHANGELOG.md
+          function Get-Section($text, $header) {
+            $pattern = "(?ms)^##\s*\[" + [regex]::Escape($header) + "\][^\n]*\n(.*?)(?=^##\s*\[|\z)"
+            $m = [regex]::Match($text, $pattern)
+            if ($m.Success) { return $m.Groups[1].Value.Trim() } else { return $null }
+          }
+          $body = Get-Section $cl $version
+          if (-not $body) { $body = Get-Section $cl 'Unreleased' }
+          if (-not $body) { $body = "See the commits in this release for details." }
+          "## What's new in $version`n`n$body`n" | Set-Content -Path release-notes.md -Encoding utf8
+          Write-Host "----- release-notes.md -----"
+          Write-Host (Get-Content release-notes.md -Raw)
 
       # Optional: scan with VirusTotal and surface the per-engine result URLs
       # in the run summary. Skips silently unless both the repository variable
@@ -152,7 +170,7 @@ jobs:
               $body += "- [``$name``]($($parts[1]))`n"
             }
           }
-          $body | Out-File -FilePath release-notes-extra.md -Encoding utf8 -Append
+          $body | Out-File -FilePath release-notes.md -Encoding utf8 -Append
           Write-Host $body
 
       - name: Upload installer artifact
@@ -185,10 +203,11 @@ jobs:
         with:
           tag_name: v${{ steps.ver.outputs.version }}
           name: GamerGuardian ${{ steps.ver.outputs.version }}
+          # Curated CHANGELOG section (+ any VirusTotal URLs) becomes the body;
+          # generate_release_notes appends GitHub's "What's Changed" PR list and
+          # the Full Changelog link after it.
           generate_release_notes: true
-          # If VirusTotal ran, append its URLs after the auto-generated notes.
-          body_path: release-notes-extra.md
-          append_body: true
+          body_path: release-notes.md
           target_commitish: ${{ github.sha }}
           files: |
             installer/Output/GamerGuardian-Setup-${{ steps.ver.outputs.version }}.exe
