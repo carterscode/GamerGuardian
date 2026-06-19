@@ -14,7 +14,7 @@ Almost every setting exposes the same three controls, so they're worth understan
 
 Other conventions:
 
-- **Current** / **Default** labels under each setting show the live system value and the Windows default, so you can see at a glance whether you're already where you want to be.
+- **Current** / **Default** / **Recommended** labels under each setting show the live system value, the Windows default, and GamerGuardian's suggested gaming-optimized target. The green **Recommended** value is the same one the one-click setup applies — so you can see at a glance whether you're already where you want to be and what we'd pick. Settings without a documented recommendation simply omit the label.
 - A yellow **reboot required** badge means the change only takes full effect after a restart.
 - **Learn more** expanders carry the same per-setting explanation as the reference doc.
 - Changes are **staged**: toggling preferences doesn't write to Windows until you click **Apply** (or **Save & close**). Everything is reversible, and every applied change is recorded in [`changes.log`](Logging).
