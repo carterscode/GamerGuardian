@@ -103,4 +103,26 @@ public class SettingDocsTests
         // sc qc would query the Services hive; the policy verify shouldn't.
         Assert.DoesNotContain("sc qc", cmd);
     }
+
+    [Fact]
+    public void Catalog_EveryEntry_HasRecommendation()
+    {
+        // The Settings UI shows "Recommended: {x}" next to Current/Default for
+        // every documented setting (GlobalToggleRow / ServiceRow.RecommendedText).
+        // A blank Recommended would render an empty/hidden line, so guard against
+        // any catalog entry shipping without one.
+        foreach (var d in SettingDocsCatalog.All)
+            Assert.False(string.IsNullOrWhiteSpace(d.Recommended),
+                $"no Recommended for {d.SettingId}");
+    }
+
+    [Fact]
+    public void Catalog_Get_ResolvesRecommendation_ForToggleAndServiceIds()
+    {
+        // RecommendedText is built from SettingDocsCatalog.Get(SettingId).Recommended.
+        // Spot-check the id shapes the toggle/service rows actually pass.
+        Assert.False(string.IsNullOrWhiteSpace(SettingDocsCatalog.Get("ai.copilot")?.Recommended));
+        Assert.False(string.IsNullOrWhiteSpace(SettingDocsCatalog.Get("service:DiagTrack")?.Recommended));
+        Assert.False(string.IsNullOrWhiteSpace(SettingDocsCatalog.Get("powerplan")?.Recommended));
+    }
 }

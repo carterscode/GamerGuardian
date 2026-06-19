@@ -787,6 +787,10 @@ public partial class SettingsWindow : FluentWindow
         var active = SafeRunGuid(PowerPlanMonitor.GetActivePlan);
         var activeName = active is not null && planNames.TryGetValue(active.Value, out var name) ? name : "unknown";
         PowerPlanCurrentText.Text = $"Current: {activeName}";
+        var planRec = SettingDocsCatalog.Get("powerplan")?.Recommended;
+        PowerPlanRecommendedText.Text = string.IsNullOrWhiteSpace(planRec) ? string.Empty : $"Recommended: {planRec}";
+        PowerPlanRecommendedText.Visibility = string.IsNullOrEmpty(PowerPlanRecommendedText.Text)
+            ? Visibility.Collapsed : Visibility.Visible;
         PowerPlanMonitorCheck.IsChecked = g.PowerPlan.Monitor;
         PowerPlanAutoApplyCheck.IsChecked = g.PowerPlan.AutoApply;
 
@@ -1666,6 +1670,23 @@ public sealed class GlobalToggleRow : INotifyPropertyChanged
     public Visibility LearnMoreVisibility =>
         string.IsNullOrEmpty(LearnMoreContent) ? Visibility.Collapsed : Visibility.Visible;
 
+    /// <summary>
+    /// GamerGuardian's recommended value for this setting, pulled from the
+    /// per-setting docs catalog. Shown alongside Current/Default so the user can
+    /// see the suggested target at a glance. Empty (and hidden) when the setting
+    /// has no documented recommendation.
+    /// </summary>
+    public string RecommendedText
+    {
+        get
+        {
+            var rec = SettingDocsCatalog.Get(SettingId)?.Recommended;
+            return string.IsNullOrWhiteSpace(rec) ? string.Empty : $"Recommended: {rec}";
+        }
+    }
+    public Visibility RecommendedTextVisibility =>
+        string.IsNullOrEmpty(RecommendedText) ? Visibility.Collapsed : Visibility.Visible;
+
     public bool Monitor
     {
         get => _pref.Monitor;
@@ -1762,6 +1783,22 @@ public sealed class ServiceRow : INotifyPropertyChanged
     public string LearnMoreContent => SettingDocsCatalog.FormatForExpander(SettingId);
     public Visibility LearnMoreVisibility =>
         string.IsNullOrEmpty(LearnMoreContent) ? Visibility.Collapsed : Visibility.Visible;
+
+    /// <summary>
+    /// GamerGuardian's recommended startup state for this service, pulled from the
+    /// per-setting docs catalog. Shown alongside Current/Default. Empty (and
+    /// hidden) when the service has no documented recommendation.
+    /// </summary>
+    public string RecommendedText
+    {
+        get
+        {
+            var rec = SettingDocsCatalog.Get(SettingId)?.Recommended;
+            return string.IsNullOrWhiteSpace(rec) ? string.Empty : $"Recommended: {rec}";
+        }
+    }
+    public Visibility RecommendedTextVisibility =>
+        string.IsNullOrEmpty(RecommendedText) ? Visibility.Collapsed : Visibility.Visible;
 
     public bool Monitor
     {
