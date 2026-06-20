@@ -8,7 +8,7 @@ Almost every setting exposes the same three controls, so they're worth understan
 
 | Control | What it means |
 |---|---|
-| **Monitor** | When checked, GamerGuardian watches this setting on every poll (default every 30 s) and reports when it has *drifted* away from your chosen value. Unchecked = ignored entirely. |
+| **Monitor** | When checked, GamerGuardian watches this setting and reports when it has *drifted* away from your chosen value. Display settings (HDR, refresh rate, resolution, DRR) are re-checked on every poll (default every 30 s) because Windows changes them mid-session; the set-and-forget registry/policy/service settings are re-checked at startup, when you resume from sleep, unlock the PC, or change your display, plus a slow 10-minute backstop — so the app isn't constantly polling dozens of settings that only move across a reboot. Unchecked = ignored entirely. |
 | **Want** (the desired value) | The value you want this setting to hold — shown as **Enabled / Disabled** for intuitive settings or **Gaming / Default** where the registry meaning is inverted (so "Gaming" always means the gaming-optimized state, even when that writes a `0` under the hood). |
 | **Auto-apply silently** | When checked, GamerGuardian re-applies your desired value automatically the moment it detects drift — no prompt. Unchecked = it only notifies you, and you apply with a click. |
 
@@ -31,7 +31,7 @@ App preferences and the one-click setup — not a monitored-setting tab.
   - **Apply extreme** — everything that could even *remotely* help gaming, on: **every** toggle at its most-aggressive value — including Memory Integrity / VBS **off** and the contested Nagle / NIC tweaks — with **Monitor and Auto-apply turned on for every setting**. Disabling Memory Integrity / VBS breaks Valorant (Vanguard) and weakens malware protection, and several changes need a reboot — it asks for confirmation first.
   - **Reset all to defaults** — the inverse: stages every setting back to its **Windows default** and turns **Monitor + Auto-apply off**. Applying then restores Windows' shipped behavior (which re-enables features you may have turned off, like Copilot, ads/suggestions, and telemetry services).
 - **Launch at startup** — start GamerGuardian minimized to the tray when you sign in.
-- **Polling interval** — how often (seconds) the drift check runs. Default 30 s.
+- **Polling interval** — how often (seconds) the fast drift check runs for the volatile display settings. Default 30 s. The set-and-forget settings don't use this — they re-check on startup / resume / unlock / display-change events plus a slow 10-minute backstop.
 - **Theme** — Light / Dark / System.
 - **Check for updates on startup** — looks at GitHub Releases and offers a one-click update.
 - **Change log** — quick access to `changes.log`, the record of everything the app has applied.

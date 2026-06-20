@@ -2,6 +2,7 @@ using System.Runtime;
 using GamerGuardian.Models;
 using GamerGuardian.Monitors;
 using GamerGuardian.Native;
+using Microsoft.Win32;
 
 namespace GamerGuardian.Services;
 
@@ -10,7 +11,20 @@ public sealed class MonitorService : IDisposable
     private readonly ConfigStore _store;
     private readonly IReadOnlyList<IMonitoredSetting> _monitors;
     private readonly Func<DriftReport, Task> _onDriftAsync;
-    private readonly System.Threading.Timer _timer;
+
+    /// <summary>Fast cadence (the user's poll interval, default 30 s): only the
+    /// <see cref="MonitorTier.Volatile"/> settings (display) -- the ones Windows
+    /// actually changes mid-session.</summary>
+    private readonly System.Threading.Timer _fastTimer;
+
+    /// <summary>Slow backstop: re-checks the ~40 <see cref="MonitorTier.Stable"/>
+    /// registry/policy/service settings that otherwise only change across a reboot
+    /// or feature update. Catches anything the startup check and the
+    /// resume/unlock/display events miss, without polling them every 30 s.</summary>
+    private readonly System.Threading.Timer _slowTimer;
+    private static readonly TimeSpan StableBackstop = TimeSpan.FromMinutes(10);
+
+    private bool _eventsSubscribed;
     private readonly object _lock = new();
     private bool _running;
     private int _ticksSinceTrim;
@@ -69,23 +83,83 @@ public sealed class MonitorService : IDisposable
         _store = store;
         _monitors = monitors;
         _onDriftAsync = onDriftAsync;
-        _timer = new System.Threading.Timer(_ => _ = TickAsync(), null, Timeout.Infinite, Timeout.Infinite);
+        _fastTimer = new System.Threading.Timer(_ => _ = TickAsync(MonitorTier.Volatile), null, Timeout.Infinite, Timeout.Infinite);
+        _slowTimer = new System.Threading.Timer(_ => _ = TickAsync(MonitorTier.Stable), null, Timeout.Infinite, Timeout.Infinite);
     }
 
     public void Start()
     {
         var cfg = _store.Load();
-        var ms = Math.Max(5, cfg.PollIntervalSeconds) * 1000;
-        _timer.Change(2000, ms);
+        var fastMs = Math.Max(5, cfg.PollIntervalSeconds) * 1000;
+        var slowMs = (int)Math.Max(fastMs, StableBackstop.TotalMilliseconds);
+
+        SubscribeSystemEvents();
+        _fastTimer.Change(2000, fastMs);     // volatile (display) every poll
+        _slowTimer.Change(slowMs, slowMs);   // stable backstop
+        ScheduleCheck(tier: null, delayMs: 2000); // one full check at startup
     }
 
-    public void TriggerNow()
+    /// <summary>Forces an immediate full check of every setting (both tiers). Used
+    /// by the tray "Check now" and after a Settings Apply/Save.</summary>
+    public void TriggerNow() => ScheduleCheck(tier: null, delayMs: 0);
+
+    /// <summary>
+    /// Runs a tier (or all settings when <paramref name="tier"/> is null) after a
+    /// short delay. The delay lets a triggering system event (resume, unlock,
+    /// display reconfigure) settle, and the <see cref="_running"/> guard inside
+    /// <see cref="TickAsync"/> coalesces overlapping calls.
+    /// </summary>
+    private void ScheduleCheck(MonitorTier? tier, int delayMs)
     {
-        _timer.Change(0, Timeout.Infinite);
-        var cfg = _store.Load();
-        var ms = Math.Max(5, cfg.PollIntervalSeconds) * 1000;
-        _timer.Change(ms, ms);
+        _ = Task.Run(async () =>
+        {
+            if (delayMs > 0) await Task.Delay(delayMs);
+            await TickAsync(tier);
+        });
     }
+
+    // System-event triggers for the stable tier: instead of polling ~40 settings
+    // every 30 s, re-check them at the moments Windows might actually have changed
+    // them. Resume/unlock re-check everything; a display reconfigure re-checks just
+    // the volatile (display) settings.
+    private void SubscribeSystemEvents()
+    {
+        if (_eventsSubscribed) return;
+        _eventsSubscribed = true;
+        try
+        {
+            SystemEvents.PowerModeChanged += OnPowerModeChanged;
+            SystemEvents.SessionSwitch += OnSessionSwitch;
+            SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
+        }
+        catch { /* SystemEvents needs a message pump; best-effort */ }
+    }
+
+    private void UnsubscribeSystemEvents()
+    {
+        if (!_eventsSubscribed) return;
+        _eventsSubscribed = false;
+        try
+        {
+            SystemEvents.PowerModeChanged -= OnPowerModeChanged;
+            SystemEvents.SessionSwitch -= OnSessionSwitch;
+            SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+        }
+        catch { }
+    }
+
+    private void OnPowerModeChanged(object? sender, PowerModeChangedEventArgs e)
+    {
+        if (e.Mode == PowerModes.Resume) ScheduleCheck(tier: null, delayMs: 3000);
+    }
+
+    private void OnSessionSwitch(object? sender, SessionSwitchEventArgs e)
+    {
+        if (e.Reason == SessionSwitchReason.SessionUnlock) ScheduleCheck(tier: null, delayMs: 1500);
+    }
+
+    private void OnDisplaySettingsChanged(object? sender, EventArgs e)
+        => ScheduleCheck(tier: MonitorTier.Volatile, delayMs: 1500);
 
     /// <summary>
     /// Called by the SettingsWindow's Apply / Save &amp; close path to seed our
@@ -104,7 +178,14 @@ public sealed class MonitorService : IDisposable
         }
     }
 
-    private async Task TickAsync()
+    /// <summary>
+    /// One monitoring pass. <paramref name="tier"/> selects which settings to check:
+    /// <see cref="MonitorTier.Volatile"/> on the fast poll, <see cref="MonitorTier.Stable"/>
+    /// on the slow backstop, or <c>null</c> for every setting (startup, resume/unlock,
+    /// and the tray "Check now"). The <see cref="_running"/> guard makes overlapping
+    /// passes (e.g. a fast tick racing a resume event) coalesce instead of stacking.
+    /// </summary>
+    private async Task TickAsync(MonitorTier? tier)
     {
         lock (_lock)
         {
@@ -140,8 +221,13 @@ public sealed class MonitorService : IDisposable
             if (pauseReason != null) return;
 
             var config = _store.Load();
+            // Tier filter: the fast poll only checks volatile (display) settings;
+            // the slow backstop only the stable ones; startup/events check all.
+            var active = tier is null
+                ? _monitors
+                : _monitors.Where(m => MonitorVolatility.TierFor(m) == tier.Value);
             var drifted = new List<DriftItem>();
-            foreach (var m in _monitors)
+            foreach (var m in active)
             {
                 try { drifted.AddRange(m.CheckDrift(config).Where(d => d.IsMonitored)); }
                 catch { /* swallow per-monitor failure to keep loop alive */ }
@@ -160,9 +246,14 @@ public sealed class MonitorService : IDisposable
 
             // Anything the breaker is tracking that ISN'T drifting this tick has
             // recovered (Windows stopped reverting it) -- clear its streak/cooldown
-            // so it returns to normal monitoring.
+            // so it returns to normal monitoring. Only consider settings that were
+            // actually checked this tick: on a volatile-only fast poll a stable
+            // setting's absence from `drifted` means "not checked", not "recovered".
             foreach (var id in _breaker.TrackedSettingIds.ToList())
+            {
+                if (tier is not null && MonitorVolatility.TierFor(id) != tier.Value) continue;
                 if (!driftedIds.Contains(id)) _breaker.RecordHealthy(id);
+            }
 
             // External-reset detection happens BEFORE auto-apply so we log the
             // cause (EXTRESET) and the effect (the corrective apply) as two
@@ -296,5 +387,10 @@ public sealed class MonitorService : IDisposable
         }
     }
 
-    public void Dispose() => _timer.Dispose();
+    public void Dispose()
+    {
+        UnsubscribeSystemEvents();
+        _fastTimer.Dispose();
+        _slowTimer.Dispose();
+    }
 }

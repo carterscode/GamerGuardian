@@ -9,7 +9,21 @@ Versions before 1.0.0 are pre-release: features and defaults may still change.
 
 ## [Unreleased]
 
+### Fixed
+- **Mouse and keyboard no longer hitch every ~30 seconds.** A monitored, auto-applied
+  setting that Windows kept reverting was re-applied on every poll — and when the app
+  runs without admin rights each re-apply raised a UAC prompt (and display settings
+  reconfigured the screen), seizing input. A new circuit breaker stops re-applying a
+  setting Windows keeps fighting after a few tries and leaves it notify-only for a
+  cooldown (logged as `[CIRCUIT]` in the change log), so the worst case is one
+  interruption every several minutes instead of one every 30 seconds.
+
 ### Changed
+- **Far less background polling.** Only the display settings (HDR, refresh rate,
+  resolution, DRR) — the ones Windows actually changes mid-session — are checked on the
+  30-second poll now. The ~40 set-and-forget registry, policy and service settings are
+  re-checked at startup, when you resume from sleep, unlock the PC, or change your
+  display, plus a slow 10-minute backstop — instead of every 30 seconds.
 - **Windows AI** tab now uses **Enabled / Disabled** for the *Want* choice, matching
   every other tab (it previously said On / Off).
 - The **Current / Default / Recommended** line under each setting now wraps instead
