@@ -165,31 +165,48 @@ public class RecommendedPresetTests
     private static CpuTuneResult SingleCcd() =>
         CpuTuneCatalog.Resolve(CpuDetector.Parse("AMD Ryzen 7 9800X3D 8-Core Processor", "AuthenticAMD", ""));
 
-    private static Dictionary<Guid, string> PlansWithBalanced() =>
-        new() { [PowerPlanMonitor.Balanced] = "Balanced" };
+    // The power plan is isolated from every preset: it's a one-time, user-initiated
+    // setup on the CPU / Power tab. No preset button may stage, monitor, or revert it.
 
     [Fact]
-    public void Apply_PowerPlan_IsCpuAware_RecommendsBalanced_NotHighPerformance()
+    public void Apply_DoesNotTouchPowerPlan()
     {
         var cfg = new AppConfig();
-        // Inject an installed-plans set so the test doesn't depend on a live OS
-        // power-scheme enumeration (deterministic in CI).
-        RecommendedPreset.ApplyToDraft(cfg, DualCcd(), PlansWithBalanced());
+        RecommendedPreset.ApplyToDraft(cfg, DualCcd());
 
-        Assert.Equal(PowerPlanChoice.Balanced, cfg.Global.PowerPlan.Desired);
-        Assert.NotEqual(PowerPlanChoice.HighPerformance, cfg.Global.PowerPlan.Desired);
+        Assert.Null(cfg.Global.PowerPlan.DesiredGuid);
+        Assert.False(cfg.Global.PowerPlan.Monitor);
+        Assert.False(cfg.Global.PowerPlan.AutoApply);
     }
 
     [Fact]
-    public void Apply_PowerPlan_NotInstalled_LeavesPlanAlone()
+    public void ApplyExtreme_DoesNotTouchPowerPlan()
     {
         var cfg = new AppConfig();
-        var before = cfg.Global.PowerPlan.Desired;
-        // Recommended Balanced is not in the (empty) installed set.
-        RecommendedPreset.ApplyToDraft(cfg, DualCcd(), new Dictionary<Guid, string>());
+        RecommendedPreset.ApplyExtremeToDraft(cfg, SingleCcd());
 
-        Assert.Equal(before, cfg.Global.PowerPlan.Desired); // unchanged
         Assert.Null(cfg.Global.PowerPlan.DesiredGuid);
+        Assert.False(cfg.Global.PowerPlan.Monitor);
+        Assert.False(cfg.Global.PowerPlan.AutoApply);
+    }
+
+    [Fact]
+    public void Reset_LeavesUserPowerPlanSetupAlone()
+    {
+        // A user who configured the power plan manually must keep that setup across
+        // a Reset -- the power plan is owned outside the presets.
+        var cfg = new AppConfig();
+        cfg.Global.PowerPlan.Desired = PowerPlanChoice.HighPerformance;
+        cfg.Global.PowerPlan.DesiredGuid = PowerPlanMonitor.HighPerformance.ToString();
+        cfg.Global.PowerPlan.Monitor = true;
+        cfg.Global.PowerPlan.AutoApply = true;
+
+        RecommendedPreset.ResetToDefaultsToDraft(cfg);
+
+        Assert.Equal(PowerPlanChoice.HighPerformance, cfg.Global.PowerPlan.Desired);
+        Assert.Equal(PowerPlanMonitor.HighPerformance.ToString(), cfg.Global.PowerPlan.DesiredGuid);
+        Assert.True(cfg.Global.PowerPlan.Monitor);
+        Assert.True(cfg.Global.PowerPlan.AutoApply);
     }
 
     [Fact]
@@ -295,7 +312,7 @@ public class RecommendedPresetTests
     public void ApplyExtreme_FreshConfig_TurnsOnMonitorAndAutoApplyForEverySetting()
     {
         var cfg = new AppConfig();
-        var result = RecommendedPreset.ApplyExtremeToDraft(cfg, SingleCcd(), PlansWithBalanced());
+        var result = RecommendedPreset.ApplyExtremeToDraft(cfg, SingleCcd());
         Assert.True(result.SettingsChanged > 0);
 
         // Spot-check across every category: Monitor + Auto-apply on everywhere.
@@ -315,7 +332,7 @@ public class RecommendedPresetTests
     public void ApplyExtreme_DisablesSecurityAndPushesContestedNetworkTweaks()
     {
         var cfg = new AppConfig();
-        RecommendedPreset.ApplyExtremeToDraft(cfg, SingleCcd(), PlansWithBalanced());
+        RecommendedPreset.ApplyExtremeToDraft(cfg, SingleCcd());
 
         Assert.False(cfg.Global.MemoryIntegrity.DesiredOn); // off (gaming)
         Assert.False(cfg.Global.Vbs.DesiredOn);             // off (gaming)
@@ -332,10 +349,10 @@ public class RecommendedPresetTests
     public void ApplyExtreme_IsIdempotent()
     {
         var cfg = new AppConfig();
-        var first = RecommendedPreset.ApplyExtremeToDraft(cfg, SingleCcd(), PlansWithBalanced());
+        var first = RecommendedPreset.ApplyExtremeToDraft(cfg, SingleCcd());
         Assert.True(first.SettingsChanged > 0);
 
-        var second = RecommendedPreset.ApplyExtremeToDraft(cfg, SingleCcd(), PlansWithBalanced());
+        var second = RecommendedPreset.ApplyExtremeToDraft(cfg, SingleCcd());
         Assert.Equal(0, second.SettingsChanged);
     }
 
@@ -349,7 +366,7 @@ public class RecommendedPresetTests
     public void ApplyExtreme_DualCcd_StillProtectsCcdRoutingServices()
     {
         var cfg = new AppConfig();
-        RecommendedPreset.ApplyExtremeToDraft(cfg, DualCcd(), PlansWithBalanced());
+        RecommendedPreset.ApplyExtremeToDraft(cfg, DualCcd());
         foreach (var (name, pref) in cfg.Services)
         {
             if (RecommendedPreset.ShouldProtectServiceOnDualCcd(name, DualCcd()))
@@ -364,9 +381,9 @@ public class RecommendedPresetTests
     {
         // Start from a fully gaming-optimized config, then reset.
         var cfg = new AppConfig();
-        RecommendedPreset.ApplyExtremeToDraft(cfg, SingleCcd(), PlansWithBalanced());
+        RecommendedPreset.ApplyExtremeToDraft(cfg, SingleCcd());
 
-        RecommendedPreset.ResetToDefaultsToDraft(cfg, PlansWithBalanced());
+        RecommendedPreset.ResetToDefaultsToDraft(cfg);
 
         // Windows-default Want values restored.
         Assert.True(cfg.Global.GameMode.DesiredOn);        // on by default
@@ -394,10 +411,10 @@ public class RecommendedPresetTests
     public void Reset_ResetsManagedServicesToDefaultUnmanaged()
     {
         var cfg = new AppConfig();
-        RecommendedPreset.ApplyExtremeToDraft(cfg, SingleCcd(), PlansWithBalanced());
+        RecommendedPreset.ApplyExtremeToDraft(cfg, SingleCcd());
         Assert.NotEmpty(cfg.Services); // extreme materialized service prefs
 
-        RecommendedPreset.ResetToDefaultsToDraft(cfg, PlansWithBalanced());
+        RecommendedPreset.ResetToDefaultsToDraft(cfg);
 
         foreach (var (_, pref) in cfg.Services)
         {
@@ -412,9 +429,9 @@ public class RecommendedPresetTests
     {
         var cfg = new AppConfig();
         cfg.Displays["DISPLAY-A"] = new DisplayPreference { DisplayLabel = "Monitor A" };
-        RecommendedPreset.ApplyExtremeToDraft(cfg, SingleCcd(), PlansWithBalanced());
+        RecommendedPreset.ApplyExtremeToDraft(cfg, SingleCcd());
 
-        RecommendedPreset.ResetToDefaultsToDraft(cfg, PlansWithBalanced());
+        RecommendedPreset.ResetToDefaultsToDraft(cfg);
 
         var d = cfg.Displays["DISPLAY-A"];
         Assert.False(d.Hdr.Monitor);
@@ -427,11 +444,11 @@ public class RecommendedPresetTests
     public void Reset_IsIdempotent()
     {
         var cfg = new AppConfig();
-        RecommendedPreset.ApplyExtremeToDraft(cfg, SingleCcd(), PlansWithBalanced());
-        var first = RecommendedPreset.ResetToDefaultsToDraft(cfg, PlansWithBalanced());
+        RecommendedPreset.ApplyExtremeToDraft(cfg, SingleCcd());
+        var first = RecommendedPreset.ResetToDefaultsToDraft(cfg);
         Assert.True(first.SettingsChanged > 0);
 
-        var second = RecommendedPreset.ResetToDefaultsToDraft(cfg, PlansWithBalanced());
+        var second = RecommendedPreset.ResetToDefaultsToDraft(cfg);
         Assert.Equal(0, second.SettingsChanged);
     }
 

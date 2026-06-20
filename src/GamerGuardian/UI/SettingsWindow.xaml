@@ -160,15 +160,15 @@
                                     <StackPanel Margin="0,4,0,0">
                                         <TextBlock TextWrapping="Wrap" FontSize="12"
                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                                            <Run FontWeight="SemiBold" Text="Apply recommended"/><Run Text=" -- GamerGuardian's safe gaming preset: sets the recommended Want, Monitor on, Auto-apply on. Keeps Memory Integrity / VBS on (security) and leaves Privacy / Debloat / contested network tweaks for you to choose."/>
+                                            <Run FontWeight="SemiBold" Text="Apply recommended"/><Run Text=" -- GamerGuardian's safe gaming preset: sets the recommended Want, Monitor on, Auto-apply on. Keeps Memory Integrity / VBS on (security) and leaves Privacy / Debloat / contested network tweaks for you to choose. Does not touch your power plan -- set that once yourself on the CPU / Power tab."/>
                                         </TextBlock>
                                         <TextBlock TextWrapping="Wrap" FontSize="12" Margin="0,4,0,0"
                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                                            <Run FontWeight="SemiBold" Text="Apply extreme"/><Run Text=" -- everything that could even remotely help gaming, on: every toggle at its most-aggressive value (including Memory Integrity / VBS OFF and the contested Nagle / NIC tweaks), with Monitor AND Auto-apply turned on for every setting. Disabling Memory Integrity / VBS breaks Valorant (Vanguard) and weakens malware protection."/>
+                                            <Run FontWeight="SemiBold" Text="Apply extreme"/><Run Text=" -- everything that could even remotely help gaming, on: every toggle at its most-aggressive value (including Memory Integrity / VBS OFF and the contested Nagle / NIC tweaks), with Monitor AND Auto-apply turned on for every setting. Disabling Memory Integrity / VBS breaks Valorant (Vanguard) and weakens malware protection. Still leaves your power plan alone -- that's a separate one-time setup on the CPU / Power tab."/>
                                         </TextBlock>
                                         <TextBlock TextWrapping="Wrap" FontSize="12" Margin="0,4,0,0"
                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                                            <Run FontWeight="SemiBold" Text="Reset all to defaults"/><Run Text=" -- stages every setting back to its Windows default and turns Monitor + Auto-apply off. Applying then restores Windows' shipped behavior (this re-enables features like Copilot, ads and telemetry services you may have turned off)."/>
+                                            <Run FontWeight="SemiBold" Text="Reset all to defaults"/><Run Text=" -- stages every setting back to its Windows default and turns Monitor + Auto-apply off. Applying then restores Windows' shipped behavior (this re-enables features like Copilot, ads and telemetry services you may have turned off). Leaves your power plan as-is -- manage that on the CPU / Power tab."/>
                                         </TextBlock>
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
