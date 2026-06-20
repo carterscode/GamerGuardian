@@ -28,3 +28,9 @@ CLAUDE.md
 
 # Personal scratch note — local only, never commit.
 qc
+
+# Planning & brainstorm docs are local-only working notes — never committed
+# (same philosophy as CLAUDE.md). Committed human docs live elsewhere in docs/.
+docs/plans/
+docs/brainstorms/
+docs/feat-gaming-optimize-plan.md
