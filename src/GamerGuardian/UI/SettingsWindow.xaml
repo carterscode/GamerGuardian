@@ -11,6 +11,33 @@
         ExtendsContentIntoTitleBar="True"
         WindowCornerPreference="Round">
     <ui:FluentWindow.Resources>
+        <!-- Read-only, chrome-free TextBox used to render "Learn more" text so it
+             can be selected and copied (a TextBlock can't be) — lets users copy the
+             PowerShell verify / apply / reverse commands straight out of the panel.
+             The custom template drops all TextBox chrome and disables its scrollbars
+             so it looks like plain text and doesn't swallow mouse-wheel scrolling. -->
+        <Style x:Key="CopyableLearnMoreText" TargetType="{x:Type TextBox}">
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="IsReadOnlyCaretVisible" Value="False"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
+            <Setter Property="Cursor" Value="IBeam"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TextBox}">
+                        <ScrollViewer x:Name="PART_ContentHost" Focusable="False"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      VerticalScrollBarVisibility="Disabled"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Shared row template for the Debloat tab's two sections (same shape
              as the inline toggle templates on the other tabs). -->
         <DataTemplate x:Key="ToggleRowTemplate">
@@ -61,10 +88,9 @@
                     </Grid>
                     <Expander Header="Learn more" Margin="0,8,0,0"
                               Visibility="{Binding LearnMoreVisibility}">
-                        <TextBlock Text="{Binding LearnMoreContent}"
-                                   TextWrapping="Wrap" FontSize="12"
-                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   Margin="8,8,8,8"/>
+                        <TextBox Text="{Binding LearnMoreContent, Mode=OneWay}"
+                                 Style="{StaticResource CopyableLearnMoreText}"
+                                 Margin="8,8,8,8"/>
                     </Expander>
                 </StackPanel>
             </ui:Card>
@@ -282,10 +308,9 @@
                                                 </Grid>
                                                 <Expander Header="Learn more" Margin="0,8,0,0"
                                                           Visibility="{Binding LearnMoreVisibility}">
-                                                    <TextBlock Text="{Binding LearnMoreContent}"
-                                                               TextWrapping="Wrap" FontSize="12"
-                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                               Margin="8,8,8,8"/>
+                                                    <TextBox Text="{Binding LearnMoreContent, Mode=OneWay}"
+                                                             Style="{StaticResource CopyableLearnMoreText}"
+                                                             Margin="8,8,8,8"/>
                                                 </Expander>
                                             </StackPanel>
                                         </ui:Card>
@@ -356,10 +381,9 @@
                                                 </Grid>
                                                 <Expander Header="Learn more" Margin="0,8,0,0"
                                                           Visibility="{Binding LearnMoreVisibility}">
-                                                    <TextBlock Text="{Binding LearnMoreContent}"
-                                                               TextWrapping="Wrap" FontSize="12"
-                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                               Margin="8,8,8,8"/>
+                                                    <TextBox Text="{Binding LearnMoreContent, Mode=OneWay}"
+                                                             Style="{StaticResource CopyableLearnMoreText}"
+                                                             Margin="8,8,8,8"/>
                                                 </Expander>
                                             </StackPanel>
                                         </ui:Card>
@@ -456,10 +480,9 @@
                                                 </Grid>
                                                 <Expander Header="Learn more" Margin="0,8,0,0"
                                                           Visibility="{Binding LearnMoreVisibility}">
-                                                    <TextBlock Text="{Binding LearnMoreContent}"
-                                                               TextWrapping="Wrap" FontSize="12"
-                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                               Margin="8,8,8,8"/>
+                                                    <TextBox Text="{Binding LearnMoreContent, Mode=OneWay}"
+                                                             Style="{StaticResource CopyableLearnMoreText}"
+                                                             Margin="8,8,8,8"/>
                                                 </Expander>
                                             </StackPanel>
                                         </ui:Card>
@@ -566,10 +589,9 @@
                                             </Grid>
                                                 <Expander Header="Learn more" Margin="0,8,0,0"
                                                           Visibility="{Binding LearnMoreVisibility}">
-                                                    <TextBlock Text="{Binding LearnMoreContent}"
-                                                               TextWrapping="Wrap" FontSize="12"
-                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                               Margin="8,8,8,8"/>
+                                                    <TextBox Text="{Binding LearnMoreContent, Mode=OneWay}"
+                                                             Style="{StaticResource CopyableLearnMoreText}"
+                                                             Margin="8,8,8,8"/>
                                                 </Expander>
                                             </StackPanel>
                                         </ui:Card>
@@ -646,10 +668,9 @@
                                                 </Grid>
                                                 <Expander Header="Learn more" Margin="0,8,0,0"
                                                           Visibility="{Binding LearnMoreVisibility}">
-                                                    <TextBlock Text="{Binding LearnMoreContent}"
-                                                               TextWrapping="Wrap" FontSize="12"
-                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                               Margin="8,8,8,8"/>
+                                                    <TextBox Text="{Binding LearnMoreContent, Mode=OneWay}"
+                                                             Style="{StaticResource CopyableLearnMoreText}"
+                                                             Margin="8,8,8,8"/>
                                                 </Expander>
                                             </StackPanel>
                                         </ui:Card>
@@ -698,10 +719,9 @@
                                             </Grid>
                                                 <Expander Header="Learn more" Margin="0,8,0,0"
                                                           Visibility="{Binding LearnMoreVisibility}">
-                                                    <TextBlock Text="{Binding LearnMoreContent}"
-                                                               TextWrapping="Wrap" FontSize="12"
-                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                               Margin="8,8,8,8"/>
+                                                    <TextBox Text="{Binding LearnMoreContent, Mode=OneWay}"
+                                                             Style="{StaticResource CopyableLearnMoreText}"
+                                                             Margin="8,8,8,8"/>
                                                 </Expander>
                                             </StackPanel>
                                         </ui:Card>
@@ -836,10 +856,9 @@
                                                 </Grid>
                                                 <Expander Header="Learn more" Margin="0,8,0,0"
                                                           Visibility="{Binding LearnMoreVisibility}">
-                                                    <TextBlock Text="{Binding LearnMoreContent}"
-                                                               TextWrapping="Wrap" FontSize="12"
-                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                               Margin="8,8,8,8"/>
+                                                    <TextBox Text="{Binding LearnMoreContent, Mode=OneWay}"
+                                                             Style="{StaticResource CopyableLearnMoreText}"
+                                                             Margin="8,8,8,8"/>
                                                 </Expander>
                                             </StackPanel>
                                         </ui:Card>
