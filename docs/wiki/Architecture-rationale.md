@@ -17,15 +17,20 @@ User-mode P/Invoke:
 - Runs at the logged-in user's privilege level (medium IL by default)
 - Prompts UAC for the specific writes that need it (HKLM, service start type)
 - Touches only documented Windows APIs that are also reachable from PowerShell
-- Is auditable by anyone who can read C# — every API call is in [`src/GamerGuardian/Native/`](https://github.com/carterscode/GamerGuardian/tree/main/src/GamerGuardian/Native), ~6 small files
+- Is auditable by anyone who can read C# — every API call is in [`src/GamerGuardian/Native/`](https://github.com/carterscode/GamerGuardian/tree/main/src/GamerGuardian/Native), 8 small files
 
 The tradeoff: every HKLM write triggers a UAC prompt, which is mildly annoying but **also a feature** — the user always sees, in advance, that a privileged change is about to happen. There is no silent escalation path.
 
-## Why polling, not event subscription
+## Why a two-tier poll plus a few system events
 
-Most of the registry values GamerGuardian watches don't broadcast change notifications, and the few that do (via `RegNotifyChangeKeyValue`) require an open handle plus a wait thread per key. Polling 17 settings every 30 s costs ~10 ms — below the noise floor. The complexity of an event-driven design isn't justified.
+The backbone is still polling — most of the registry values GamerGuardian watches don't broadcast change notifications, and the few that do (via `RegNotifyChangeKeyValue`) require an open handle plus a wait thread per key. But it isn't a flat 30 s sweep over everything. Settings are split by how often Windows actually changes them (see [`MonitorVolatility`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Services/MonitorVolatility.cs)):
 
-Polling also makes the **paused** state trivial: skip the tick, do nothing. A subscription model would still wake the process when keys change during a game.
+- **Display settings (HDR, refresh rate, resolution, DRR)** are *volatile* — Windows silently resets them after sleep, a monitor hot-plug, or a driver/GPU event. These are polled on the **fast timer**, at the user's poll interval (default 30 s), because catching that mid-session change quickly is the whole point of watching them.
+- **The dozens of set-and-forget registry / policy / service settings** are *stable* — they only move across a reboot or a feature update. Polling them every 30 s did nothing but burn cycles and hand every drifting auto-apply a fresh chance to fire a UAC prompt each tick. Instead they're checked at **startup**, on a **10-minute backstop** timer, and on the three OS events that coincide with a real change: `PowerModeChanged` (resume from sleep), `SessionSwitch` (unlock), and `DisplaySettingsChanged` (re-probe display support and re-check the volatile tier).
+
+This keeps the watch responsive without subjecting the user to a secure-desktop UAC prompt every 30 s for a setting Windows keeps reverting. The [`AutoApplyCircuitBreaker`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Services/AutoApplyCircuitBreaker.cs) is the backstop for that case: after a few verify-then-revert loops it trips a setting to notify-only for a cooldown window.
+
+Polling also makes the **paused** state trivial: skip the tick, do nothing. A pure subscription model would still wake the process when keys change during a game.
 
 ## Why pause during gameplay and benchmarks (and what counts)
 
@@ -71,7 +76,7 @@ Each monitor is one ~30-line file — read raw, compute desired, yield a `DriftI
 - **Targetable.** When something breaks for a specific setting (e.g., the [v0.1.18 power-plan combo bug](https://github.com/carterscode/GamerGuardian/issues)), the blast radius is one file.
 - **Diffable.** `git log` on one file tells you the full history of how that setting has been handled.
 
-The genericized version of this exists too — [`WindowsServiceMonitor`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/WindowsServiceMonitor.cs) is registered N times from [`ServiceCatalog`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Services/ServiceCatalog.cs). That's because services genuinely follow one shape (start type + stop). The 17 fixed settings genuinely don't.
+The genericized version of this exists too — [`WindowsServiceMonitor`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Monitors/WindowsServiceMonitor.cs) is registered N times from [`ServiceCatalog`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Services/ServiceCatalog.cs). That's because services genuinely follow one shape (start type + stop). The dozens of fixed settings genuinely don't.
 
 ## Why HKLM writes go through `reg.exe` / `sc.exe` and not `runas` of GamerGuardian itself
 
@@ -103,6 +108,8 @@ The trimming code:
 
 Net effect: ~135 MB peak after first Settings open → ~25 MB at idle within minutes. Verified empirically over hours of runtime.
 
-## Why no DRR (Dynamic Refresh Rate) monitoring yet
+## How DRR is monitored
 
-DRR is a different mechanism from VRR — it requires the Win11 22H2+ DisplayConfig path with `DISPLAYCONFIG_DEVICE_INFO_GET_REFRESH_RATE_RANGE`, plus the panel-side support detection. The code surface is meaningful and the feature is niche enough that it hasn't bubbled up yet. On the roadmap; PRs welcome.
+DRR (Dynamic Refresh Rate) is a different mechanism from VRR. VRR is the `GraphicsDrivers\VRROptimizeEnable` registry flag; DRR is set per **display target** through the public CCD `SetDisplayConfig` path by toggling the boost-refresh-rate flag with `SDC_VIRTUAL_REFRESH_RATE_AWARE` — user-mode, no elevation (see [`DrrInterop`](https://github.com/carterscode/GamerGuardian/blob/main/src/GamerGuardian/Native/DrrInterop.cs)).
+
+Support detection is the subtle part. Whether a target can run DRR is a static property of the panel + driver + OS, but probing it isn't free — it calls `SetDisplayConfig(SDC_VALIDATE)`, which on some GPU/driver combos re-evaluates the display pipeline and briefly stalls the mouse and keyboard. Running that on every 30 s drift poll caused a periodic input hitch, so the result is **cached per display** and the probe runs at most once per target — re-probed only when the display topology changes, via `ClearSupportCache()` on the `DisplaySettingsChanged` event. DRR lives on the Display tab alongside the other volatile display settings.

@@ -31,7 +31,7 @@ It's also paranoid about not making your gaming worse. Polling pauses entirely d
 ## Highlights
 
 - 🎯 **29+ monitored settings** spanning display, security, performance, capture, input, privacy/telemetry, network latency, system tuning, and Windows services
-- ⚙️ **One-click Recommended preset** -- General tab button stages the gaming-optimized configuration across every setting (Want + Monitor + Auto-apply). Idempotent, so re-running it after a future update picks up only the new settings.
+- ⚙️ **Three one-click presets** on the General tab -- **Apply recommended** (safe gaming preset: keeps Memory Integrity / VBS on, leaves contested network tweaks to you), **Apply extreme** (every gaming tweak on, including Memory Integrity / VBS off and the contested Nagle / NIC tweaks, with Monitor + Auto-apply on for every setting — confirms first), and **Reset all to defaults** (stages everything back to Windows defaults). The recommended preset is idempotent, so re-running it after a future update picks up only the new settings.
 - 🎮 **Pauses during gameplay** — fullscreen, borderless, *and* during benchmark runs (3DMark, Cinebench, Geekbench, etc.)
 - ⚡ **One-click apply** with a per-setting auto-apply opt-in
 - 🪟 **Native Win11 Fluent design** with light / dark / system themes
@@ -44,7 +44,7 @@ It's also paranoid about not making your gaming worse. Polling pauses entirely d
 
 <img src="docs/screenshots/settings-global-gaming.png" width="780" alt="GamerGuardian Settings — Global gaming tab" />
 
-*Settings → Global gaming tab. Each card shows the setting name, a short description, current value, Windows default, and per-setting Monitor / Want / Auto-apply controls. Reboot-required settings get a yellow badge. The other tabs cover General preferences, **Privacy** (Advertising ID, Activity History, Cross-Device Platform, Tailored experiences), **Network** (Nagle's algorithm, NIC power management), Windows services, Windows AI, per-display Display settings (HDR / refresh / DRR), and CPU / Power.*
+*Settings → Global gaming tab. Each card shows the setting name, a short description, current value, Windows default, and per-setting Monitor / Want / Auto-apply controls. Reboot-required settings get a yellow badge. The other tabs cover General preferences (three one-click presets), **Privacy** (Advertising ID, Activity History, Cross-Device Platform, Tailored experiences, speech, inking), **Debloat** (ads / nags / suggested content), **Network** (Nagle's algorithm, NIC power management), Windows services, Windows AI, per-display Display settings (HDR / refresh / DRR), and CPU / Power.*
 
 </div>
 
@@ -52,10 +52,10 @@ It's also paranoid about not making your gaming worse. Polling pauses entirely d
 
 For each setting you choose three things: **Monitor** (watch it or not), the **desired value** (**Want** — shown as Enabled/Disabled, or Gaming/Default where the registry meaning is inverted), and whether to **auto-apply silently** when it drifts. Changes are staged until you click **Apply**, every change is reversible, and each one is recorded in `changes.log`.
 
-Settings live across **nine tabs**. The lists below cover the monitored settings; for a complete walkthrough of every tab and what each setting means, see the **[Settings & tabs guide](https://github.com/carterscode/GamerGuardian/wiki/Settings-and-tabs)** (and [SETTINGS-REFERENCE.md](docs/SETTINGS-REFERENCE.md) for the full per-setting reference).
+Settings live across **ten tabs**. The lists below cover the monitored settings; for a complete walkthrough of every tab and what each setting means, see the **[Settings & tabs guide](https://github.com/carterscode/GamerGuardian/wiki/Settings-and-tabs)** (and [SETTINGS-REFERENCE.md](docs/SETTINGS-REFERENCE.md) for the full per-setting reference).
 
-- **General** — theme, launch-at-startup, polling interval, update check, change log, and the **one-click Recommended setup** button that stages the gaming-optimized config across every tab.
-- **Global gaming**, **Privacy**, **Network**, **Windows services**, **Windows AI**, **Display** — the monitored settings, listed below.
+- **General** — theme, launch-at-startup, polling interval, update check, change log, and the **three one-click preset buttons** (Apply recommended / Apply extreme / Reset all to defaults) that stage a whole-app config across every tab.
+- **Global gaming**, **Privacy**, **Debloat**, **Network**, **Windows services**, **Windows AI**, **Display** — the monitored settings, listed below.
 - **CPU / Power** — detected CPU, **Power Throttling**, a CPU-aware custom gaming **power plan** (Balanced clone tuned for your CPU — e.g. X3D core-parking), and dual-CCD routing prerequisites. See [CPU-aware power plans](https://github.com/carterscode/GamerGuardian/wiki/CPU-Power-Plans).
 - **Recommended BIOS** — a firmware checklist (Resizable BAR, XMP/EXPO, CPPC mode, etc.); guidance only, nothing is changed.
 
@@ -108,7 +108,7 @@ Policy-toggle disables for Copilot, Recall, Click-to-Do, Edge Copilot/Hubs/GenAI
 
 Designed to be invisible during gameplay.
 
-- **~23 MB working set** at idle, **~10 ms** per polling tick (default 30 s interval).
+- **~23 MB working set** at idle, **~10 ms** per polling tick. Only the four display settings (HDR, refresh rate, resolution, DRR) are polled on the fast interval (default 30 s); the ~40 set-and-forget registry / policy / service settings are re-checked at startup, on resume / unlock / display-change events, and on a slow 10-minute backstop instead — so the fast tick does almost nothing most of the time.
 - **Pauses entirely** during fullscreen games, borderless-fullscreen games, and known benchmarks (3DMark, Cinebench, Geekbench, AIDA64, Unigine, OCCT, etc.).
 - **No process spawning** for reads. Power plan reads/writes go through `powrprof.dll` directly.
 - **No kernel hooks, no drivers, no admin** — only HKLM writes need elevation, which prompts UAC.
@@ -139,14 +139,14 @@ GamerGuardian doesn't ask you to take its word for it. Independent ways to confi
 2. The Apply Results window shows before / target / after for each setting
 3. The footer **Verify all** button re-reads every monitored setting and writes a `[SNAPSHOT]` to `changes.log` -- nothing is applied
 4. Every change writes a copy-pasteable PowerShell **apply** and **verify** command to [`changes.log`](https://github.com/carterscode/GamerGuardian/wiki/Logging)
-5. Verbose log lines include `[SESSION]` (version + OS + elevation), `[APPLY-START]` / per-change record / `[APPLY-END]`, `[EXTRESET]` (Windows reverted a value we'd applied), and `[PREF-STAGE]` (a draft toggle, not yet applied)
+5. Verbose log lines include `[SESSION]` (version + OS + elevation), `[APPLY-START]` / per-change record / `[APPLY-END]`, `[EXTRESET]` (Windows reverted a value we'd applied), `[CIRCUIT]` (the auto-apply circuit breaker stopped re-applying a setting Windows keeps reverting, so a stubborn GPO-managed value can't trigger a UAC prompt every cycle), and `[PREF-STAGE]` (a draft toggle, not yet applied)
 6. `GamerGuardian.exe --test` dumps every monitor's current readout to `%TEMP%`
 7. Every Release ships with a [`SHA256SUMS.txt`](https://github.com/carterscode/GamerGuardian/wiki/Security#reproducibility) you can verify against your local download
 8. Every monitor is one ~30-line file in [`src/GamerGuardian/Monitors/`](src/GamerGuardian/Monitors/)
 
 ## Documentation
 
-- [**Settings reference**](docs/SETTINGS-REFERENCE.md) -- per-setting What / Why / How-it-helps / Per-scenario recommendation / Risks / Reversal. Generated from [`SettingDocsCatalog.cs`](src/GamerGuardian/Services/SettingDocsCatalog.cs); a unit test asserts they can't drift.
+- [**Settings reference**](docs/SETTINGS-REFERENCE.md) -- per-setting What / Why / plain-English pro-con of each choice / Per-scenario recommendation / Risks / Reversal, plus a **Command line (PowerShell)** block with copy-paste verify, apply-gaming, and reverse-to-default commands. Generated from [`SettingDocsCatalog.cs`](src/GamerGuardian/Services/SettingDocsCatalog.cs); a unit test asserts they can't drift.
 - [**Staged-apply + verbose logging architecture**](docs/STAGED-APPLY-ARCHITECTURE.md) -- how the draft config, MonitorService, ChangeLogger, and EXTRESET detection fit together.
 
 ## Security

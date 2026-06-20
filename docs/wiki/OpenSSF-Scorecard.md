@@ -14,15 +14,15 @@ For a small solo-author OSS Windows project, **the realistic ceiling is around 8
 
 ## Current state
 
-As of the most recent scan (~7.0/10):
+Scores below are illustrative of the project's posture; for the current overall number see the live badge at the top of this page (the scan is periodic, so a single figure here would go stale).
 
 | Check | Score | What it means here |
 |---|---:|---|
 | [Token-Permissions](#token-permissions) | 10/10 | All workflows declare minimal `permissions:`; write scopes only at job level when needed |
-| [Pinned-Dependencies](#pinned-dependencies) | 10/10 | All 21 GitHub Actions are pinned to commit SHAs; Dependabot keeps them updated |
+| [Pinned-Dependencies](#pinned-dependencies) | 10/10 | Every GitHub Action is pinned to a commit SHA; Dependabot keeps them updated |
 | [Vulnerabilities](#vulnerabilities) | 10/10 | No known unpatched vulnerabilities; `dotnet list --vulnerable` gates every release |
 | [SAST](#sast) | 10/10 | CodeQL on every PR + push to main + weekly cron |
-| [CI-Tests](#ci-tests) | 10/10 | Build + xUnit tests run on every PR via required status checks |
+| [CI-Tests](#ci-tests) | 10/10 | Build + the xUnit suite run on every PR via required status checks |
 | [Dangerous-Workflow](#dangerous-workflow) | 10/10 | No script-injection or untrusted-input patterns |
 | [Security-Policy](#security-policy) | 10/10 | `SECURITY.md` at repo root with private-channel disclosure flow |
 | [Binary-Artifacts](#binary-artifacts) | 10/10 | No checked-in EXEs, DLLs, or other binaries |
@@ -30,7 +30,7 @@ As of the most recent scan (~7.0/10):
 | [Dependency-Update-Tool](#dependency-update-tool) | 10/10 | Dependabot configured for NuGet + Actions |
 | [CII-Best-Practices](#cii-best-practices) | 5/10 | OpenSSF Best Practices Badge in progress (Passing tier) |
 | [Branch-Protection](#branch-protection) | -1 | Workflow's default token can't read protection rules; needs `SCORECARD_TOKEN` PAT |
-| [Signed-Releases](#signed-releases) | 0/10 | Climbing — recent releases (v0.1.31+) ship SLSA Build Provenance; check looks at last 5 |
+| [Signed-Releases](#signed-releases) | 10/10 | Every release since v0.1.31 ships SLSA Build Provenance; the most-recent-5 window is now fully signed |
 | [Maintained](#maintained) | 0/10 | Repo < 90 days old; auto-fixes on its own |
 | [Packaging](#packaging) | -1 | Heuristic doesn't recognize Inno Setup / EXE distribution |
 | [Code-Review](#code-review) | 0/10 | Solo dev; no external PR approvals |
@@ -117,7 +117,7 @@ As of the most recent scan (~7.0/10):
 
 **What it measures:** at least 1 of the most recent 5 releases has cryptographic provenance (Sigstore signature, SLSA attestation, etc.).
 
-**This project:** as of v0.1.31, every release ships [SLSA Build Provenance](https://slsa.dev/) signed via Sigstore OIDC and verifiable with `gh attestation verify`. The check returns 0 today because Scorecard's last scan looked at the most recent 5 releases when most were unsigned. As more signed releases age in, this score climbs and reaches 10/10 once every release in the most-recent-5 window has provenance (~v0.1.36+).
+**This project:** since v0.1.31, every release ships [SLSA Build Provenance](https://slsa.dev/) signed via Sigstore OIDC and verifiable with `gh attestation verify`. Now that the most-recent-5-releases window is entirely past v0.1.31, this check reaches 10/10.
 
 ### Maintained
 
@@ -155,8 +155,9 @@ Achievable wins (in order of effort vs. impact):
 
 1. **Create `SCORECARD_TOKEN` PAT** (~5 min, +0.7 to overall): see [Branch-Protection](#branch-protection) above. Highest-impact single thing you can do.
 2. **Wait for OpenSSF Best Practices badge approval** (already submitted): CII-Best-Practices climbs from 5 to 7+.
-3. **Cut ~3 more releases** (passive — happens with normal development): Signed-Releases climbs from 0 to 10 as older unsigned releases age out of the most-recent-5 window.
-4. **Wait until 2026-08-04** (passive): Maintained climbs from 0 to 10 once repo is > 90 days old.
+3. **Wait until 2026-08-04** (passive): Maintained climbs from 0 to 10 once repo is > 90 days old.
+
+Signed-Releases has already reached 10/10 now that every release in the most-recent-5 window ships SLSA provenance.
 
 Combined, these get the project to ~9.0/10. The remaining ~1 point is the structural-limit cluster (Code-Review, Fuzzing, Contributors, Packaging) — Scorecard's model doesn't reward solo Windows desktop projects there, but that's a reflection of the model's bias, not project security.
 

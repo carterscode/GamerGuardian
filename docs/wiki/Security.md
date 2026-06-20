@@ -55,7 +55,7 @@ GamerGuardian collects no personal data and operates no first-party server. The 
 
 ## Reporting a vulnerability
 
-If you've found a security issue, please **do not** open a public GitHub issue. Email **security@example.com** (or the address listed in [SECURITY.md](https://github.com/carterscode/GamerGuardian/blob/main/SECURITY.md)) with:
+If you've found a security issue, please **do not** open a public GitHub issue. Report it privately via [**GitHub Security Advisories**](https://github.com/carterscode/GamerGuardian/security/advisories/new) (preferred — keeps the conversation private until a fix is ready), or the email channel listed in [SECURITY.md](https://github.com/carterscode/GamerGuardian/blob/main/SECURITY.md), with:
 
 - A description of the issue and its impact
 - Steps to reproduce
