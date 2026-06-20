@@ -1,5 +1,24 @@
 # feat/gaming-optimize — execution plan
 
+> **⚠️ Historical planning doc — largely shipped (status as of v0.1.58).** This was the
+> scope tracker for the now-merged `feat/gaming-optimize` branch. It's kept as a record of
+> what was planned; the body below is **not** a current to-do list. For the live picture of
+> what GamerGuardian monitors, see [`SETTINGS-REFERENCE.md`](SETTINGS-REFERENCE.md), the
+> [Settings & tabs guide](wiki/Settings-and-tabs.md), and the [Source file reference](wiki/Source-file-reference.md).
+>
+> **Shipped since this plan was written:** Cross-Device Platform (`privacy.cdp` / `CdpMonitor`) ·
+> full Game Bar / Game DVR lockdown including the HKLM `AllowGameDVR` policy (`GameDvrMonitor`) ·
+> Dynamic Refresh Rate (`DrrMonitor` — listed below as "deferred", now implemented) ·
+> the Windows-service catalog (DiagTrack, SysMain, Xbox, etc. on the Windows services tab) ·
+> a UWP-package-removal pattern (`WindowsAiAppMonitor`, for the Windows AI apps) ·
+> and — despite the "not in scope" note below — CPU-aware power plans and Power Throttling
+> (CPU / Power tab). Plus much beyond this plan: VBS, the Privacy / Debloat / Network tabs,
+> the Windows AI lockdown tab, and the three one-click presets.
+>
+> **Not done (still candidates if revisited):** NVIDIA overlay scheduled-task disable ·
+> Defender exclusions for Steam libraries (list-based) · Phone Link removal specifically ·
+> one-shot tools (restore point, process kills, Run-key cleanup).
+
 Scope tracker for the `feat/gaming-optimize` branch. Integrates features from `~/Downloads/GamingOptimize-Guide.md` (the user's PowerShell optimization script) as `IMonitoredSetting` implementations in GamerGuardian, where the model fits.
 
 ## Goal
