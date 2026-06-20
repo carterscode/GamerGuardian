@@ -125,29 +125,43 @@
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,8,8,0">
                         <StackPanel>
                             <ui:Card Padding="16" Margin="0,0,0,12">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
-                                        <TextBlock Text="One-click Recommended setup" FontWeight="SemiBold"/>
-                                        <TextBlock TextWrapping="Wrap" Margin="0,4,0,0"
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                   FontSize="12"
-                                                   Text="Applies GamerGuardian's gaming-recommended preset to every setting it knows about: sets the recommended Want value, turns Monitor on, and turns Auto-apply silently on. Skips Memory Integrity / VBS (security tradeoff) and the optional UWP AI app removals (irreversible). Idempotent -- only mutates settings that aren't already in the recommended state, so re-running it after a future update picks up only the new settings."/>
-                                        <TextBlock x:Name="RecommendedStatusText"
-                                                   Margin="0,8,0,0"
-                                                   FontSize="11"
-                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                   TextWrapping="Wrap"/>
+                                <StackPanel>
+                                    <TextBlock Text="One-click setup" FontWeight="SemiBold"/>
+                                    <TextBlock TextWrapping="Wrap" Margin="0,4,0,0"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               FontSize="12"
+                                               Text="Stage a whole-config preset in one click, then review the per-tab changes and click Apply / Save &amp; close to commit (or Cancel to discard). All three are idempotent -- they only mutate settings that aren't already where the preset wants them."/>
+                                    <StackPanel Margin="0,4,0,0">
+                                        <TextBlock TextWrapping="Wrap" FontSize="12"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                            <Run FontWeight="SemiBold" Text="Apply recommended"/><Run Text=" -- GamerGuardian's safe gaming preset: sets the recommended Want, Monitor on, Auto-apply on. Keeps Memory Integrity / VBS on (security) and leaves Privacy / Debloat / contested network tweaks for you to choose."/>
+                                        </TextBlock>
+                                        <TextBlock TextWrapping="Wrap" FontSize="12" Margin="0,4,0,0"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                            <Run FontWeight="SemiBold" Text="Apply extreme"/><Run Text=" -- everything that could even remotely help gaming, on: every toggle at its most-aggressive value (including Memory Integrity / VBS OFF and the contested Nagle / NIC tweaks), with Monitor AND Auto-apply turned on for every setting. Disabling Memory Integrity / VBS breaks Valorant (Vanguard) and weakens malware protection."/>
+                                        </TextBlock>
+                                        <TextBlock TextWrapping="Wrap" FontSize="12" Margin="0,4,0,0"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                            <Run FontWeight="SemiBold" Text="Reset all to defaults"/><Run Text=" -- stages every setting back to its Windows default and turns Monitor + Auto-apply off. Applying then restores Windows' shipped behavior (this re-enables features like Copilot, ads and telemetry services you may have turned off)."/>
+                                        </TextBlock>
                                     </StackPanel>
-                                    <ui:Button Grid.Column="1" Content="Apply recommended"
-                                               Appearance="Primary" MinWidth="150"
-                                               VerticalAlignment="Center"
-                                               Click="ApplyRecommendedPresetButton_Click"
-                                               ToolTip="Stages the recommended preset to your draft. Review the per-tab changes, then click Apply / Save &amp; close to commit."/>
-                                </Grid>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                                        <ui:Button Content="Reset all to defaults" MinWidth="150" Margin="0,0,8,0"
+                                                   Click="ResetToDefaultsButton_Click"
+                                                   ToolTip="Stages every setting back to its Windows default and turns Monitor / Auto-apply off. Review, then Apply / Save &amp; close to commit."/>
+                                        <ui:Button Content="Apply recommended" Appearance="Primary" MinWidth="150" Margin="0,0,8,0"
+                                                   Click="ApplyRecommendedPresetButton_Click"
+                                                   ToolTip="Stages the recommended preset to your draft. Review the per-tab changes, then click Apply / Save &amp; close to commit."/>
+                                        <ui:Button Content="Apply extreme" Appearance="Caution" MinWidth="150"
+                                                   Click="ApplyExtremePresetButton_Click"
+                                                   ToolTip="Stages the most-aggressive gaming preset (including Memory Integrity / VBS off) with Monitor + Auto-apply on for every setting. Review, then Apply / Save &amp; close to commit."/>
+                                    </StackPanel>
+                                    <TextBlock x:Name="RecommendedStatusText"
+                                               Margin="0,8,0,0"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
                             </ui:Card>
 
                             <ui:Card Padding="16" Margin="0,0,0,8">

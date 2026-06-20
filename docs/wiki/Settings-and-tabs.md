@@ -1,6 +1,6 @@
 # Settings & tabs guide
 
-This page explains **every tab** in the GamerGuardian Settings window and **what each setting does and means**. For the deep per-setting reference (full rationale, per-scenario recommendations, risks, exact reversal, and a copy-pasteable verify command), see [SETTINGS-REFERENCE.md](https://github.com/carterscode/GamerGuardian/blob/main/docs/SETTINGS-REFERENCE.md), which is generated from the source catalog.
+This page explains **every tab** in the GamerGuardian Settings window and **what each setting does and means**. For the deep per-setting reference — why the recommendation is what it is, a plain-English **pro/con of each choice**, per-scenario recommendations, risks, and copy-pasteable **verify / apply / reverse** PowerShell commands — see [SETTINGS-REFERENCE.md](https://github.com/carterscode/GamerGuardian/blob/main/docs/SETTINGS-REFERENCE.md), which is generated from the source catalog.
 
 ## The three controls on every monitored setting
 
@@ -16,7 +16,7 @@ Other conventions:
 
 - **Current** / **Default** / **Recommended** labels under each setting show the live system value, the Windows default, and GamerGuardian's suggested choice. The green **Recommended** value is shown in that row's own wording — **Enabled/Disabled**, **Gaming/Default**, **On/Off**, or a service's **Default/Manual/Disabled** — so it always matches the actual **Want** options. It's tuned for the typical desktop gamer: clear performance wins are recommended, security toggles (Memory Integrity / VBS) are recommended to stay **on**, and genuinely contested tweaks (Nagle, NIC power) are recommended to stay at the Windows default. For the core gaming settings the recommendation is exactly what the one-click setup applies; Privacy and Debloat recommendations are shown for guidance but stay opt-in. Settings without a documented recommendation simply omit the label.
 - A yellow **reboot required** badge means the change only takes full effect after a restart.
-- **Learn more** expanders carry the same per-setting explanation as the reference doc.
+- **Learn more** expanders carry the same per-setting explanation as the reference doc: why the value is recommended, a **pro/con of each choice** (written for someone who's never heard of the setting), per-scenario picks, risks, and a **Command line (PowerShell)** block to check the current value, apply the gaming-optimized value, and reverse it back to the Windows default.
 - Changes are **staged**: toggling preferences doesn't write to Windows until you click **Apply** (or **Save & close**). Everything is reversible, and every applied change is recorded in [`changes.log`](Logging).
 - **HKCU** (per-user) settings apply directly; **HKLM** (machine-wide) settings prompt once for **UAC** elevation. Multi-value changes batch into a single prompt.
 
@@ -26,7 +26,10 @@ Other conventions:
 
 App preferences and the one-click setup — not a monitored-setting tab.
 
-- **One-click Recommended setup** — stages the gaming-optimized configuration across *every* tab at once (sets each setting's **Want**, turns **Monitor** on, and opts into **Auto-apply**). Idempotent: re-running it after an update only picks up newly added settings.
+- **One-click setup** — three whole-config presets. Each only *stages* changes (review them per-tab, then **Apply** / **Save & close** to commit, or **Cancel** to discard) and each is idempotent, so re-running after an update only picks up the new deltas:
+  - **Apply recommended** — GamerGuardian's safe gaming preset: sets each covered setting's **Want**, turns **Monitor** on, opts into **Auto-apply**. Keeps Memory Integrity / VBS **on** (security) and leaves Privacy / Debloat / the contested network tweaks for you to choose. Skips the irreversible UWP AI-app removals.
+  - **Apply extreme** — everything that could even *remotely* help gaming, on: **every** toggle at its most-aggressive value — including Memory Integrity / VBS **off** and the contested Nagle / NIC tweaks — with **Monitor and Auto-apply turned on for every setting**. Disabling Memory Integrity / VBS breaks Valorant (Vanguard) and weakens malware protection, and several changes need a reboot — it asks for confirmation first.
+  - **Reset all to defaults** — the inverse: stages every setting back to its **Windows default** and turns **Monitor + Auto-apply off**. Applying then restores Windows' shipped behavior (which re-enables features you may have turned off, like Copilot, ads/suggestions, and telemetry services).
 - **Launch at startup** — start GamerGuardian minimized to the tray when you sign in.
 - **Polling interval** — how often (seconds) the drift check runs. Default 30 s.
 - **Theme** — Light / Dark / System.

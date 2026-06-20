@@ -130,12 +130,56 @@ public class SettingDocsCatalogTests
     {
         var text = SettingDocsCatalog.FormatForExpander("hags");
         Assert.Contains("Recommended:", text);
+        Assert.Contains("Why this is the recommendation", text);
         Assert.Contains("What it does", text);
-        Assert.Contains("Why you'd change it", text);
         Assert.Contains("How it helps", text);
+        Assert.Contains("Pros & cons of each choice", text);
         Assert.Contains("Per-scenario", text);
         Assert.Contains("Risks", text);
+        Assert.Contains("Command line (PowerShell)", text);
+        Assert.Contains("Reverse it (restore the Windows default)", text);
         Assert.Contains("Reversible via", text);
+    }
+
+    [Fact]
+    public void FormatForExpander_EmbedsVerifyApplyAndReverseCommands()
+    {
+        // The command block must surface the real verify / apply / reverse
+        // PowerShell, not just section headers.
+        var text = SettingDocsCatalog.FormatForExpander("hags");
+        Assert.Contains("HwSchMode).HwSchMode", text);          // verify
+        Assert.Contains("HwSchMode -Value 2", text);            // apply (gaming = On)
+        Assert.Contains("HwSchMode -Value 1", text);            // reverse (Off)
+
+        // Memory Integrity's apply must show the gaming (Off=0) value, not the
+        // safe On fallback ApplyCommandFor uses when given no raw value.
+        var mi = SettingDocsCatalog.FormatForExpander("memintegrity");
+        Assert.Contains("Enabled -Value 0", mi);                // apply (gaming = Off)
+        Assert.Contains("Enabled -Value 1", mi);                // reverse (re-enable)
+    }
+
+    [Fact]
+    public void ProsConsFor_EveryCatalogEntry_HasAtLeastTwoCompleteChoices()
+    {
+        foreach (var d in SettingDocsCatalog.All)
+        {
+            var pc = SettingDocsCatalog.ProsConsFor(d.SettingId);
+            Assert.True(pc.Count >= 2,
+                $"{d.SettingId} has fewer than 2 pro/con choices -- a user wants to see both sides");
+            foreach (var t in pc)
+            {
+                Assert.False(string.IsNullOrWhiteSpace(t.Choice), $"{d.SettingId} pro/con missing a choice label");
+                Assert.False(string.IsNullOrWhiteSpace(t.Pro), $"{d.SettingId} pro/con missing a Pro");
+                Assert.False(string.IsNullOrWhiteSpace(t.Con), $"{d.SettingId} pro/con missing a Con");
+            }
+        }
+    }
+
+    [Fact]
+    public void ProsConsFor_UnknownId_ReturnsEmpty()
+    {
+        Assert.Empty(SettingDocsCatalog.ProsConsFor("definitely.not.a.real.setting"));
+        Assert.Empty(SettingDocsCatalog.ProsConsFor(null!));
     }
 
     [Fact]

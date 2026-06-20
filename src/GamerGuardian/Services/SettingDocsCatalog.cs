@@ -60,14 +60,22 @@ public static class SettingDocsCatalog
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"Recommended: {d.Recommended}");
         sb.AppendLine();
+        sb.AppendLine("Why this is the recommendation");
+        sb.AppendLine(d.Why);
+        sb.AppendLine();
         sb.AppendLine("What it does");
         sb.AppendLine(d.What);
         sb.AppendLine();
-        sb.AppendLine("Why you'd change it");
-        sb.AppendLine(d.Why);
-        sb.AppendLine();
         sb.AppendLine("How it helps");
         sb.AppendLine(d.HowItHelps);
+        sb.AppendLine();
+        sb.AppendLine("Pros & cons of each choice");
+        foreach (var t in ProsConsFor(settingId))
+        {
+            sb.AppendLine($"  {t.Choice}");
+            sb.AppendLine($"    Pro: {t.Pro}");
+            sb.AppendLine($"    Con: {t.Con}");
+        }
         sb.AppendLine();
         sb.AppendLine("Per-scenario recommendation");
         foreach (var (scenario, rec) in d.Scenarios)
@@ -75,6 +83,23 @@ public static class SettingDocsCatalog
         sb.AppendLine();
         sb.AppendLine("Risks");
         sb.AppendLine(d.Risks);
+        sb.AppendLine();
+        sb.AppendLine("Command line (PowerShell)");
+        var verify = SettingDocs.VerifyCommandFor(settingId);
+        var apply = SettingDocs.ApplyCommandFor(settingId, GamingRawFor(settingId));
+        var reverse = SettingDocs.ReverseCommandFor(settingId);
+        if (!string.IsNullOrWhiteSpace(verify))
+        {
+            sb.AppendLine("  Check the current value:");
+            sb.AppendLine($"    {verify}");
+        }
+        if (!string.IsNullOrWhiteSpace(apply))
+        {
+            sb.AppendLine("  Apply the gaming-optimized value:");
+            sb.AppendLine($"    {apply}");
+        }
+        sb.AppendLine("  Reverse it (restore the Windows default):");
+        sb.AppendLine($"    {(string.IsNullOrWhiteSpace(reverse) ? d.ReversibleVia : reverse)}");
         sb.AppendLine();
         sb.AppendLine("Reversible via");
         sb.Append(d.ReversibleVia);
@@ -88,6 +113,56 @@ public static class SettingDocsCatalog
         var d = new Dictionary<string, string>(entries.Length);
         foreach (var (s, r) in entries) d[s] = r;
         return d;
+    }
+
+    private static IReadOnlyList<ChoiceTradeoff> Pc(params (string choice, string pro, string con)[] entries)
+    {
+        var list = new List<ChoiceTradeoff>(entries.Length);
+        foreach (var (c, p, n) in entries) list.Add(new ChoiceTradeoff(c, p, n));
+        return list;
+    }
+
+    /// <summary>
+    /// The raw value to embed in the "apply the gaming-optimized value" command in
+    /// the expander. Empty means "let <see cref="SettingDocs.ApplyCommandFor"/> use
+    /// its own gaming-optimized fallback" -- correct for every setting except
+    /// Memory Integrity, whose apply fallback is the safe (On) value, not the
+    /// gaming (Off) one.
+    /// </summary>
+    private static string GamingRawFor(string settingId) => settingId switch
+    {
+        "memintegrity" => "0",
+        _ => string.Empty,
+    };
+
+    /// <summary>
+    /// Pro/con of each choice for a setting, written for someone who knows nothing
+    /// about it. Hand-authored entries live in <see cref="ProsConsById"/>; service
+    /// and UWP-app rows (uniform "disable to save vs keep the feature" shape) are
+    /// synthesized from the catalog entry so every documented setting has one.
+    /// </summary>
+    public static IReadOnlyList<ChoiceTradeoff> ProsConsFor(string settingId)
+    {
+        if (settingId is null) return Array.Empty<ChoiceTradeoff>();
+        if (ProsConsById.TryGetValue(settingId, out var pc)) return pc;
+
+        var d = Get(settingId);
+        if (d is null) return Array.Empty<ChoiceTradeoff>();
+
+        // Synthesized fallback (services + anything not hand-authored): the choice
+        // is always "turn the feature/service off" vs "leave it as Windows ships
+        // it". Pro/con of disabling come straight from the entry's own honest
+        // HowItHelps / Risks text.
+        bool recommendDisable = !d.Recommended.StartsWith("Default", StringComparison.OrdinalIgnoreCase)
+            && !d.Recommended.StartsWith("Don't", StringComparison.OrdinalIgnoreCase)
+            && !d.Recommended.StartsWith("On (", StringComparison.OrdinalIgnoreCase);
+        return Pc(
+            (recommendDisable ? "Disable / remove it (recommended)" : "Disable / remove it",
+             d.HowItHelps,
+             d.Risks),
+            (recommendDisable ? "Leave it as Windows ships it" : "Leave it as Windows ships it (recommended)",
+             "The feature it backs keeps working exactly as before -- nothing to re-enable later.",
+             "Keeps the background work running, so you don't get the resource/idle saving above."));
     }
 
     // ---- Global toggles ---------------------------------------------------
@@ -1056,6 +1131,216 @@ public static class SettingDocsCatalog
             recommended: "Default (stays Disabled)",
             risks: "If you intentionally run the Windows routing / RRAS VPN server role (rare on a gaming desktop), leave it alone.",
             reversibleVia: "Set-Service -Name RemoteAccess -StartupType Disabled (its default), or Manual if you need it."),
+    };
+
+    // ---- Pros & cons of each choice (hand-authored) -----------------------
+    //
+    // For a user who knows nothing about the setting: one plain upside and one
+    // downside of each option, in the same words the Settings window offers.
+    // Service and UWP-app rows are synthesized in ProsConsFor() from the catalog
+    // entry, so they don't appear here.
+
+    private static readonly Dictionary<string, IReadOnlyList<ChoiceTradeoff>> ProsConsById = new()
+    {
+        ["gamemode"] = Pc(
+            ("On (recommended)", "Slightly lower input latency and no Windows Update reboots mid-game, at zero cost.", "On a few GPU/driver/game combos it can cause stutter or capture glitches."),
+            ("Off", "Rules Game Mode out as the cause if you're chasing a specific stutter.", "You give up the small latency win and the mid-game update-reboot suppression.")),
+
+        ["gamedvr"] = Pc(
+            ("Off (recommended)", "Frees the GPU's video encoder and removes constant background recording overhead.", "You lose the Win+Alt+G 'save the last 30 seconds' clip shortcut."),
+            ("On", "Press Win+Alt+G any time to save a clip of what just happened.", "Constant background encoding costs framerate (more on older GPUs) and ties up the encoder.")),
+
+        ["hags"] = Pc(
+            ("On (recommended)", "1-5% more FPS in CPU-bound games, and unlocks DLSS Frame Generation and other GPU-managed features.", "Rare driver instability on first-gen HAGS GPUs; some pro render/ML/emulation apps prefer it off; needs a reboot."),
+            ("Off", "Safest for the few professional GPU workloads that prefer driver-side scheduling.", "Leaves per-frame CPU scheduling overhead and disables features (like DLSS Frame Gen) that require GPU scheduling.")),
+
+        ["memintegrity"] = Pc(
+            ("On (recommended)", "Keeps kernel-driver tamper protection on, and is required by some anti-cheat (Riot Vanguard).", "Hypervisor transitions cost CPU -- typically 5-15% worse 1% lows in CPU-bound games."),
+            ("Off", "Recovers 5-15% framerate (especially 1% lows) in CPU-bound games.", "Weakens kernel-driver malware protection and breaks games whose anti-cheat requires it (Valorant); needs a reboot.")),
+
+        ["vbs"] = Pc(
+            ("On (recommended)", "Keeps the full security stack (HVCI, Credential Guard, boot protection) and Valorant/Vanguard working.", "Every VBS service keeps paying the hypervisor cost on kernel calls."),
+            ("Off", "Durably recovers 5-15% framerate/1% lows by zeroing every VBS scenario so updates can't silently re-enable them.", "Disables kernel-driver, credential, and boot-time protections at once and breaks Valorant; reboot required, and a UEFI lock can keep it on.")),
+
+        ["sysresponse"] = Pc(
+            ("Gaming, 10 (recommended)", "Frees ~10% more CPU for games tagged as multimedia, helping low-core-count CPUs most.", "Effect is small, and the value only takes effect after a reboot."),
+            ("Default, 20", "Windows' shipped balance; guaranteed headroom for background tasks.", "Reserves 20% of CPU time away from games during contention.")),
+
+        ["netthrottle"] = Pc(
+            ("Disabled (recommended)", "Removes packet pacing that can add micro-stutter to online-game netcode.", "Practically none -- in theory multimedia apps could see slightly less reliable timing on a saturated network."),
+            ("Default (on)", "Windows' shipped pacing protects multimedia playback under heavy network load.", "Can introduce small, inconsistent latency in competitive online games.")),
+
+        ["usbsuspend"] = Pc(
+            ("Disabled (recommended for desktops)", "Kills first-input lag and random USB audio pops by never suspending idle mice/keyboards/headsets.", "Slightly higher idle power (1-3 W) -- measurably worse battery on a laptop. Reboot to apply."),
+            ("Enabled (default)", "Saves power by letting Windows sleep idle USB devices -- the right call on battery.", "First mouse move or keypress after idle can drop or stutter; cheap USB DACs may pop.")),
+
+        ["gamestask"] = Pc(
+            ("Gaming, boosted (recommended)", "Gives game threads a stronger claim on CPU and I/O, smoothing frame pacing under load.", "Background tasks are deprioritized a little further (not observable with any CPU headroom)."),
+            ("Default", "Windows' shipped balance between games and everything else.", "Game threads get a weaker claim during contention, so 1% lows can suffer on busy systems.")),
+
+        ["mouseaccel"] = Pc(
+            ("Off (recommended)", "1:1 mouse-to-cursor movement that matches every competitive FPS's in-game feel.", "The cursor feels slower at low DPI until you bump pointer speed or DPI."),
+            ("On (default)", "Acceleration helps cover large/high-res desktops with small movements.", "Breaks 1:1 aim consistency between desktop and in-game.")),
+
+        ["fso"] = Pc(
+            ("On (default, recommended)", "Faster alt-tab, working overlays (Discord/NVIDIA), and no display-mode flicker.", "A couple frames of extra latency vs true exclusive fullscreen on some titles."),
+            ("Off", "Forces true exclusive fullscreen where supported, shaving 1-2 frames of latency.", "Some games crash or render wrong, some overlays can't draw, and alt-tab is slower.")),
+
+        ["vrr"] = Pc(
+            ("On (recommended if you have VRR hardware)", "Smooth, tear-free frame delivery (G-Sync/FreeSync) even in games without their own VRR toggle.", "A few old driver+game combos can flicker -- fixable by turning off in-game V-Sync."),
+            ("Off", "Avoids the rare VRR flicker on problem displays.", "Games without a VRR toggle won't get variable refresh, so you're back to tearing or V-Sync latency.")),
+
+        ["powerplan"] = Pc(
+            ("High Performance / tuned plan (gaming)", "CPU clocks stay pegged, so there's no ramp-up latency at the start of a CPU burst.", "10-30 W more idle draw, warmer components, more fan noise; worse battery on a laptop."),
+            ("Balanced (default)", "Lets modern CPUs' boost algorithms run (often better than a pegged plan) and saves power when idle.", "A few ms of clock-ramp latency at the start of bursts on older CPUs.")),
+
+        ["cpuplan"] = Pc(
+            ("Build the optimized plan (recommended)", "A Balanced clone tuned to your CPU -- aggressive boost and the right core-parking -- without High Performance's heat/boost cost.", "For asymmetric dual-CCD X3D it isn't enough alone; it relies on BIOS CPPC=Driver + the AMD V-Cache service the app can't set."),
+            ("Keep Balanced / a stock plan", "Zero setup, and fine on most modern CPUs whose own boost is already good.", "Misses the per-CPU parking/boost tuning (notably for X3D chips).")),
+
+        ["powerthrottling"] = Pc(
+            ("Disabled (gaming, recommended on desktop)", "All threads stay at full clock -- no surprise downclocking of helper threads a game relies on.", "Higher power/heat; on a laptop on battery it costs real runtime."),
+            ("Default", "Throttling saves real battery by clocking down idle/background threads.", "Can clip background/helper threads a game uses, hurting consistency on a desktop.")),
+
+        ["faststartup"] = Pc(
+            ("Disabled (gaming, recommended)", "Every shutdown becomes a true cold boot, clearing the stale driver/USB/GPU state that 'a real restart fixes'.", "Boots are slightly slower."),
+            ("Default (on)", "Faster boots by restoring a saved kernel session.", "'Shutdown' isn't a clean boot, so driver/peripheral quirks can carry across restarts; also locks the disk for dual-boot.")),
+
+        ["visualfx"] = Pc(
+            ("Best performance (gaming)", "Instant window/menu response and a touch less idle GPU compositor work.", "Purely cosmetic loss -- the desktop looks flatter; full effect needs a sign-out."),
+            ("Default", "Keeps the Fluent animations and fades many people prefer.", "Animations add a small delay to every window/menu interaction.")),
+
+        ["privacy.advertisingid"] = Pc(
+            ("Disabled (recommended)", "Apps can't build a stable cross-session ad profile of you, with no functional downside.", "Ads you see may be less 'relevant' (which is the point)."),
+            ("Enabled (default)", "Personalized ads across apps.", "Gives apps a persistent identifier to correlate your activity.")),
+
+        ["privacy.tailoredexp"] = Pc(
+            ("Disabled (recommended)", "Windows stops mining your diagnostic data for targeted tips and promos.", "You stop seeing personalized Windows tips and suggestions."),
+            ("Enabled (default)", "Personalized tips and recommendations in Start/Settings/lock screen.", "Uses your diagnostic data to target suggestions and promotional content.")),
+
+        ["privacy.cdp"] = Pc(
+            ("Disabled (gaming, recommended if unused)", "Stops cross-device discovery/sync background activity, reasserted after updates.", "Handoff, shared clipboard, and nearby-device discovery stop working (Phone Link integrations may be affected)."),
+            ("Default (on)", "Cross-device handoff and shared clipboard work.", "Background discovery/sync runs even if you never use those features.")),
+
+        ["privacy.activityhistory"] = Pc(
+            ("Disabled (gaming, recommended)", "Stops the activity feed collecting and uploading what you do, reasserted after updates.", "Timeline and cross-device activity resume stop working."),
+            ("Default (on)", "Timeline shows recent activities and can resume them across devices.", "Records -- and, when signed in, uploads -- your cross-app activity.")),
+
+        ["privacy.speech"] = Pc(
+            ("Disabled (recommended)", "Your voice audio never leaves the machine; offline speech and Voice Access still work.", "Cloud-powered dictation loses accuracy or stops working."),
+            ("Enabled", "Most accurate cloud dictation and voice features.", "Sends your voice audio to Microsoft's cloud.")),
+
+        ["privacy.inking"] = Pc(
+            ("Disabled (recommended)", "Stops Windows harvesting your handwriting samples and contact names.", "Handwriting recognition and suggestions become less personalized."),
+            ("Enabled", "Better personalized handwriting recognition and word suggestions.", "Builds and uploads a personal dictionary from your ink and contacts.")),
+
+        ["network.nagle"] = Pc(
+            ("Default (recommended unless you've measured a gain)", "The safe choice -- no risk of making latency or throughput worse.", "You might leave a few ms on the table on the rare setup where disabling helps."),
+            ("Disabled", "Sends small game packets immediately, which can lower latency on some setups.", "Contested -- can increase bufferbloat latency or hurt throughput, especially on Wi-Fi/congested links; revert if worse.")),
+
+        ["network.nicpower"] = Pc(
+            ("Default (recommended)", "No battery cost and no per-hardware guesswork.", "On a wired desktop you might miss a small win from preventing NIC wake stalls."),
+            ("Disabled", "NIC never sleeps, so no wake-from-idle network hitches (best on wired desktops).", "Higher idle power, worse laptop battery, needs a reboot, and many adapters are unaffected either way.")),
+
+        ["debloat.suggestedcontent"] = Pc(
+            ("Disabled (recommended)", "No silent promo-app installs and no Start/Settings suggestion cards.", "You stop seeing Microsoft's app/feature suggestions; a feature update may re-enable some (Auto-apply holds it)."),
+            ("Enabled (default)", "Microsoft surfaces app and feature suggestions.", "Silently installs promo apps and clutters Start with ad-like cards.")),
+
+        ["debloat.spotlight"] = Pc(
+            ("Disabled (recommended)", "Removes the tips/fun-facts/ad overlay from the lock screen.", "If your lock-screen background is Spotlight, also switch it to Picture/Slideshow for a full opt-out."),
+            ("Enabled (default)", "Rotating Spotlight images with fun facts and tips.", "Shows ad-like captions and tips on your lock screen.")),
+
+        ["debloat.finishsetup"] = Pc(
+            ("Disabled (recommended)", "No more post-update 'finish setting up your device' interruption.", "You won't be prompted to finish optional account/OneDrive setup."),
+            ("Enabled (default)", "Windows reminds you to finish optional setup steps.", "A recurring full-screen nag that resurfaces after feature updates.")),
+
+        ["debloat.startrecommend"] = Pc(
+            ("Disabled (recommended)", "Quiets Start 'Recommended' suggestions and hides recently opened files (a privacy win on a shared screen).", "Recent files stop appearing in Start/jump lists; on Win11 Home the section can't be fully emptied."),
+            ("Enabled (default)", "Quick access to recent files and app/web suggestions in Start.", "Suggestions are often ads, and recent files are visible to anyone at your screen.")),
+
+        ["debloat.explorerads"] = Pc(
+            ("Disabled (recommended)", "Removes the OneDrive/Microsoft 365 upsell banners from File Explorer.", "None -- genuine sync-status icons on files are unaffected."),
+            ("Enabled (default)", "Shows OneDrive/Office sync prompts in Explorer.", "Advertising inside your file manager.")),
+
+        ["debloat.feedback"] = Pc(
+            ("Disabled (recommended)", "Windows stops popping 'rate your experience' dialogs (Feedback Hub still opens manually).", "None -- your telemetry level is unaffected."),
+            ("Enabled (default)", "You can answer Microsoft's periodic feedback prompts.", "Interrupting popups, sometimes frequent on fresh installs.")),
+
+        ["debloat.widgets"] = Pc(
+            ("Disabled (recommended)", "Stops the Widgets process/MSN feed and removes the taskbar button, freeing idle RAM/CPU/bandwidth.", "The Widgets board and its button disappear (one UAC prompt to apply)."),
+            ("Enabled (default)", "One-click weather/news board on the taskbar.", "A background web feed that uses RAM/CPU/bandwidth even if you rarely open it.")),
+
+        ["debloat.edge"] = Pc(
+            ("Disabled (recommended)", "Edge stops pre-launching at boot and exits when closed, freeing 150-500 MB of idle RAM.", "Edge cold-starts a little slower (WebView2 apps are unaffected; one UAC prompt)."),
+            ("Enabled (default)", "Edge launches instantly and stays warm in the background.", "Keeps Edge resident from boot for no benefit if it isn't your daily browser.")),
+
+        ["ai.copilot"] = Pc(
+            ("Off (recommended)", "Removes the taskbar button and Win+C, and stops background Copilot processes and cloud calls.", "You lose quick access to Copilot unless you turn it back on."),
+            ("On (default)", "One-click and Win+C access to Windows Copilot.", "Always-present button, background processes, and page/context sent to cloud AI.")),
+
+        ["ai.recall"] = Pc(
+            ("Off (recommended)", "Stops Recall snapshotting your screen at the policy level (no NPU/disk cost, smaller privacy surface).", "You lose Recall's 'find what I had open' search; existing snapshots aren't deleted by this toggle."),
+            ("On (default on Copilot+ PCs)", "Search your past screen activity with on-device AI.", "Continuous screen capture plus NPU/disk cost, even though it's processed locally.")),
+
+        ["ai.clicktodo"] = Pc(
+            ("Off (recommended)", "Hides the Snipping Tool AI actions panel; normal screenshots are unaffected.", "You lose the AI 'summarize/rewrite/search' actions on captures."),
+            ("On (default)", "AI actions appear after you take a screenshot.", "Those actions call Microsoft cloud services.")),
+
+        ["ai.edge"] = Pc(
+            ("Off (recommended)", "Cleaner Edge UI, no page contents sent to Copilot, and no in-browser AI generation.", "You lose Edge's built-in Copilot sidebar and AI features (normal browsing is unaffected)."),
+            ("On (default)", "Edge Copilot sidebar, page-aware help, and in-browser generative AI.", "Persistent Copilot icon and page-context sharing with cloud AI.")),
+
+        ["ai.notepadpaint"] = Pc(
+            ("Off (recommended)", "Notepad and Paint behave like the classic apps -- no AI buttons, cloud calls, or opt-in prompts.", "You lose Notepad Rewrite and Paint Cocreator/Image Creator/Generative Erase."),
+            ("On (default)", "AI writing and image tools built into Notepad and Paint.", "Bolts cloud AI (and opt-in prompts) onto otherwise simple apps.")),
+
+        ["ai.settingssearch"] = Pc(
+            ("Off (recommended)", "The search box returns local files/apps only -- no web/Copilot suggestions or taskbar companion.", "You lose inline web answers in the search box (indexing and search itself are unchanged)."),
+            ("On (default)", "Web and Copilot answers suggested as you type in the search box.", "Calls Microsoft web endpoints on your keystrokes; some builds add a floating companion.")),
+
+        ["ai.actions"] = Pc(
+            ("Off (recommended)", "Right-click and image menus stop offering AI actions; the menus otherwise work normally.", "You lose the 'rewrite/summarize/search the web for this' shell actions."),
+            ("On (default)", "AI actions available from right-click and image context menus.", "Those actions send selected text/images to cloud AI.")),
+
+        ["ai.inputinsights"] = Pc(
+            ("Off (recommended)", "Windows stops saving samples of what you type for personalization.", "Typing suggestions get slightly less personalized over time (autocorrect/spell-check unaffected)."),
+            ("On (default)", "Personalized typing suggestions that improve as you type.", "The OS saves a per-user model of the text you type.")),
+
+        ["ai.office"] = Pc(
+            ("Off (recommended)", "Removes the Copilot ribbon/buttons from Word/Excel/OneNote and opts out of training on your document text.", "If you have a Copilot license you lose the in-app entry points."),
+            ("On (default)", "In-app Copilot in Word/Excel/OneNote (with a license).", "Copilot affordances in every document and potential document-text use for training.")),
+
+        ["hdr"] = Pc(
+            ("On (recommended for HDR display + HDR content)", "Genuinely better picture in HDR games/movies; monitoring auto-restores it after Windows silently turns it off.", "Some games tone-map badly in HDR, and SDR desktop content can look worse than native SDR."),
+            ("Off", "Native SDR is often cleaner for desktop work and SDR-only content.", "HDR games won't use their HDR rendering paths.")),
+
+        ["refresh"] = Pc(
+            ("Maximum supported (recommended)", "Lowest input-to-photon latency and smoothest motion; monitoring catches Windows silently dropping it.", "On a laptop on battery a high rate costs real power."),
+            ("A lower / fixed rate", "Saves power on high-Hz panels (useful on battery).", "Higher latency and less smooth motion than your panel can do.")),
+
+        ["drr"] = Pc(
+            ("Enabled", "Saves power by dropping to a low virtual refresh for static content and boosting to max for scrolling/ink.", "Refresh isn't fixed, which a few gamers find less predictable."),
+            ("Disabled", "A fixed, predictable maximum refresh for consistent latency.", "Loses the battery saving DRR gives on static content.")),
+
+        ["resolution"] = Pc(
+            ("Don't enforce (recommended)", "Windows can switch resolution freely when you dock/undock or change monitors.", "Without pinning, Windows could occasionally drop you to a lower resolution after a driver update."),
+            ("Pin a resolution", "Absolute stability -- the app re-asserts your chosen resolution after drift.", "Fights legitimate display changes (docking a laptop, plugging in a different monitor).")),
+
+        ["ai.app:Microsoft.Copilot"] = Pc(
+            ("Remove (after the Copilot policy is Off)", "Reclaims hundreds of MB and removes the Copilot launcher from Start.", "Reinstalling needs the Microsoft Store; Windows Update may re-provision it (Auto-apply re-removes)."),
+            ("Keep", "The Copilot app stays one click away.", "Dead weight on disk if you've already blocked Copilot via policy.")),
+
+        ["ai.app:Microsoft.Windows.Ai.Copilot.Provider"] = Pc(
+            ("Remove (after the Copilot policy is Off)", "Removes the unused background provider; smaller installed-app surface.", "Re-provisioned by Windows Update; reinstall needs the Store."),
+            ("Keep", "Nothing to re-provision later.", "Keeps a provider that does nothing once Copilot is blocked.")),
+
+        ["ai.app:MicrosoftWindows.Client.AIX"] = Pc(
+            ("Remove (if you don't use Windows AI)", "Reclaims disk and removes the AI settings panel.", "The AI Settings UI disappears; re-provisioned by Windows Update."),
+            ("Keep", "Keeps the AI settings panel and shell AI integrations.", "Unused weight on non-Copilot+ PCs.")),
+
+        ["ai.app:Microsoft.MicrosoftOfficeHub"] = Pc(
+            ("Remove", "Removes the Microsoft 365 launcher tile and its Copilot promotion -- your actual Office apps keep working.", "Windows Update/Store may re-provision it (Auto-apply re-removes); reinstall via the Store."),
+            ("Keep", "Keeps the hub tile for finding docs.", "Re-pins itself to Start and nags about Copilot if you never use it.")),
     };
 
     private static SettingDetails SvcRec(
