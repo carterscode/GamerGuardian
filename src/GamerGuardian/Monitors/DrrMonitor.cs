@@ -21,11 +21,18 @@ public sealed class DrrMonitor : IMonitoredSetting
         var active = DisplayHelper.EnumerateActiveDisplays();
         foreach (var display in active)
         {
+            // Resolve the preference first and bail before touching the display
+            // config when DRR isn't being monitored. CheckDrift runs on every poll
+            // and the support probe below calls SetDisplayConfig, which can stall
+            // input -- so we must not run it for displays the user isn't watching
+            // (the drift would be filtered out by IsMonitored anyway).
+            var pref = DisplayPreferenceResolver.Resolve(config, display, active);
+            if (!pref.Drr.Monitor) continue;
+
             var read = DrrInterop.ReadState(display.AdapterId, display.TargetId);
             if (!read.Found) continue;
             if (!DrrInterop.IsSupported(display.AdapterId, display.TargetId)) continue;
 
-            var pref = DisplayPreferenceResolver.Resolve(config, display, active);
             bool current = read.Enabled;
             bool desired = pref.Drr.DesiredOn;
             if (current == desired) continue;

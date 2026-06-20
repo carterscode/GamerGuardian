@@ -9,20 +9,29 @@ Versions before 1.0.0 are pre-release: features and defaults may still change.
 
 ## [Unreleased]
 
-> **⚠️ Important update — please upgrade right away.** This release fixes a bug that
-> could interrupt your **mouse and keyboard and stutter system performance about every
-> 30 seconds** while GamerGuardian was running (a monitored setting was being
-> re-applied on a loop). If you're on an earlier version, updating now is strongly
-> recommended.
+> **⚠️ Important update — please upgrade right away.** This is the real fix for the
+> **mouse and keyboard stuttering about every 30 seconds** while GamerGuardian runs.
+> The earlier 0.1.56 fix addressed a related auto-apply loop but not this cause, so if
+> you're still seeing the hitch, update to this build.
 
 ### Fixed
-- **Mouse and keyboard no longer hitch every ~30 seconds.** A monitored, auto-applied
-  setting that Windows kept reverting was re-applied on every poll — and when the app
-  runs without admin rights each re-apply raised a UAC prompt (and display settings
-  reconfigured the screen), seizing input. A new circuit breaker stops re-applying a
-  setting Windows keeps fighting after a few tries and leaves it notify-only for a
-  cooldown (logged as `[CIRCUIT]` in the change log), so the worst case is one
-  interruption every several minutes instead of one every 30 seconds.
+- **Mouse and keyboard hitch every ~30 seconds — the real cause.** The Dynamic Refresh
+  Rate (DRR) "is this display capable?" check was running on every 30-second poll for
+  each monitor, and that check briefly re-validates the display configuration — which on
+  many GPUs stalls the mouse and keyboard for a moment. DRR capability never changes
+  while you're using the PC, so it's now checked **once** per display instead of every
+  poll, and skipped entirely for displays you aren't monitoring. (This ran regardless of
+  whether you were even monitoring DRR, which is why turning settings off didn't help.)
+
+## [0.1.56] - 2026-06-20
+
+### Fixed
+- **Mouse and keyboard no longer hitch every ~30 seconds (auto-apply loop).** A
+  monitored, auto-applied setting that Windows kept reverting was re-applied on every
+  poll — and when the app runs without admin rights each re-apply raised a UAC prompt
+  (and display settings reconfigured the screen), seizing input. A circuit breaker now
+  stops re-applying a setting Windows keeps fighting after a few tries and leaves it
+  notify-only for a cooldown (logged as `[CIRCUIT]` in the change log).
 
 ### Changed
 - **Far less background polling.** Only the display settings (HDR, refresh rate,
