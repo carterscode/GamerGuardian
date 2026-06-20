@@ -9,6 +9,12 @@ Versions before 1.0.0 are pre-release: features and defaults may still change.
 
 ## [Unreleased]
 
+> **⚠️ Important update — please upgrade right away.** This release fixes a bug that
+> could interrupt your **mouse and keyboard and stutter system performance about every
+> 30 seconds** while GamerGuardian was running (a monitored setting was being
+> re-applied on a loop). If you're on an earlier version, updating now is strongly
+> recommended.
+
 ### Fixed
 - **Mouse and keyboard no longer hitch every ~30 seconds.** A monitored, auto-applied
   setting that Windows kept reverting was re-applied on every poll — and when the app
