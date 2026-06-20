@@ -219,6 +219,32 @@ public static class ChangeLogger
         catch { }
     }
 
+    /// <summary>
+    /// Records that the auto-apply circuit breaker tripped for a setting Windows
+    /// keeps reverting: GamerGuardian stops re-applying it for a cooldown so it
+    /// doesn't spawn a UAC prompt / display reconfiguration every poll. Distinct
+    /// line type so a user grepping for "[CIRCUIT" can see exactly what got
+    /// suspended and why their input stopped being interrupted.
+    /// </summary>
+    public static void LogCircuitBreaker(
+        string settingId, string description, int resetCount, TimeSpan cooldown)
+    {
+        try
+        {
+            EnsureLogDir();
+            RotateIfNeeded();
+            var sb = new StringBuilder();
+            sb.AppendLine(Divider);
+            sb.AppendLine($"[{Now()}] [CIRCUIT   ] auto-apply suspended: {description}");
+            sb.AppendLine($"  settingId    : {settingId}");
+            sb.AppendLine($"  reason       : Windows reverted this {resetCount} time(s) in a row -- re-applying every poll was interrupting input");
+            sb.AppendLine($"  cooldown     : not auto-applied for {FormatDuration(cooldown)}; will retry once after that");
+            sb.AppendLine($"  action       : leave it (notify-only), or untick Auto-apply for this setting in Settings");
+            File.AppendAllText(LogPath, sb.ToString(), Encoding.UTF8);
+        }
+        catch { }
+    }
+
     private static string Format(ApplyResult r)
     {
         var status = r.ErrorMessage is not null ? "ERROR" : (r.Verified ? "OK" : "FAILED");

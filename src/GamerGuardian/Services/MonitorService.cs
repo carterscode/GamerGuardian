@@ -35,8 +35,16 @@ public sealed class MonitorService : IDisposable
     /// apply is corrective" tag on the next ApplyResult.
     /// </summary>
     private readonly Dictionary<string, LastVerified> _lastVerified = new();
-    /// <summary>How many times Windows has reverted each setting since app start. Logged with each EXTRESET.</summary>
-    private readonly Dictionary<string, int> _stickiness = new();
+
+    /// <summary>
+    /// Stops auto-applying a setting Windows keeps reverting. Without it, a value
+    /// that verifies-then-reverts every poll re-applies forever -- and every
+    /// re-apply that needs elevation throws a UAC secure-desktop prompt (or
+    /// reconfigures the display), seizing the mouse + keyboard every 30 s. After a
+    /// few reverts the breaker trips and the setting is left to notify-only for a
+    /// cooldown. Also tracks the per-setting revert count surfaced in the log.
+    /// </summary>
+    private readonly AutoApplyCircuitBreaker _breaker = new();
 
     private readonly record struct LastVerified(string RawValue, string DisplayValue, DateTimeOffset At);
 
@@ -147,9 +155,21 @@ public sealed class MonitorService : IDisposable
             // doesn't mutate config anyway, so the save was a no-op except
             // for triggering this race. Removed in v0.1.40.
 
+            var now = DateTimeOffset.UtcNow;
+            var driftedIds = new HashSet<string>(drifted.Select(d => d.SettingId), StringComparer.OrdinalIgnoreCase);
+
+            // Anything the breaker is tracking that ISN'T drifting this tick has
+            // recovered (Windows stopped reverting it) -- clear its streak/cooldown
+            // so it returns to normal monitoring.
+            foreach (var id in _breaker.TrackedSettingIds.ToList())
+                if (!driftedIds.Contains(id)) _breaker.RecordHealthy(id);
+
             // External-reset detection happens BEFORE auto-apply so we log the
             // cause (EXTRESET) and the effect (the corrective apply) as two
-            // separate, easily-correlated lines.
+            // separate, easily-correlated lines. When a setting has been reverted
+            // enough times the breaker trips: we stop treating it as
+            // previously-verified (so it stops logging EXTRESET every poll) and the
+            // auto-apply filter below skips it for the cooldown window.
             var externalResetIds = new HashSet<string>();
             foreach (var d in drifted)
             {
@@ -158,20 +178,30 @@ public sealed class MonitorService : IDisposable
                 // definition this is an external reset — we set it correctly,
                 // something else moved it.
                 externalResetIds.Add(d.SettingId);
-                _stickiness[d.SettingId] = _stickiness.GetValueOrDefault(d.SettingId) + 1;
+                bool tripped = _breaker.RecordExternalReset(d.SettingId, now);
                 ChangeLogger.LogExternalReset(
                     settingId: d.SettingId,
                     description: d.Description,
                     lastAppliedValue: $"{prev.DisplayValue} ({prev.RawValue})",
                     currentValue: $"{d.CurrentValue} ({d.RawBefore})",
                     lastAppliedAt: prev.At,
-                    stickinessCount: _stickiness[d.SettingId],
-                    autoApplyOn: d.AutoApply);
+                    stickinessCount: _breaker.ResetCount(d.SettingId),
+                    autoApplyOn: d.AutoApply && !tripped);
+                if (tripped)
+                {
+                    ChangeLogger.LogCircuitBreaker(
+                        d.SettingId, d.Description,
+                        _breaker.ResetCount(d.SettingId), _breaker.Cooldown);
+                    // Drop the verified record so we stop re-detecting this as an
+                    // external reset (and re-logging) every poll while it's tripped.
+                    _lastVerified.Remove(d.SettingId);
+                    externalResetIds.Remove(d.SettingId);
+                }
             }
 
-            var now = DateTimeOffset.UtcNow;
             var auto = drifted
                 .Where(d => d.AutoApply)
+                .Where(d => !_breaker.IsTripped(d.SettingId, now))
                 .Where(d => !_autoApplyBackoff.TryGetValue(d.SettingId, out var until) || now >= until)
                 .ToList();
             if (auto.Count > 0)
@@ -196,7 +226,7 @@ public sealed class MonitorService : IDisposable
                         results[i] = results[i] with
                         {
                             ExternalResetDetected = true,
-                            StickinessCount = _stickiness.GetValueOrDefault(results[i].SettingId)
+                            StickinessCount = _breaker.ResetCount(results[i].SettingId)
                         };
                     }
                     ChangeLogger.LogApplyResults(results, "auto-revert");
@@ -242,8 +272,13 @@ public sealed class MonitorService : IDisposable
 
             // Drifts that aren't auto-applied (or are in cooldown) still surface
             // as a notification so the user knows something's drifting and can
-            // act manually.
-            var prompt = drifted.Where(a => !auto.Any(b => b.SettingId == a.SettingId)).ToList();
+            // act manually. Settings the breaker has tripped are excluded: they're
+            // logged once (LogCircuitBreaker) and would otherwise re-notify every
+            // poll, swapping UAC spam for toast spam.
+            var prompt = drifted
+                .Where(a => !auto.Any(b => b.SettingId == a.SettingId))
+                .Where(a => !_breaker.IsTripped(a.SettingId, now))
+                .ToList();
             if (prompt.Count > 0)
                 await _onDriftAsync(new DriftReport(prompt));
 
