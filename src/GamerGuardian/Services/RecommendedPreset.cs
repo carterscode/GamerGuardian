@@ -13,7 +13,7 @@ namespace GamerGuardian.Services;
 /// settings have been added picks up only the new ones; everything already
 /// in the recommended state is reported as "already correct" and skipped.</para>
 ///
-/// <para><b>Conservative.</b> Two categories are intentionally NOT in the
+/// <para><b>Conservative.</b> Three categories are intentionally NOT in the
 /// preset:
 /// <list type="bullet">
 ///   <item><b>Memory Integrity and the full VBS-stack toggle</b> -- security
@@ -23,6 +23,11 @@ namespace GamerGuardian.Services;
 ///   <item><b>UWP AI app removal</b> -- irreversible without the Microsoft
 ///     Store. Policy toggles are sufficient to disable Copilot; opt-in only
 ///     for actual uninstall.</item>
+///   <item><b>The Windows power plan</b> -- isolated by design. The active
+///     power scheme is a one-time, user-initiated setup on the CPU / Power tab
+///     (pick a prebuilt plan or build the CPU-aware optimized one). No preset
+///     button -- Recommended, Extreme, or Reset -- touches it, so the user's
+///     choice is never overwritten or reverted.</item>
 /// </list></para>
 ///
 /// <para>The preset mutates the draft directly (no per-field PropertyChanged
@@ -47,12 +52,9 @@ public static class RecommendedPreset
     public static Result ApplyToDraft(AppConfig draft) =>
         ApplyToDraft(draft, CpuTuneCatalog.Resolve(CpuDetector.Current));
 
-    public static Result ApplyToDraft(AppConfig draft, CpuTuneResult recipe) =>
-        ApplyToDraft(draft, recipe, SafeListPlans());
-
-    // installedPlans is injectable so the power-plan step is testable without a
-    // live OS power-scheme enumeration.
-    public static Result ApplyToDraft(AppConfig draft, CpuTuneResult recipe, IDictionary<Guid, string> installedPlans)
+    // recipe drives the dual-CCD service guardrail. The power plan is NOT staged
+    // here -- it stays a one-time, user-initiated setup on the CPU / Power tab.
+    public static Result ApplyToDraft(AppConfig draft, CpuTuneResult recipe)
     {
         if (draft is null) throw new ArgumentNullException(nameof(draft));
 
@@ -88,8 +90,7 @@ public static class RecommendedPreset
         Count(SetToggle(g.InputInsights,   "Typing / input insights",        "ai.inputinsights",  changes));
         Count(SetToggle(g.OfficeCopilot,   "Office 365 Copilot",             "ai.office",         changes));
 
-        // ---- Power plan: CPU-aware recommended prebuilt (Balanced for modern) ----
-        Count(SetPowerPlan(g.PowerPlan, recipe, installedPlans, changes));
+        // ---- Power plan: intentionally NOT staged (isolated, one-time user setup) ----
 
         // ---- Services with a RecommendedTarget ----
         foreach (var def in ServiceCatalog.All)
@@ -131,10 +132,7 @@ public static class RecommendedPreset
     public static Result ApplyExtremeToDraft(AppConfig draft) =>
         ApplyExtremeToDraft(draft, CpuTuneCatalog.Resolve(CpuDetector.Current));
 
-    public static Result ApplyExtremeToDraft(AppConfig draft, CpuTuneResult recipe) =>
-        ApplyExtremeToDraft(draft, recipe, SafeListPlans());
-
-    public static Result ApplyExtremeToDraft(AppConfig draft, CpuTuneResult recipe, IDictionary<Guid, string> installedPlans)
+    public static Result ApplyExtremeToDraft(AppConfig draft, CpuTuneResult recipe)
     {
         if (draft is null) throw new ArgumentNullException(nameof(draft));
 
@@ -149,9 +147,8 @@ public static class RecommendedPreset
             Count(SetToggleTo(pref, label, desiredOn, monitor: true, autoApply: true, "Extreme", changes));
         }
 
-        // Power plan: still the CPU-aware prebuilt (never blindly High Performance).
-        // Building the custom optimized scheme stays an explicit CPU/Power action.
-        Count(SetPowerPlan(g.PowerPlan, recipe, installedPlans, changes));
+        // Power plan: intentionally NOT staged. Even Extreme leaves the active
+        // power scheme to the user's one-time CPU / Power tab setup.
 
         foreach (var def in ServiceCatalog.All)
         {
@@ -182,12 +179,11 @@ public static class RecommendedPreset
     // Windows out-of-box value and turn Monitor + Auto-apply OFF, so a subsequent
     // Apply restores Windows defaults and GamerGuardian stops re-asserting anything.
     // Displays are only un-monitored (their Want is hardware-specific, so it's left
-    // alone). UWP AI app removals are not touched (reinstalling is Store-only).
+    // alone). UWP AI app removals are not touched (reinstalling is Store-only). The
+    // power plan is also left alone -- it's an isolated, user-owned one-time setup,
+    // so Reset never reverts or un-monitors it.
 
-    public static Result ResetToDefaultsToDraft(AppConfig draft) =>
-        ResetToDefaultsToDraft(draft, SafeListPlans());
-
-    public static Result ResetToDefaultsToDraft(AppConfig draft, IDictionary<Guid, string> installedPlans)
+    public static Result ResetToDefaultsToDraft(AppConfig draft)
     {
         if (draft is null) throw new ArgumentNullException(nameof(draft));
 
@@ -202,7 +198,8 @@ public static class RecommendedPreset
             Count(SetToggleTo(pref, label, desiredOn, monitor: false, autoApply: false, "Reset", changes));
         }
 
-        Count(ResetPowerPlan(g.PowerPlan, installedPlans, changes));
+        // Power plan: intentionally NOT reset. The user's one-time power-plan
+        // setup is isolated from the presets and left untouched.
 
         // Reset only services the user is actually managing -- don't materialize a
         // Default pref for every catalog entry the user never touched.
@@ -217,31 +214,6 @@ public static class RecommendedPreset
         }
 
         return new Result(changed, alreadyCorrect, changes);
-    }
-
-    private static bool ResetPowerPlan(PowerPlanPref pref, IDictionary<Guid, string> plans, List<string> changes)
-    {
-        // Windows default plan is Balanced. Stage it (unmanaged) if it's installed;
-        // otherwise just stop monitoring whatever plan is selected.
-        var balanced = PowerPlanMonitor.Balanced;
-        plans.TryGetValue(balanced, out var name);
-        var guidStr = balanced.ToString();
-
-        bool already = !pref.Monitor && !pref.AutoApply
-                       && pref.Desired == PowerPlanChoice.Balanced
-                       && (name is null || string.Equals(pref.DesiredGuid, guidStr, StringComparison.OrdinalIgnoreCase));
-        if (already) return false;
-
-        var before = pref.DesiredName ?? pref.Desired.ToString();
-        pref.Desired = PowerPlanChoice.Balanced;
-        if (name is not null) { pref.DesiredGuid = guidStr; pref.DesiredName = name; }
-        pref.Monitor = false;
-        pref.AutoApply = false;
-        ChangeLogger.LogPreferenceChange("[Reset] Power plan", "preset",
-            $"Want={before}",
-            $"Want={name ?? "Balanced"} Monitor=Off AutoApply=Off");
-        changes.Add($"Power plan: Balanced (Windows default), Monitor off, Auto-apply off");
-        return true;
     }
 
     private static bool ResetDisplay(DisplayPreference dp, string label, List<string> changes)
@@ -375,36 +347,6 @@ public static class RecommendedPreset
         return true;
     }
 
-    private static bool SetPowerPlan(PowerPlanPref pref, CpuTuneResult recipe,
-        IDictionary<Guid, string> plans, List<string> changes)
-    {
-        // CPU-aware: recommend the prebuilt plan the catalog picked (Balanced for
-        // modern CPUs) -- never blindly High Performance. Building the custom
-        // optimized plan stays an explicit action on the CPU / Power tab. If the
-        // recommended plan isn't installed, leave the power plan alone.
-        var choice = recipe.RecommendedPrebuilt;
-        var targetGuid = PowerPlanMonitor.ToGuid(choice);
-        if (!plans.TryGetValue(targetGuid, out var name))
-            return false;
-
-        var guidStr = targetGuid.ToString();
-        var (bGuid, bMon, bAuto) = (pref.DesiredGuid, pref.Monitor, pref.AutoApply);
-        bool already = string.Equals(bGuid, guidStr, StringComparison.OrdinalIgnoreCase)
-                       && bMon && bAuto && pref.Desired == choice;
-        if (already) return false;
-
-        pref.DesiredGuid = guidStr;
-        pref.DesiredName = name;
-        pref.Desired = choice;
-        pref.Monitor = true;
-        pref.AutoApply = true;
-        ChangeLogger.LogPreferenceChange("[Recommended] Power plan", "preset",
-            $"Want={bGuid ?? "(unset)"} Monitor={B(bMon)} AutoApply={B(bAuto)}",
-            $"Want={name} Monitor=On AutoApply=On");
-        changes.Add($"Power plan: {name} (CPU-aware recommendation), Monitor on, Auto-apply on");
-        return true;
-    }
-
     /// <summary>True when the service backs the AMD CCD-routing stack / Game Bar
     /// and the detected CPU is asymmetric dual-CCD X3D (so it must not be disabled).</summary>
     public static bool ShouldProtectServiceOnDualCcd(string serviceName, CpuTuneResult recipe)
@@ -412,12 +354,6 @@ public static class RecommendedPreset
         if (!recipe.NeedsCcdRoutingStack || string.IsNullOrEmpty(serviceName)) return false;
         return DualCcdProtectedFragments.Any(f =>
             serviceName.Contains(f, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static IDictionary<Guid, string> SafeListPlans()
-    {
-        try { return Monitors.PowerPlanMonitor.ListAvailablePlans(); }
-        catch { return new Dictionary<Guid, string>(); }
     }
 
     private static string B(bool x) => x ? "On" : "Off";

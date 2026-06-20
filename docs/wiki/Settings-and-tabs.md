@@ -26,7 +26,7 @@ Other conventions:
 
 App preferences and the one-click setup — not a monitored-setting tab.
 
-- **One-click setup** — three whole-config presets. Each only *stages* changes (review them per-tab, then **Apply** / **Save & close** to commit, or **Cancel** to discard) and each is idempotent, so re-running after an update only picks up the new deltas:
+- **One-click setup** — three whole-config presets. Each only *stages* changes (review them per-tab, then **Apply** / **Save & close** to commit, or **Cancel** to discard) and each is idempotent, so re-running after an update only picks up the new deltas. None of them touch the **power plan** — that's isolated as a one-time, user-initiated setup on the **CPU / Power** tab:
   - **Apply recommended** — GamerGuardian's safe gaming preset: sets each covered setting's **Want**, turns **Monitor** on, opts into **Auto-apply**. Keeps Memory Integrity / VBS **on** (security) and leaves Privacy / Debloat / the contested network tweaks for you to choose. Skips the irreversible UWP AI-app removals.
   - **Apply extreme** — everything that could even *remotely* help gaming, on: **every** toggle at its most-aggressive value — including Memory Integrity / VBS **off** and the contested Nagle / NIC tweaks — with **Monitor and Auto-apply turned on for every setting**. Disabling Memory Integrity / VBS breaks Valorant (Vanguard) and weakens malware protection, and several changes need a reboot — it asks for confirmation first.
   - **Reset all to defaults** — the inverse: stages every setting back to its **Windows default** and turns **Monitor + Auto-apply off**. Applying then restores Windows' shipped behavior (which re-enables features you may have turned off, like Copilot, ads/suggestions, and telemetry services).
