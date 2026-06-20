@@ -4,13 +4,14 @@ A Windows 11 tray app that watches gaming-related display and system settings, a
 
 ## What it looks like
 
-Settings is split into nine tabs. See the **[Settings & tabs guide](Settings-and-tabs)** for what every tab and setting does and means.
+Settings is split into ten tabs. See the **[Settings & tabs guide](Settings-and-tabs)** for what every tab and setting does and means.
 
 | Tab | Covers |
 |---|---|
-| **General** | Theme, launch-at-startup, polling interval, update check, change log, one-click Recommended setup |
+| **General** | Theme, launch-at-startup, polling interval, update check, change log, and three one-click presets (Reset all to defaults · Apply recommended · Apply extreme) |
 | **Global gaming** | Game Mode, Game DVR, HAGS, Memory Integrity/VBS, MMCSS, USB Selective Suspend, VRR, Fast Startup, Visual effects, power plan |
-| **Privacy** | Advertising ID, Tailored experiences, Cross-Device Platform, Activity History |
+| **Privacy** | Advertising ID, Tailored experiences, Cross-Device Platform, Activity History, online speech recognition, inking & typing personalization |
+| **Debloat** | Switches off Windows 11 ads, nags, suggested content, and idle background features — all reversible and off by default |
 | **Network** | Network Throttling, Nagle's algorithm, NIC power management |
 | **Windows services** | Curated catalog with one-click Gaming-optimized preset, per-service Default/Manual/Disabled |
 | **Windows AI** | Policy disables for Copilot, Recall, Click-to-Do, Edge AI, Notepad/Paint AI, search AI, AI Actions, Office Copilot + optional AI UWP removal |
@@ -19,6 +20,8 @@ Settings is split into nine tabs. See the **[Settings & tabs guide](Settings-and
 | **Recommended BIOS** | Firmware checklist (guidance only) |
 
 Screenshots: [General](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-general.png) · [Global gaming](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-global-gaming.png) · [Windows services](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-windows-services.png) · [Display](https://raw.githubusercontent.com/carterscode/GamerGuardian/main/docs/screenshots/settings-display.png)
+
+**How it watches:** the volatile display settings (HDR, refresh rate, resolution, DRR) are re-checked on a fast poll (default every 30 s); the ~40 set-and-forget registry/policy/service settings are re-checked at startup, on resume/unlock, on display changes, and on a slow 10-minute backstop — so the app isn't constantly polling settings that only move across a reboot. A built-in circuit breaker stops re-applying a setting that Windows keeps reverting (logged as `[CIRCUIT]`). Every setting's **Learn more** expander gives a plain-English pro/con of each choice plus a copy-pasteable PowerShell block to verify, apply the gaming value, or reverse to the Windows default.
 
 ## Getting started
 

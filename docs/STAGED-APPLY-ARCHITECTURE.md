@@ -117,6 +117,25 @@ Long-form documentation per setting. Populated in `Services/SettingDocsCatalog`.
 4. Each gets its own session id. Corrective applies log as `source=auto-revert` with `ExternalResetDetected = true` and the current stickiness count, so a single `grep '\[EXTRESET'` / `grep 'auto-revert'` answers "what does Windows keep undoing, and what's GamerGuardian doing about it?"
 5. Verification failures move the setting into the 15-minute backoff so a stubborn setting doesn't pop UAC every 30 seconds.
 
+### User clicks one of the three General-tab preset buttons
+
+The General tab has three one-click preset buttons. **All three stage into the draft only** -- they never touch the live `_config` or `config.json`. Like every other staged change, they commit only when the user later clicks **Apply** or **Save & close**. All three route through the shared `RunPreset(presetName, apply)` helper in `SettingsWindow.xaml.cs`:
+
+1. The button's click handler calls `RunPreset("…", () => RecommendedPreset.<Builder>(_draft))`.
+2. The builder mutates `_draft` directly (no per-row `PropertyChanged` fires) and returns a `RecommendedPreset.Result(SettingsChanged, SettingsAlreadyCorrect, ChangeDescriptions)`. Each per-setting delta it stages is logged as an ordinary `[PREF-STAGE]` line with `field=preset` (see below) -- **no new line type**.
+3. `RunPreset` bumps `_pendingCount += result.SettingsChanged` (so Save & close doesn't short-circuit), calls `UpdatePendingStatus()`, then rebuilds **every** row collection (`LoadGlobals` / `LoadDisplays` / `LoadServices` / `LoadWindowsAi` / `LoadPrivacy` / `LoadDebloat` / `LoadNetwork` / `LoadCpuTabs`) so the UI reflects the mutated draft. The row setters short-circuit on equality, so rebinding doesn't double-log.
+4. `RunPreset` updates `RecommendedStatusText` and pops an informational summary MessageBox ("Staged N change(s)… Click Apply or Save & close to commit").
+
+The three buttons (`Services/RecommendedPreset.cs`):
+
+| Button | Builder | What it stages | Confirmation? |
+|---|---|---|---|
+| Apply recommended | `RecommendedPreset.ApplyToDraft` | Conservative gaming preset: the hand-picked subset of toggles at their recommended gaming value, plus services / displays / the CPU-aware power plan. **Memory Integrity / VBS and UWP AI-app removal are deliberately excluded** (security tradeoff + irreversible). Monitor + Auto-apply turned **on** for each touched setting. | none |
+| Apply extreme | `RecommendedPreset.ApplyExtremeToDraft` | Every managed toggle at its most-aggressive gaming value -- including **Memory Integrity / VBS off** and the contested **Nagle / NIC** tweaks -- plus services, displays and the CPU-aware power plan. Monitor + Auto-apply **on**. Still excludes irreversible UWP AI-app removal. | yes -- a warning `MessageBox` (kernel-driver protection / anti-cheat / reboot) before `RunPreset` is called |
+| Reset all to defaults | `RecommendedPreset.ResetToDefaultsToDraft` | Every managed setting back to its Windows out-of-box value, with Monitor + Auto-apply turned **off** so a subsequent Apply restores defaults and GamerGuardian stops re-asserting. Displays are only un-monitored (their Want is hardware-specific). UWP AI-app removals are not touched. | yes -- a warning `MessageBox` before `RunPreset` is called |
+
+All three are **idempotent**: each per-setting helper compares the draft's `(DesiredOn/Want, Monitor, AutoApply)` triple to the target and stages (and logs) only the deltas; a second click when everything already matches stages zero changes and reports "already correct". The `[PREF-STAGE]` `settingName` carries a `[Recommended]` / `[Extreme]` / `[Reset]` tag prefix so the log shows which preset staged each delta.
+
 ## Log schema (`changes.log`)
 
 | Marker | Written by | Meaning |
@@ -127,6 +146,7 @@ Long-form documentation per setting. Populated in `Services/SettingDocsCatalog`.
 | `[manual    ]` etc. per-record | `LogApplyResults` | One verbose entry per change. Multi-line: settingId, location, before/desired/after, applyCmd, verifyCmd, elapsedMs, status. |
 | `[APPLY-END  ]` | `LogApplyResults` | Same session id. Includes `verified=N/M` summary and total elapsed ms. |
 | `[EXTRESET  ]` | `LogExternalReset` | Windows or another tool changed a value we'd previously applied. Includes how long the previous applied value held and the current stickiness count. |
+| `[CIRCUIT   ]` | `LogCircuitBreaker` | The auto-apply circuit breaker tripped: Windows kept reverting a setting, so GamerGuardian suspended re-applying it for a cooldown (avoids spawning a UAC prompt / display reconfig every poll). Multi-line: `settingId`, `reason` (revert count -- "Windows reverted this N time(s) in a row"), `cooldown` (not auto-applied for D; retries once after), `action` (leave it notify-only, or untick Auto-apply). |
 | `[PAUSE     ]` | `LogPauseEvent` | MonitorService entered or left a paused state (fullscreen, benchmark, user manual). |
 | `[MEM       ]` | `LogMemorySnapshot` | Periodic process memory snapshot. |
 
@@ -161,5 +181,7 @@ A unit test in `tests/GamerGuardian.Tests/SettingsReferenceGenTests.cs` asserts 
 | Verbose logger | `Services/ChangeLogger.cs` |
 | Background monitor + external-reset detection | `Services/MonitorService.cs` |
 | One-line mechanism / verify / apply PowerShell | `Services/SettingDocs.cs` |
-| Draft UI + Apply/Save&close/Cancel | `UI/SettingsWindow.xaml.cs` |
+| Draft UI + Apply/Save&close/Cancel + preset buttons | `UI/SettingsWindow.xaml.cs` |
+| Recommended / Extreme / Reset preset draft builders | `Services/RecommendedPreset.cs` |
+| CPU-aware power-plan recipes (used by `SetPowerPlan` in the presets) | `Services/CpuTuneCatalog.cs` |
 | Verbose per-change result UI | `UI/ApplyResultsWindow.xaml.cs` |

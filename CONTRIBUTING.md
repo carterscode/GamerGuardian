@@ -47,8 +47,9 @@ Symptom: enabling auto-apply on a service Windows refuses to actually
 disable (DoSvc / Delivery Optimization is the trigger case) caused a
 UAC prompt every 30 s forever.
 
-MonitorService now backs off auto-apply for a setting whose verify
-failed for 15 minutes. Drift still surfaces as a notification.
+MonitorService now trips the auto-apply circuit breaker for a setting
+whose verify keeps failing (logged as [CIRCUIT]). Drift still surfaces
+as a notification.
 ```
 
 ## Code style
@@ -67,7 +68,7 @@ The canonical example is `src/GamerGuardian/Monitors/HagsMonitor.cs` — about 3
 A new monitor needs:
 
 1. A class implementing `IMonitoredSetting` in `src/GamerGuardian/Monitors/`.
-2. Registration in `App.xaml.cs` in the `_allMonitors` array.
+2. Registration in `App.xaml.cs` in the `fixedMonitors` array.
 3. A row in `SettingsWindow.xaml.cs` `LoadGlobals` (or the equivalent for your tab).
 4. A `MechanismFor` and `VerifyCommandFor` entry in `src/GamerGuardian/Services/SettingDocs.cs`.
 5. **A test** in `tests/GamerGuardian.Tests/` (see *Tests* below).
