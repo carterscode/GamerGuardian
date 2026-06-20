@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using static GamerGuardian.Native.DisplayConfig;
 
 namespace GamerGuardian.Native;
@@ -59,9 +60,35 @@ public static class DrrInterop
         catch { return new ReadResult(false, false); }
     }
 
-    /// <summary>True when DRR can be set on this target (the driver/panel accepts
-    /// the boost-refresh-rate flag under SDC_VALIDATE).</summary>
+    // Whether a target supports DRR is a static property of the panel + driver +
+    // OS -- it does not change between polls. The probe below is NOT free: it calls
+    // SetDisplayConfig (SDC_VALIDATE), which on some GPU/driver combos re-evaluates
+    // the display pipeline and briefly stalls the mouse/keyboard. Running it on
+    // every 30s drift poll (DrrMonitor.CheckDrift -> IsSupported) is what caused the
+    // periodic input hitch, so the result is cached per target and the probe runs
+    // at most once per display until the topology changes.
+    private static readonly ConcurrentDictionary<(uint low, int high, uint target), bool> _supportCache = new();
+
+    /// <summary>
+    /// The actual support probe. Exposed as a settable delegate ONLY so tests can
+    /// substitute a non-native counter (the native probe needs a real display and
+    /// would itself disturb it). Production never reassigns this.
+    /// </summary>
+    public static Func<LUID, uint, bool> SupportProbe { get; set; } = ProbeSupportedNative;
+
+    /// <summary>True when DRR can be set on this target. Cached: the underlying
+    /// SDC_VALIDATE probe runs once per display, not on every poll.</summary>
     public static bool IsSupported(LUID adapterId, uint targetId)
+        => _supportCache.GetOrAdd(
+            (adapterId.LowPart, adapterId.HighPart, targetId),
+            _ => SupportProbe(adapterId, targetId));
+
+    /// <summary>Drops the cached support results so they are re-probed once. Call
+    /// when the display topology changes (monitor hot-plug, driver change) -- DRR
+    /// support can differ for a newly attached panel.</summary>
+    public static void ClearSupportCache() => _supportCache.Clear();
+
+    private static bool ProbeSupportedNative(LUID adapterId, uint targetId)
     {
         try
         {

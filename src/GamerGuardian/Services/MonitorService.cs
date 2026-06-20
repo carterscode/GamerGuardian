@@ -159,7 +159,13 @@ public sealed class MonitorService : IDisposable
     }
 
     private void OnDisplaySettingsChanged(object? sender, EventArgs e)
-        => ScheduleCheck(tier: MonitorTier.Volatile, delayMs: 1500);
+    {
+        // The display topology may have changed (monitor hot-plug / driver) -- a
+        // newly attached panel can have different DRR support, so drop the cached
+        // support results and let the next check re-probe each display once.
+        GamerGuardian.Native.DrrInterop.ClearSupportCache();
+        ScheduleCheck(tier: MonitorTier.Volatile, delayMs: 1500);
+    }
 
     /// <summary>
     /// Called by the SettingsWindow's Apply / Save &amp; close path to seed our
