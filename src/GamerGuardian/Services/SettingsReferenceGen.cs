@@ -84,24 +84,78 @@ public static class SettingsReferenceGen
         sb.AppendLine();
         sb.AppendLine($"`{d.SettingId}` &nbsp; **Recommended:** {d.Recommended}");
         sb.AppendLine();
-        sb.AppendLine($"**What it does.** {d.What}");
+        sb.AppendLine($"**Why this is the recommendation.** {d.Why}");
         sb.AppendLine();
-        sb.AppendLine($"**Why you'd change it.** {d.Why}");
+        sb.AppendLine($"**What it does.** {d.What}");
         sb.AppendLine();
         sb.AppendLine($"**How it helps.** {d.HowItHelps}");
         sb.AppendLine();
+
+        var prosCons = SettingDocsCatalog.ProsConsFor(d.SettingId);
+        if (prosCons.Count > 0)
+        {
+            sb.AppendLine("**Pros & cons of each choice:**");
+            sb.AppendLine();
+            sb.AppendLine("| Choice | Pro | Con |");
+            sb.AppendLine("|---|---|---|");
+            foreach (var t in prosCons)
+                sb.AppendLine($"| {Cell(t.Choice)} | {Cell(t.Pro)} | {Cell(t.Con)} |");
+            sb.AppendLine();
+        }
+
         sb.AppendLine("**Per-scenario recommendation:**");
         sb.AppendLine();
         sb.AppendLine("| Scenario | Setting |");
         sb.AppendLine("|---|---|");
         foreach (var (scenario, rec) in d.Scenarios)
-            sb.AppendLine($"| {scenario} | {rec} |");
+            sb.AppendLine($"| {Cell(scenario)} | {Cell(rec)} |");
         sb.AppendLine();
         sb.AppendLine($"**Risks.** {d.Risks}");
         sb.AppendLine();
+
+        Commands(sb, d);
+
         sb.AppendLine($"**Reversible via.** {d.ReversibleVia}");
         sb.AppendLine();
     }
+
+    /// <summary>Verify / apply / reverse PowerShell, in a fenced block when present.</summary>
+    private static void Commands(StringBuilder sb, SettingDetails d)
+    {
+        var verify = SettingDocs.VerifyCommandFor(d.SettingId);
+        var apply = SettingDocs.ApplyCommandFor(d.SettingId, GamingRaw(d.SettingId));
+        var reverse = SettingDocs.ReverseCommandFor(d.SettingId);
+        if (string.IsNullOrWhiteSpace(reverse)) reverse = d.ReversibleVia;
+
+        sb.AppendLine("**Command line (PowerShell):**");
+        sb.AppendLine();
+        sb.AppendLine("```powershell");
+        if (!string.IsNullOrWhiteSpace(verify))
+        {
+            sb.AppendLine("# Check the current value");
+            sb.AppendLine(verify);
+            sb.AppendLine();
+        }
+        if (!string.IsNullOrWhiteSpace(apply))
+        {
+            sb.AppendLine("# Apply the gaming-optimized value");
+            sb.AppendLine(apply);
+            sb.AppendLine();
+        }
+        sb.AppendLine("# Reverse it (restore the Windows default)");
+        sb.AppendLine(reverse);
+        sb.AppendLine("```");
+        sb.AppendLine();
+    }
+
+    // Memory Integrity's apply fallback is the safe (On) value, not the gaming
+    // (Off) one -- ask for Off explicitly so the doc shows the gaming command.
+    private static string GamingRaw(string settingId) =>
+        settingId == "memintegrity" ? "0" : string.Empty;
+
+    /// <summary>Escape a value for a Markdown table cell (pipes + newlines).</summary>
+    private static string Cell(string s) =>
+        s.Replace("|", "\\|").Replace("\r", " ").Replace("\n", " ");
 
     private static string Slug(string name)
     {

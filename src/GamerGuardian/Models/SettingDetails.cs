@@ -40,3 +40,13 @@ public sealed record SettingDetails(
     string Recommended,
     string Risks,
     string ReversibleVia);
+
+/// <summary>
+/// One side of a per-setting "what happens if I pick this" pro/con, written for a
+/// user who knows nothing about the setting. <see cref="Choice"/> names the option
+/// in the same words the Settings window offers (e.g. "Turn it On", "Disabled
+/// (gaming)", "Keep it"); <see cref="Pro"/> and <see cref="Con"/> are a single
+/// plain-English upside and downside of choosing it. Surfaced in the "Learn more"
+/// expander and the generated reference so the recommendation is never a black box.
+/// </summary>
+public sealed record ChoiceTradeoff(string Choice, string Pro, string Con);

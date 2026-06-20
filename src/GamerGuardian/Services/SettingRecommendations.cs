@@ -97,6 +97,92 @@ public static class SettingRecommendations
         };
 
     /// <summary>
+    /// "Extreme" gaming target -- everything that could even remotely help gaming,
+    /// turned on. Same as <see cref="ToggleDesiredOn"/> for every clear-win toggle,
+    /// but flips the four settings the standard recommendation deliberately softens:
+    /// Memory Integrity and the full VBS stack go <b>off</b> (the contested 5-15%
+    /// FPS gain), and Nagle's algorithm + NIC power management go to their
+    /// <b>aggressive</b> (disabled) state. Used by the "Apply Extreme" preset, which
+    /// also turns Monitor + Auto-apply on for every setting.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, bool> ExtremeDesiredOn = BuildExtreme();
+
+    private static Dictionary<string, bool> BuildExtreme()
+    {
+        var d = new Dictionary<string, bool>(ToggleDesiredOn);
+        d["memintegrity"]    = false; // Disabled -- accept the security tradeoff for FPS
+        d["vbs"]             = false; // Disabled -- full VBS stack off
+        d["network.nagle"]   = true;  // Gaming   -- disable Nagle (send small packets immediately)
+        d["network.nicpower"] = true; // Gaming   -- never let the NIC sleep
+        return d;
+    }
+
+    /// <summary>
+    /// The Windows out-of-box <c>DesiredOn</c> for each toggle -- the value "Reset
+    /// all to defaults" stages (alongside Monitor = off and Auto-apply = off) so a
+    /// subsequent Apply restores the machine to Windows' shipped behavior. For
+    /// intuitive Enabled/Disabled features the default is "feature on" (true); for
+    /// the inverted Gaming/Default registry knobs the default is the non-gaming
+    /// state (false); security toggles default on; opt-in data collection (speech,
+    /// inking) defaults off because Windows ships it off until the user accepts.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, bool> WindowsDefaultDesiredOn =
+        new Dictionary<string, bool>
+        {
+            // ---- Global / system (true = the Windows-shipped state) ----
+            ["gamemode"]        = true,   // On by default
+            ["gamedvr"]         = true,   // Capture on by default
+            ["hags"]            = true,   // On by default on Win11
+            ["vrr"]             = false,  // VRROptimizeEnable flag not set by default
+            ["sysresponse"]     = false,  // Default reservation (20)
+            ["netthrottle"]     = false,  // Throttling on by default
+            ["usbsuspend"]      = false,  // Windows-managed selective suspend on
+            ["gamestask"]       = false,  // Stock Games MMCSS profile
+            ["mouseaccel"]      = true,   // Enhance pointer precision on by default
+            ["fso"]             = true,   // Fullscreen optimizations on by default
+            ["powerthrottling"] = false,  // Throttling on by default
+            ["faststartup"]     = false,  // Fast Startup on by default
+            ["visualfx"]        = false,  // "Let Windows choose" by default
+
+            // ---- Security: on by default ----
+            ["memintegrity"]    = true,
+            ["vbs"]             = true,
+
+            // ---- Windows AI: feature on by default ----
+            ["ai.copilot"]        = true,
+            ["ai.recall"]         = true,
+            ["ai.clicktodo"]      = true,
+            ["ai.edge"]           = true,
+            ["ai.notepadpaint"]   = true,
+            ["ai.settingssearch"] = true,
+            ["ai.actions"]        = true,
+            ["ai.inputinsights"]  = true,
+            ["ai.office"]         = true,
+
+            // ---- Privacy ----
+            ["privacy.advertisingid"]   = true,  // ad ID on by default
+            ["privacy.tailoredexp"]     = true,  // tailored experiences on by default
+            ["privacy.cdp"]             = false, // CDP on by default (DesiredOn=true = disabled-by-policy)
+            ["privacy.activityhistory"] = false, // Activity feed on by default
+            ["privacy.speech"]          = false, // Online speech is opt-in (off until accepted)
+            ["privacy.inking"]          = false, // Inking personalization is opt-in (off until accepted)
+
+            // ---- Debloat: the bloat feature is on by default ----
+            ["debloat.suggestedcontent"] = true,
+            ["debloat.spotlight"]        = true,
+            ["debloat.finishsetup"]      = true,
+            ["debloat.startrecommend"]   = true,
+            ["debloat.explorerads"]      = true,
+            ["debloat.feedback"]         = true,
+            ["debloat.widgets"]          = true,
+            ["debloat.edge"]             = true,
+
+            // ---- Network: contested tweaks default to off (Windows pacing on) ----
+            ["network.nagle"]    = false,
+            ["network.nicpower"] = false,
+        };
+
+    /// <summary>
     /// Recommended <c>DesiredOn</c> for a toggle setting, or <c>null</c> when the
     /// setting has no documented recommendation (the UI hides the hint).
     /// </summary>

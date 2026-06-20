@@ -46,10 +46,57 @@ public class SettingDocsTests
     [InlineData("privacy.activityhistory")]
     [InlineData("powerthrottling")]
     [InlineData("faststartup")]
+    [InlineData("network.nagle")]
+    [InlineData("network.nicpower")]
     public void VerifyCommandFor_KnownIds_ReturnsNonEmpty(string id)
     {
         var cmd = SettingDocs.VerifyCommandFor(id);
         Assert.False(string.IsNullOrWhiteSpace(cmd), $"no Verify command for {id}");
+    }
+
+    [Theory]
+    [InlineData("hags")]
+    [InlineData("memintegrity")]
+    [InlineData("vbs")]
+    [InlineData("gamemode")]
+    [InlineData("gamedvr")]
+    [InlineData("sysresponse")]
+    [InlineData("netthrottle")]
+    [InlineData("usbsuspend")]
+    [InlineData("vrr")]
+    [InlineData("fso")]
+    [InlineData("powerthrottling")]
+    [InlineData("faststartup")]
+    [InlineData("visualfx")]
+    [InlineData("privacy.advertisingid")]
+    [InlineData("privacy.cdp")]
+    [InlineData("ai.copilot")]
+    [InlineData("ai.recall")]
+    [InlineData("debloat.widgets")]
+    public void ReverseCommandFor_RegistryToggles_ReturnsNonEmpty(string id)
+    {
+        // Every registry-backed toggle must offer a clean command to put it back
+        // (so the Learn more block can show both directions). Services, display
+        // settings, mouse accel and the Games task profile deliberately return "" and
+        // fall back to the prose Reversible via.
+        var cmd = SettingDocs.ReverseCommandFor(id);
+        Assert.False(string.IsNullOrWhiteSpace(cmd), $"no Reverse command for {id}");
+    }
+
+    [Fact]
+    public void ReverseCommandFor_PolicyOverrideService_DeletesPolicyValue()
+    {
+        var cmd = SettingDocs.ReverseCommandFor("service:dosvc");
+        Assert.Contains("Remove-ItemProperty", cmd);
+        Assert.Contains("DODownloadMode", cmd);
+    }
+
+    [Fact]
+    public void ReverseCommandFor_Service_ReEnables()
+    {
+        var cmd = SettingDocs.ReverseCommandFor("service:DiagTrack");
+        Assert.Contains("sc.exe", cmd);
+        Assert.Contains("DiagTrack", cmd, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

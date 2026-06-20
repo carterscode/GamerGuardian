@@ -1237,13 +1237,57 @@ public partial class SettingsWindow : FluentWindow
     /// that adds new settings to the preset can be picked up by the user
     /// re-clicking this button -- only the new deltas land.</para>
     /// </summary>
-    private void ApplyRecommendedPresetButton_Click(object sender, RoutedEventArgs e)
+    private void ApplyRecommendedPresetButton_Click(object sender, RoutedEventArgs e) =>
+        RunPreset("Recommended preset", () => RecommendedPreset.ApplyToDraft(_draft));
+
+    private void ApplyExtremePresetButton_Click(object sender, RoutedEventArgs e)
+    {
+        var confirm = System.Windows.MessageBox.Show(this,
+            "Apply EXTREME staging will turn on every gaming tweak GamerGuardian knows -- "
+            + "including disabling Memory Integrity / VBS and the contested Nagle / NIC tweaks -- "
+            + "and enable Monitor + Auto-apply for every setting.\n\n"
+            + "Disabling Memory Integrity / VBS weakens kernel-driver malware protection and breaks "
+            + "games whose anti-cheat requires it (Valorant / Vanguard). Several changes need a reboot.\n\n"
+            + "Nothing is written yet -- this only stages the changes for you to review, then Apply / "
+            + "Save & close. Continue?",
+            "GamerGuardian -- Apply extreme",
+            System.Windows.MessageBoxButton.OKCancel, System.Windows.MessageBoxImage.Warning);
+        if (confirm != System.Windows.MessageBoxResult.OK) return;
+
+        RunPreset("Extreme preset", () => RecommendedPreset.ApplyExtremeToDraft(_draft));
+    }
+
+    private void ResetToDefaultsButton_Click(object sender, RoutedEventArgs e)
+    {
+        var confirm = System.Windows.MessageBox.Show(this,
+            "Reset all to defaults will stage every setting back to its Windows default and turn "
+            + "Monitor + Auto-apply off.\n\n"
+            + "If you then Apply, this restores Windows' shipped behavior -- which re-enables features "
+            + "you may have turned off (Copilot, ads and suggestions, telemetry services) and may need "
+            + "a reboot or a UAC prompt.\n\n"
+            + "Nothing is written yet -- this only stages the changes for you to review, then Apply / "
+            + "Save & close. Continue?",
+            "GamerGuardian -- Reset all to defaults",
+            System.Windows.MessageBoxButton.OKCancel, System.Windows.MessageBoxImage.Warning);
+        if (confirm != System.Windows.MessageBoxResult.OK) return;
+
+        RunPreset("Reset to defaults", () => RecommendedPreset.ResetToDefaultsToDraft(_draft));
+    }
+
+    /// <summary>
+    /// Shared body for the three one-click preset buttons. Runs <paramref name="apply"/>
+    /// against the draft, bumps the pending count, rebuilds every row collection so
+    /// the UI reflects the mutated draft, and reports what was staged. The row
+    /// setters short-circuit on equality, so rebinding doesn't double-log
+    /// per-row PREF-STAGE events.
+    /// </summary>
+    private void RunPreset(string presetName, Func<RecommendedPreset.Result> apply)
     {
         RecommendedPreset.Result result;
-        try { result = RecommendedPreset.ApplyToDraft(_draft); }
+        try { result = apply(); }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show(this, "Recommended preset failed: " + ex.Message,
+            System.Windows.MessageBox.Show(this, $"{presetName} failed: " + ex.Message,
                 "GamerGuardian", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             return;
         }
@@ -1251,9 +1295,6 @@ public partial class SettingsWindow : FluentWindow
         _pendingCount += result.SettingsChanged;
         UpdatePendingStatus();
 
-        // Rebuild every row collection so the UI reflects the mutated draft.
-        // (Row setters short-circuit on equality so this rebinds cleanly
-        // without firing per-row PREF-STAGE events -- those would double-log.)
         LoadGlobals();
         LoadDisplays();
         LoadServices();
@@ -1266,16 +1307,16 @@ public partial class SettingsWindow : FluentWindow
         if (RecommendedStatusText is not null)
         {
             RecommendedStatusText.Text = result.SettingsChanged == 0
-                ? $"All {result.SettingsAlreadyCorrect} preset-managed setting(s) already in the recommended state. Nothing to do."
-                : $"Staged {result.SettingsChanged} setting(s); {result.SettingsAlreadyCorrect} already correct. Click Apply or Save & close to commit.";
+                ? $"{presetName}: all {result.SettingsAlreadyCorrect} setting(s) already in that state. Nothing to do."
+                : $"{presetName}: staged {result.SettingsChanged} setting(s); {result.SettingsAlreadyCorrect} already correct. Click Apply or Save & close to commit.";
         }
 
         var dialogMsg = result.SettingsChanged == 0
-            ? $"Your draft already matches the Recommended preset across all {result.SettingsAlreadyCorrect} preset-managed setting(s). Nothing to do."
-            : $"Staged {result.SettingsChanged} change(s) to the Recommended preset. {result.SettingsAlreadyCorrect} setting(s) were already correct and skipped."
+            ? $"Your draft already matches the {presetName} across all {result.SettingsAlreadyCorrect} covered setting(s). Nothing to do."
+            : $"Staged {result.SettingsChanged} change(s) for the {presetName}. {result.SettingsAlreadyCorrect} setting(s) were already correct and skipped."
               + "\n\nReview the per-tab changes if you want. Click Apply (stay in Settings) or Save & close to commit the apply pass. Click Cancel to discard.";
 
-        System.Windows.MessageBox.Show(this, dialogMsg, "GamerGuardian -- Recommended preset",
+        System.Windows.MessageBox.Show(this, dialogMsg, $"GamerGuardian -- {presetName}",
             System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
 
