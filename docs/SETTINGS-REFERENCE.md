@@ -3232,8 +3232,14 @@ sc.exe config "XboxNetApiSvc" start= auto; sc.exe start "XboxNetApiSvc"   # rest
 **Command line (PowerShell):**
 
 ```powershell
+# Check the current value
+schtasks /Query /TN "\microsoft\windows\application experience\microsoft compatibility appraiser" /XML   # <Settings><Enabled>false</Enabled> = disabled
+
+# Apply the gaming-optimized value
+schtasks /Change /TN "\microsoft\windows\application experience\microsoft compatibility appraiser" /Disable
+
 # Reverse it (restore the Windows default)
-schtasks /Change /TN "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser" /Enable  (verify: schtasks /Query /TN "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser" /FO LIST)
+schtasks /Change /TN "\microsoft\windows\application experience\microsoft compatibility appraiser" /Enable   # re-enable the scheduled task
 ```
 
 **Reversible via.** schtasks /Change /TN "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser" /Enable  (verify: schtasks /Query /TN "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser" /FO LIST)
@@ -3270,8 +3276,14 @@ schtasks /Change /TN "\Microsoft\Windows\Application Experience\Microsoft Compat
 **Command line (PowerShell):**
 
 ```powershell
+# Check the current value
+schtasks /Query /TN "\microsoft\windows\application experience\microsoft compatibility appraiser exp" /XML   # <Settings><Enabled>false</Enabled> = disabled
+
+# Apply the gaming-optimized value
+schtasks /Change /TN "\microsoft\windows\application experience\microsoft compatibility appraiser exp" /Disable
+
 # Reverse it (restore the Windows default)
-schtasks /Change /TN "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser Exp" /Enable  (verify: schtasks /Query /TN "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser Exp" /FO LIST)
+schtasks /Change /TN "\microsoft\windows\application experience\microsoft compatibility appraiser exp" /Enable   # re-enable the scheduled task
 ```
 
 **Reversible via.** schtasks /Change /TN "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser Exp" /Enable  (verify: schtasks /Query /TN "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser Exp" /FO LIST)
@@ -3308,8 +3320,14 @@ schtasks /Change /TN "\Microsoft\Windows\Application Experience\Microsoft Compat
 **Command line (PowerShell):**
 
 ```powershell
+# Check the current value
+schtasks /Query /TN "\microsoft\windows\application experience\pcapatchdbtask" /XML   # <Settings><Enabled>false</Enabled> = disabled
+
+# Apply the gaming-optimized value
+schtasks /Change /TN "\microsoft\windows\application experience\pcapatchdbtask" /Disable
+
 # Reverse it (restore the Windows default)
-schtasks /Change /TN "\Microsoft\Windows\Application Experience\PcaPatchDbTask" /Enable  (verify: schtasks /Query /TN "\Microsoft\Windows\Application Experience\PcaPatchDbTask" /FO LIST)
+schtasks /Change /TN "\microsoft\windows\application experience\pcapatchdbtask" /Enable   # re-enable the scheduled task
 ```
 
 **Reversible via.** schtasks /Change /TN "\Microsoft\Windows\Application Experience\PcaPatchDbTask" /Enable  (verify: schtasks /Query /TN "\Microsoft\Windows\Application Experience\PcaPatchDbTask" /FO LIST)
@@ -3346,8 +3364,14 @@ schtasks /Change /TN "\Microsoft\Windows\Application Experience\PcaPatchDbTask" 
 **Command line (PowerShell):**
 
 ```powershell
+# Check the current value
+schtasks /Query /TN "\microsoft\windows\application experience\programdataupdater" /XML   # <Settings><Enabled>false</Enabled> = disabled
+
+# Apply the gaming-optimized value
+schtasks /Change /TN "\microsoft\windows\application experience\programdataupdater" /Disable
+
 # Reverse it (restore the Windows default)
-schtasks /Change /TN "\Microsoft\Windows\Application Experience\ProgramDataUpdater" /Enable  (verify: schtasks /Query /TN "\Microsoft\Windows\Application Experience\ProgramDataUpdater" /FO LIST)
+schtasks /Change /TN "\microsoft\windows\application experience\programdataupdater" /Enable   # re-enable the scheduled task
 ```
 
 **Reversible via.** schtasks /Change /TN "\Microsoft\Windows\Application Experience\ProgramDataUpdater" /Enable  (verify: schtasks /Query /TN "\Microsoft\Windows\Application Experience\ProgramDataUpdater" /FO LIST)
@@ -3384,8 +3408,14 @@ schtasks /Change /TN "\Microsoft\Windows\Application Experience\ProgramDataUpdat
 **Command line (PowerShell):**
 
 ```powershell
+# Check the current value
+schtasks /Query /TN "\microsoft\windows\application experience\startupapptask" /XML   # <Settings><Enabled>false</Enabled> = disabled
+
+# Apply the gaming-optimized value
+schtasks /Change /TN "\microsoft\windows\application experience\startupapptask" /Disable
+
 # Reverse it (restore the Windows default)
-schtasks /Change /TN "\Microsoft\Windows\Application Experience\StartupAppTask" /Enable  (verify: schtasks /Query /TN "\Microsoft\Windows\Application Experience\StartupAppTask" /FO LIST)
+schtasks /Change /TN "\microsoft\windows\application experience\startupapptask" /Enable   # re-enable the scheduled task
 ```
 
 **Reversible via.** schtasks /Change /TN "\Microsoft\Windows\Application Experience\StartupAppTask" /Enable  (verify: schtasks /Query /TN "\Microsoft\Windows\Application Experience\StartupAppTask" /FO LIST)

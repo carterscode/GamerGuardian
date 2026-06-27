@@ -54,10 +54,26 @@ public class ScheduledTaskMonitorTests
     }
 
     [Fact]
-    public void NotMonitored_NeverDrifts_RegardlessOfState()
+    public void Unmonitored_WantDisabled_TaskEnabled_StillDrifts_SoManualApplyWorks()
     {
+        // Manual Apply ("do it now") must disable a task the user wants Disabled even
+        // when Monitor is off -- matching the app-wide rule that Apply ignores IsMonitored.
         var cfg = ConfigWith(new ScheduledTaskPref { Monitor = false, Desired = ScheduledTaskTarget.Disabled });
-        Assert.Empty(MonitorReturning(ScheduledTaskState.Enabled).CheckDrift(cfg));
+        var drift = MonitorReturning(ScheduledTaskState.Enabled).CheckDrift(cfg).ToList();
+        Assert.Single(drift);
+        Assert.False(drift[0].IsMonitored);   // background poll ignores it; Apply still acts
+    }
+
+    [Fact]
+    public void FullyUnmanaged_DefaultAndUnmonitored_NeverDrifts_AndSkipsTheQuery()
+    {
+        // Default + unmonitored = the common "never engaged" state: no drift and the
+        // state reader is never invoked (no background schtasks spawn).
+        var cfg = ConfigWith(new ScheduledTaskPref { Monitor = false, Desired = ScheduledTaskTarget.Default });
+        bool queried = false;
+        var monitor = new ScheduledTaskMonitor(Def, _ => { queried = true; return ScheduledTaskState.Enabled; });
+        Assert.Empty(monitor.CheckDrift(cfg));
+        Assert.False(queried);
     }
 
     [Fact]

@@ -78,6 +78,29 @@ public class AppConfigClonerTests
     }
 
     [Fact]
+    public void CopyInto_CommitsScheduledTaskPrefs()
+    {
+        // Regression guard: CopyInto must carry ScheduledTasks, or the scheduled-task
+        // feature silently no-ops on Apply (draft prefs are dropped on commit).
+        const string taskPath = @"\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser";
+        var live = new AppConfig();
+        var draft = AppConfigCloner.Clone(live);
+        draft.ScheduledTasks[taskPath] = new ScheduledTaskPref
+        {
+            Desired = ScheduledTaskTarget.Disabled,
+            Monitor = true,
+            AutoApply = true,
+        };
+
+        AppConfigCloner.CopyInto(draft, live);
+
+        Assert.True(live.ScheduledTasks.TryGetValue(taskPath, out var pref));
+        Assert.Equal(ScheduledTaskTarget.Disabled, pref!.Desired);
+        Assert.True(pref.Monitor);
+        Assert.True(pref.AutoApply);
+    }
+
+    [Fact]
     public void Clone_NullSource_Throws()
     {
         Assert.Throws<ArgumentNullException>(() => AppConfigCloner.Clone(null!));

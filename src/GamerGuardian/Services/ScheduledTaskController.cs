@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Xml.Linq;
 
 namespace GamerGuardian.Services;
 
@@ -29,7 +30,7 @@ public static class ScheduledTaskController
     // handed to the elevated cmd.exe is still guarded — matching ElevatedRegistry — so
     // a future caller can't open a command-injection hole. Backslash and space are
     // legal in task paths and intentionally allowed.
-    private static readonly char[] ShellMeta = { '&', '|', '<', '>', '^', '"', '`', '%', ';', '\n', '\r' };
+    private static readonly char[] ShellMeta = { '&', '|', '<', '>', '^', '"', '`', '%', ';', '(', ')', '\n', '\r' };
 
     private static void GuardPath(string taskPath)
     {
@@ -40,9 +41,11 @@ public static class ScheduledTaskController
     }
 
     /// <summary>
-    /// Reads the task's enabled state without elevation. A task that doesn't exist
-    /// on this build (schtasks returns non-zero) maps to <see cref="ScheduledTaskState.NotPresent"/>,
-    /// which the monitor treats as "not drift".
+    /// Reads the task's enabled state without elevation via <c>schtasks /Query /XML</c>.
+    /// The XML representation is locale-independent (unlike <c>/FO LIST</c>'s localized
+    /// "Status:" field). A task that doesn't exist on this build (schtasks returns
+    /// non-zero) maps to <see cref="ScheduledTaskState.NotPresent"/>, which the monitor
+    /// treats as "not drift".
     /// </summary>
     public static ScheduledTaskState QueryState(string taskPath)
     {
@@ -52,11 +55,15 @@ public static class ScheduledTaskController
             var psi = new ProcessStartInfo
             {
                 FileName = Path.Combine(system32, "schtasks.exe"),
-                Arguments = $"/Query /TN \"{taskPath}\" /FO LIST",
+                Arguments = $"/Query /TN \"{taskPath}\" /XML ONE",
                 WorkingDirectory = system32,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
-                RedirectStandardError = true,
+                // stderr is intentionally NOT redirected: we don't use it, and an
+                // un-drained redirected stderr pipe can deadlock the child if it
+                // writes more than the pipe buffer. Inheriting (no console -> discarded)
+                // is safe and avoids the deadlock.
+                RedirectStandardError = false,
                 CreateNoWindow = true,
             };
             using var p = Process.Start(psi);
@@ -65,7 +72,7 @@ public static class ScheduledTaskController
             p.WaitForExit(10_000);
             if (!p.HasExited) { try { p.Kill(entireProcessTree: true); } catch { } return ScheduledTaskState.NotPresent; }
             if (p.ExitCode != 0) return ScheduledTaskState.NotPresent;
-            return ParseState(stdout);
+            return ParseEnabledState(stdout);
         }
         catch
         {
@@ -74,25 +81,30 @@ public static class ScheduledTaskController
     }
 
     /// <summary>
-    /// Parses <c>schtasks /Query ... /FO LIST</c> output. The "Status:" line reads
-    /// "Disabled" when the task is disabled and "Ready"/"Running" when enabled.
-    /// Exposed for unit testing without spawning schtasks.
+    /// Parses <c>schtasks /Query ... /XML</c> output and returns the task's state from
+    /// the locale-independent <c>Task/Settings/Enabled</c> element: <c>false</c> means
+    /// Disabled; <c>true</c> or absent means Enabled. Trigger elements can also carry an
+    /// <c>Enabled</c> flag, so this targets <c>Settings</c> specifically. Exposed for
+    /// unit testing without spawning schtasks.
     /// </summary>
-    public static ScheduledTaskState ParseState(string queryOutput)
+    public static ScheduledTaskState ParseEnabledState(string taskXml)
     {
-        if (string.IsNullOrWhiteSpace(queryOutput)) return ScheduledTaskState.NotPresent;
-        foreach (var rawLine in queryOutput.Split('\n'))
+        if (string.IsNullOrWhiteSpace(taskXml)) return ScheduledTaskState.NotPresent;
+        try
         {
-            var line = rawLine.Trim();
-            if (line.StartsWith("Status:", StringComparison.OrdinalIgnoreCase))
-            {
-                var value = line.Substring("Status:".Length).Trim();
-                return value.StartsWith("Disabled", StringComparison.OrdinalIgnoreCase)
-                    ? ScheduledTaskState.Disabled
-                    : ScheduledTaskState.Enabled;
-            }
+            var root = XDocument.Parse(taskXml).Root;
+            if (root is null) return ScheduledTaskState.NotPresent;
+            var ns = root.Name.Namespace;
+            var enabled = root.Element(ns + "Settings")?.Element(ns + "Enabled");
+            return enabled is not null
+                   && string.Equals(enabled.Value.Trim(), "false", StringComparison.OrdinalIgnoreCase)
+                ? ScheduledTaskState.Disabled
+                : ScheduledTaskState.Enabled;
         }
-        return ScheduledTaskState.NotPresent;
+        catch
+        {
+            return ScheduledTaskState.NotPresent;
+        }
     }
 
     /// <summary>Disable one or more tasks in a single elevation (one UAC prompt).</summary>

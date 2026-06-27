@@ -209,7 +209,15 @@ public partial class SettingsWindow : FluentWindow
     private void LoadScheduledTasks()
     {
         ScheduledTaskRows.Clear();
-        foreach (var def in ScheduledTaskCatalog.All)
+
+        // QueryState spawns schtasks.exe; run the five queries in parallel so opening
+        // Settings blocks on the slowest single spawn, not the sum of all five.
+        var states = ScheduledTaskCatalog.All
+            .AsParallel().AsOrdered()
+            .Select(def => (def, state: ScheduledTaskController.QueryState(def.TaskPath)))
+            .ToList();
+
+        foreach (var (def, state) in states)
         {
             if (!_draft.ScheduledTasks.TryGetValue(def.TaskPath, out var pref) || pref is null)
             {
@@ -217,7 +225,6 @@ public partial class SettingsWindow : FluentWindow
                 _draft.ScheduledTasks[def.TaskPath] = pref;
             }
 
-            var state = ScheduledTaskController.QueryState(def.TaskPath);
             bool present = state != ScheduledTaskState.NotPresent;
 
             // For tasks the user hasn't opted into monitoring, mirror the live state into

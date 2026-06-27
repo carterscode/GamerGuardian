@@ -51,5 +51,6 @@ public static class AppConfigCloner
         target.Global = source.Global;
         target.Services = source.Services;
         target.WindowsAiApps = source.WindowsAiApps;
+        target.ScheduledTasks = source.ScheduledTasks;
     }
 }

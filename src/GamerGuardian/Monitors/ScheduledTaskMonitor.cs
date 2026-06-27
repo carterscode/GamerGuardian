@@ -33,7 +33,15 @@ public sealed class ScheduledTaskMonitor : IMonitoredSetting
     public IEnumerable<DriftItem> CheckDrift(AppConfig config)
     {
         if (!config.ScheduledTasks.TryGetValue(_def.TaskPath, out var pref) || pref is null) yield break;
-        if (!pref.Monitor) yield break;
+
+        // Fully-unmanaged tasks (Windows default + not monitored) never drift, so skip
+        // them before the background schtasks /Query spawn. A task the user explicitly
+        // wants Disabled is still evaluated even when Monitor is off, so a manual Apply
+        // ("do it now") disables it regardless of the Monitor checkbox -- matching the
+        // app-wide rule that Apply ignores IsMonitored. (Reset stages Desired=Default +
+        // Monitor=off, so it un-manages a task without re-enabling it -- the telemetry
+        // tasks are harmless left disabled; re-enable explicitly via the row if wanted.)
+        if (pref.Desired == ScheduledTaskTarget.Default && !pref.Monitor) yield break;
 
         var current = _readState(_def.TaskPath);
         if (current == ScheduledTaskState.NotPresent) yield break;  // absent on this build -> not drift

@@ -49,32 +49,53 @@ public class ScheduledTaskControllerTests
             ScheduledTaskController.BuildChangeBatch(new[] { maliciousPath }, enable: false));
     }
 
+    private const string Ns = "http://schemas.microsoft.com/windows/2004/02/mit/task";
+
     [Fact]
-    public void ParseState_DisabledStatus_MapsToDisabled()
+    public void ParseEnabledState_SettingsEnabledFalse_MapsToDisabled()
     {
-        const string output = """
-            Folder: \Microsoft\Windows\Application Experience
-            HostName:      DESKTOP
-            TaskName:      \Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser
-            Next Run Time: N/A
-            Status:        Disabled
+        var xml = $"""
+            <?xml version="1.0" encoding="UTF-16"?>
+            <Task version="1.4" xmlns="{Ns}">
+              <Settings>
+                <Enabled>false</Enabled>
+              </Settings>
+            </Task>
             """;
-        Assert.Equal(ScheduledTaskState.Disabled, ScheduledTaskController.ParseState(output));
-    }
-
-    [Theory]
-    [InlineData("Ready")]
-    [InlineData("Running")]
-    public void ParseState_EnabledStatuses_MapToEnabled(string status)
-    {
-        var output = $"TaskName: \\foo\nStatus:        {status}\n";
-        Assert.Equal(ScheduledTaskState.Enabled, ScheduledTaskController.ParseState(output));
+        Assert.Equal(ScheduledTaskState.Disabled, ScheduledTaskController.ParseEnabledState(xml));
     }
 
     [Fact]
-    public void ParseState_NoStatusLine_MapsToNotPresent()
+    public void ParseEnabledState_SettingsEnabledTrue_MapsToEnabled()
     {
-        Assert.Equal(ScheduledTaskState.NotPresent, ScheduledTaskController.ParseState("ERROR: task not found"));
-        Assert.Equal(ScheduledTaskState.NotPresent, ScheduledTaskController.ParseState(""));
+        var xml = $"""<Task xmlns="{Ns}"><Settings><Enabled>true</Enabled></Settings></Task>""";
+        Assert.Equal(ScheduledTaskState.Enabled, ScheduledTaskController.ParseEnabledState(xml));
+    }
+
+    [Fact]
+    public void ParseEnabledState_NoSettingsEnabled_DefaultsToEnabled()
+    {
+        var xml = $"""<Task xmlns="{Ns}"><Settings/></Task>""";
+        Assert.Equal(ScheduledTaskState.Enabled, ScheduledTaskController.ParseEnabledState(xml));
+    }
+
+    [Fact]
+    public void ParseEnabledState_TriggerEnabledFalse_DoesNotMaskSettingsEnabled()
+    {
+        // A disabled trigger must not be read as a disabled task; only Settings/Enabled counts.
+        var xml = $"""
+            <Task xmlns="{Ns}">
+              <Triggers><CalendarTrigger><Enabled>false</Enabled></CalendarTrigger></Triggers>
+              <Settings><Enabled>true</Enabled></Settings>
+            </Task>
+            """;
+        Assert.Equal(ScheduledTaskState.Enabled, ScheduledTaskController.ParseEnabledState(xml));
+    }
+
+    [Fact]
+    public void ParseEnabledState_EmptyOrGarbage_MapsToNotPresent()
+    {
+        Assert.Equal(ScheduledTaskState.NotPresent, ScheduledTaskController.ParseEnabledState(""));
+        Assert.Equal(ScheduledTaskState.NotPresent, ScheduledTaskController.ParseEnabledState("ERROR: not found"));
     }
 }
