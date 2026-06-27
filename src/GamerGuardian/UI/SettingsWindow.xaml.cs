@@ -38,6 +38,7 @@ public partial class SettingsWindow : FluentWindow
     public ObservableCollection<GlobalToggleRow> WindowsAiRowsCollection { get; } = new();
     public ObservableCollection<WindowsAiAppRow> WindowsAiAppRowsCollection { get; } = new();
     public ObservableCollection<ServiceRow> ServiceRows { get; } = new();
+    public ObservableCollection<ScheduledTaskRow> ScheduledTaskRows { get; } = new();
     private bool _suppressPresetEvents;
     /// <summary>
     /// Number of staged preference toggles since the window opened (or since
@@ -85,12 +86,14 @@ public partial class SettingsWindow : FluentWindow
         NetworkTogglesList.ItemsSource = NetworkToggleRows;
         PowerTogglesList.ItemsSource = PowerToggleRows;
         ServicesList.ItemsSource = ServiceRows;
+        ScheduledTasksList.ItemsSource = ScheduledTaskRows;
         WindowsAiRows.ItemsSource = WindowsAiRowsCollection;
         WindowsAiAppRows.ItemsSource = WindowsAiAppRowsCollection;
 
         LoadGlobals();
         LoadDisplays();
         LoadServices();
+        LoadScheduledTasks();
         LoadWindowsAi();
         LoadPrivacy();
         LoadDebloat();
@@ -201,6 +204,38 @@ public partial class SettingsWindow : FluentWindow
         }
 
         UpdatePresetRadio();
+    }
+
+    private void LoadScheduledTasks()
+    {
+        ScheduledTaskRows.Clear();
+        foreach (var def in ScheduledTaskCatalog.All)
+        {
+            if (!_draft.ScheduledTasks.TryGetValue(def.TaskPath, out var pref) || pref is null)
+            {
+                pref = new ScheduledTaskPref();
+                _draft.ScheduledTasks[def.TaskPath] = pref;
+            }
+
+            var state = ScheduledTaskController.QueryState(def.TaskPath);
+            bool present = state != ScheduledTaskState.NotPresent;
+
+            // For tasks the user hasn't opted into monitoring, mirror the live state into
+            // Want so the "Disable" checkbox doesn't claim an intent the user never set.
+            if (!pref.Monitor && present)
+                pref.Desired = state == ScheduledTaskState.Disabled
+                    ? ScheduledTaskTarget.Disabled
+                    : ScheduledTaskTarget.Default;
+
+            var currentText = state switch
+            {
+                ScheduledTaskState.Disabled => "Current: Disabled",
+                ScheduledTaskState.Enabled => "Current: Enabled",
+                _ => "Current: not present on this system",
+            };
+
+            ScheduledTaskRows.Add(new ScheduledTaskRow(def, pref, present, currentText, OnRowPrefChanged));
+        }
     }
 
     /// <summary>
@@ -1095,6 +1130,7 @@ public partial class SettingsWindow : FluentWindow
         LoadGlobals();
         LoadDisplays();
         LoadServices();
+        LoadScheduledTasks();
         LoadWindowsAi();
         LoadPrivacy();
         LoadDebloat();
@@ -1201,6 +1237,7 @@ public partial class SettingsWindow : FluentWindow
             NetworkTogglesList.ItemsSource = null;
             PowerTogglesList.ItemsSource = null;
             ServicesList.ItemsSource = null;
+            ScheduledTasksList.ItemsSource = null;
             DisplayRows.Clear();
             GlobalToggleRows.Clear();
             PrivacyToggleRows.Clear();
@@ -1209,6 +1246,7 @@ public partial class SettingsWindow : FluentWindow
             NetworkToggleRows.Clear();
             PowerToggleRows.Clear();
             ServiceRows.Clear();
+            ScheduledTaskRows.Clear();
         }
         catch { }
     }
@@ -1298,6 +1336,7 @@ public partial class SettingsWindow : FluentWindow
         LoadGlobals();
         LoadDisplays();
         LoadServices();
+        LoadScheduledTasks();
         LoadWindowsAi();
         LoadPrivacy();
         LoadDebloat();
@@ -1907,6 +1946,94 @@ public sealed class ServiceRow : INotifyPropertyChanged
         CurrentText = currentText;
         DefaultText = defaultText;
         GroupName = "svc_" + def.Name;
+        _onPrefChanged = onPrefChanged;
+    }
+
+    public void WriteBack() { /* mutations are direct; nothing to do */ }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+    private void OnPropertyChanged([CallerMemberName] string? name = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+}
+
+/// <summary>
+/// Row view-model for one Application Experience scheduled task. The desired state
+/// is binary (leave as-is vs. disable), so the row exposes a single "Disable this
+/// task" checkbox rather than the service row's Default/Manual/Disabled radios.
+/// </summary>
+public sealed class ScheduledTaskRow : INotifyPropertyChanged
+{
+    private readonly ScheduledTaskPref _pref;
+    private readonly Action<string, string, string, string>? _onPrefChanged;
+
+    public ScheduledTaskDefinition Definition { get; }
+    public string Name => Definition.DisplayName;
+    public string TaskPath => Definition.TaskPath;
+    public string Description => Definition.Description;
+    public string CurrentText { get; }
+    public bool IsPresent { get; }
+
+    public Visibility RecommendedBadgeVisibility =>
+        Definition.RecommendedTarget.HasValue ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility NotPresentBadgeVisibility =>
+        IsPresent ? Visibility.Collapsed : Visibility.Visible;
+
+    public string SettingId => $"task:{Definition.TaskPath.ToLowerInvariant()}";
+    public string LearnMoreContent => SettingDocsCatalog.FormatForExpander(SettingId);
+    public Visibility LearnMoreVisibility =>
+        string.IsNullOrEmpty(LearnMoreContent) ? Visibility.Collapsed : Visibility.Visible;
+
+    public bool Monitor
+    {
+        get => _pref.Monitor;
+        set
+        {
+            if (_pref.Monitor == value) return;
+            var before = _pref.Monitor;
+            _pref.Monitor = value;
+            OnPropertyChanged();
+            _onPrefChanged?.Invoke($"Task: {Definition.DisplayName}", "Monitor", before.ToString(), value.ToString());
+        }
+    }
+
+    public bool DesiredDisabled
+    {
+        get => _pref.Desired == ScheduledTaskTarget.Disabled;
+        set
+        {
+            var target = value ? ScheduledTaskTarget.Disabled : ScheduledTaskTarget.Default;
+            if (_pref.Desired == target) return;
+            var before = _pref.Desired;
+            _pref.Desired = target;
+            OnPropertyChanged();
+            _onPrefChanged?.Invoke($"Task: {Definition.DisplayName}", "Want", before.ToString(), target.ToString());
+        }
+    }
+
+    public bool AutoApply
+    {
+        get => _pref.AutoApply;
+        set
+        {
+            if (_pref.AutoApply == value) return;
+            var before = _pref.AutoApply;
+            _pref.AutoApply = value;
+            OnPropertyChanged();
+            _onPrefChanged?.Invoke($"Task: {Definition.DisplayName}", "AutoApply", before.ToString(), value.ToString());
+        }
+    }
+
+    public ScheduledTaskRow(
+        ScheduledTaskDefinition def,
+        ScheduledTaskPref pref,
+        bool isPresent,
+        string currentText,
+        Action<string, string, string, string>? onPrefChanged)
+    {
+        Definition = def;
+        _pref = pref;
+        IsPresent = isPresent;
+        CurrentText = currentText;
         _onPrefChanged = onPrefChanged;
     }
 
