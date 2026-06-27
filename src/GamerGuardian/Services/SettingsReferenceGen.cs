@@ -25,7 +25,8 @@ public static class SettingsReferenceGen
 
         bool IsGlobal(string id) =>
             !id.StartsWith("service:") && !id.StartsWith("ai.app:") && !id.StartsWith("ai.")
-            && !id.StartsWith("privacy.") && !id.StartsWith("network.") && !id.StartsWith("debloat.");
+            && !id.StartsWith("privacy.") && !id.StartsWith("network.") && !id.StartsWith("debloat.")
+            && !id.StartsWith("task:");
 
         var globals = Order(SettingDocsCatalog.All.Where(d => IsGlobal(d.SettingId)));
         var privacy = Order(SettingDocsCatalog.All.Where(d => d.SettingId.StartsWith("privacy.")));
@@ -34,6 +35,7 @@ public static class SettingsReferenceGen
         var ai = Order(SettingDocsCatalog.All.Where(d => d.SettingId.StartsWith("ai.") && !d.SettingId.StartsWith("ai.app:")));
         var aiApps = Order(SettingDocsCatalog.All.Where(d => d.SettingId.StartsWith("ai.app:")));
         var services = Order(SettingDocsCatalog.All.Where(d => d.SettingId.StartsWith("service:")));
+        var tasks = Order(SettingDocsCatalog.All.Where(d => d.SettingId.StartsWith("task:")));
 
         Toc(sb, "Global gaming + display", globals);
         Toc(sb, "Privacy", privacy);
@@ -42,6 +44,7 @@ public static class SettingsReferenceGen
         Toc(sb, "Windows AI policies", ai);
         Toc(sb, "Windows AI UWP packages", aiApps);
         Toc(sb, "Windows services", services);
+        Toc(sb, "Windows scheduled tasks", tasks);
 
         sb.AppendLine();
         sb.AppendLine("---");
@@ -53,6 +56,7 @@ public static class SettingsReferenceGen
         Section(sb, "Windows AI policies", ai);
         Section(sb, "Windows AI UWP packages", aiApps);
         Section(sb, "Windows services", services);
+        Section(sb, "Windows scheduled tasks", tasks);
 
         return sb.ToString();
     }

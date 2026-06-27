@@ -108,6 +108,18 @@ public static class RecommendedPreset
             Count(SetService(pref, $"Service: {def.DisplayName}", target, changes));
         }
 
+        // ---- Application Experience scheduled tasks with a RecommendedTarget ----
+        foreach (var def in ScheduledTaskCatalog.All)
+        {
+            if (def.RecommendedTarget is not { } target) continue;
+            if (!draft.ScheduledTasks.TryGetValue(def.TaskPath, out var pref) || pref is null)
+            {
+                pref = new ScheduledTaskPref();
+                draft.ScheduledTasks[def.TaskPath] = pref;
+            }
+            Count(SetScheduledTask(pref, $"Task: {def.DisplayName}", target, changes));
+        }
+
         // ---- Display HDR + Refresh (per-display; pin AutoApply on) ----
         foreach (var (_, displayPref) in draft.Displays)
         {
@@ -163,6 +175,18 @@ public static class RecommendedPreset
             Count(SetService(pref, $"Service: {def.DisplayName}", target, changes, tag: "Extreme"));
         }
 
+        // Application Experience scheduled tasks -- same as Recommended (whole family off).
+        foreach (var def in ScheduledTaskCatalog.All)
+        {
+            if (def.RecommendedTarget is not { } target) continue;
+            if (!draft.ScheduledTasks.TryGetValue(def.TaskPath, out var pref) || pref is null)
+            {
+                pref = new ScheduledTaskPref();
+                draft.ScheduledTasks[def.TaskPath] = pref;
+            }
+            Count(SetScheduledTask(pref, $"Task: {def.DisplayName}", target, changes, tag: "Extreme"));
+        }
+
         foreach (var (_, displayPref) in draft.Displays)
         {
             var label = string.IsNullOrEmpty(displayPref.DisplayLabel) ? "(display)" : displayPref.DisplayLabel;
@@ -206,6 +230,14 @@ public static class RecommendedPreset
         foreach (var (name, pref) in draft.Services)
             Count(SetService(pref, $"Service: {name}", ServiceTargetState.Default, changes,
                 monitor: false, autoApply: false, tag: "Reset"));
+
+        // Reset only scheduled tasks the user is actually managing.
+        foreach (var (path, pref) in draft.ScheduledTasks)
+        {
+            var shortName = path.Split('\\').LastOrDefault() ?? path;
+            Count(SetScheduledTask(pref, $"Task: {shortName}", ScheduledTaskTarget.Default, changes,
+                monitor: false, autoApply: false, tag: "Reset"));
+        }
 
         foreach (var (_, displayPref) in draft.Displays)
         {
@@ -309,6 +341,19 @@ public static class RecommendedPreset
         };
 
     private static bool SetService(ServicePref pref, string label, ServiceTargetState target,
+        List<string> changes, bool monitor = true, bool autoApply = true, string tag = "Recommended")
+    {
+        var (b1, b2, b3) = (pref.Desired, pref.Monitor, pref.AutoApply);
+        if (b1 == target && b2 == monitor && b3 == autoApply) return false;
+        pref.Desired = target; pref.Monitor = monitor; pref.AutoApply = autoApply;
+        ChangeLogger.LogPreferenceChange($"[{tag}] {label}", "preset",
+            $"Want={b1} Monitor={B(b2)} AutoApply={B(b3)}",
+            $"Want={target} Monitor={B(monitor)} AutoApply={B(autoApply)}");
+        changes.Add($"{label}: Want={target}, Monitor {OnOff(monitor)}, Auto-apply {OnOff(autoApply)}");
+        return true;
+    }
+
+    private static bool SetScheduledTask(ScheduledTaskPref pref, string label, ScheduledTaskTarget target,
         List<string> changes, bool monitor = true, bool autoApply = true, string tag = "Recommended")
     {
         var (b1, b2, b3) = (pref.Desired, pref.Monitor, pref.AutoApply);

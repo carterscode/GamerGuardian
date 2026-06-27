@@ -17,12 +17,22 @@ public sealed class AppConfig
     /// <summary>Per-package preferences for the Windows AI UWP removal feature.
     /// Keyed by <c>WindowsAiAppDefinition.PackageName</c>.</summary>
     public Dictionary<string, WindowsAiAppPref> WindowsAiApps { get; set; } = new();
+    /// <summary>Per-task preferences for the Application Experience scheduled-task
+    /// disable feature. Keyed by <c>ScheduledTaskDefinition.TaskPath</c>.</summary>
+    public Dictionary<string, ScheduledTaskPref> ScheduledTasks { get; set; } = new();
 }
 
 public sealed class ServicePref
 {
     public bool Monitor { get; set; } = false;
     public ServiceTargetState Desired { get; set; } = ServiceTargetState.Default;
+    public bool AutoApply { get; set; } = false;
+}
+
+public sealed class ScheduledTaskPref
+{
+    public bool Monitor { get; set; } = false;
+    public ScheduledTaskTarget Desired { get; set; } = ScheduledTaskTarget.Default;
     public bool AutoApply { get; set; } = false;
 }
 

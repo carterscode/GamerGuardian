@@ -34,6 +34,11 @@ public static class SettingDocsCatalog
             var pkg = settingId["ai.app:".Length..];
             return AiApps.TryGetValue(pkg, out var d) ? d : null;
         }
+        if (settingId.StartsWith("task:"))
+        {
+            var path = settingId["task:".Length..];
+            return ScheduledTasks.TryGetValue(path, out var d) ? d : null;
+        }
         if (settingId.StartsWith("hdr:")) return Hdr;
         if (settingId.StartsWith("refresh:")) return RefreshRate;
         if (settingId.StartsWith("resolution:")) return Resolution;
@@ -44,7 +49,7 @@ public static class SettingDocsCatalog
 
     /// <summary>Every documented setting. Used by docs generation and tests.</summary>
     public static IEnumerable<SettingDetails> All =>
-        Globals.Values.Concat(Services.Values).Concat(AiApps.Values)
+        Globals.Values.Concat(Services.Values).Concat(AiApps.Values).Concat(ScheduledTasks.Values)
                .Append(Hdr).Append(RefreshRate).Append(Resolution).Append(Drr);
 
     /// <summary>
@@ -1361,5 +1366,73 @@ public static class SettingDocsCatalog
             Recommended: recommended,
             Risks: risks,
             ReversibleVia: reversibleVia);
+    }
+
+    // ---- Scheduled tasks (one entry per ScheduledTaskCatalog.TaskPath) ----
+    //
+    // The Application Experience tasks that drive CompatTelRunner.exe. Keyed by
+    // full task path (OrdinalIgnoreCase) so Get("task:<lowercased path>") resolves.
+    // SettingId echoes the monitor Id ("task:" + lowercased path).
+
+    private static readonly Dictionary<string, SettingDetails> ScheduledTasks = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [@"\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser"] = TaskRec(
+            @"\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser",
+            "Microsoft Compatibility Appraiser",
+            "A Windows scheduled task that runs CompatTelRunner.exe to scan installed apps, drivers, and files, then writes compatibility + Windows-upgrade-readiness markers and sends telemetry to Microsoft. It's the engine behind the 'Microsoft Compatibility Telemetry' process you see in Task Manager.",
+            "The appraiser scan is well documented for spiking CPU and disk to ~100% while it runs (sometimes at startup) -- an unpredictable hitch source mid-game. It runs on a daily trigger whether or not you ever upgrade Windows.",
+            "Disabling the task stops the periodic compatibility scan and its CPU/disk spike. Windows Update still works; you only lose pre-update compatibility checks and Win11 upgrade-readiness signals, which don't matter on a gaming PC.",
+            "You give up automatic pre-update app-compatibility checks and Windows 11 upgrade-readiness data collection. A Windows feature update may re-enable the task; GamerGuardian's Auto-apply re-disables it. Re-enable any time with the reverse command."),
+
+        [@"\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser Exp"] = TaskRec(
+            @"\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser Exp",
+            "Microsoft Compatibility Appraiser (Exp)",
+            "An experimental variant of the Compatibility Appraiser present on some newer Windows 11 builds. It performs the same compatibility/telemetry scan as the main appraiser task.",
+            "Same periodic CPU/disk scan cost as the main appraiser. Absent on many builds, in which case there is nothing to disable.",
+            "Disabling it stops the experimental appraiser scan. No user-facing functionality is lost. If the task isn't present on your build, GamerGuardian simply reports it as not present.",
+            "Same as the main appraiser: only pre-update compatibility data collection is lost, and a feature update may re-enable it (Auto-apply re-disables)."),
+
+        [@"\Microsoft\Windows\Application Experience\ProgramDataUpdater"] = TaskRec(
+            @"\Microsoft\Windows\Application Experience\ProgramDataUpdater",
+            "ProgramDataUpdater",
+            "A scheduled task in the Application Experience pipeline that collects program-inventory data (which apps are installed and used) for compatibility telemetry.",
+            "Pure background data collection with no user-facing function -- another contributor to the Application Experience scan load.",
+            "Disabling it stops the program-inventory telemetry collection and its background work. Nothing you interact with changes.",
+            "Microsoft loses program-inventory telemetry from your machine. A feature update may re-enable the task; Auto-apply re-disables it."),
+
+        [@"\Microsoft\Windows\Application Experience\StartupAppTask"] = TaskRec(
+            @"\Microsoft\Windows\Application Experience\StartupAppTask",
+            "StartupAppTask",
+            "A scheduled task that scans your startup apps for the Application Experience pipeline. Unlike the appraiser tasks, this one has a minor functional role (startup-app impact data), not pure telemetry.",
+            "It contributes to the periodic Application Experience scan. The functional cost of disabling it is small: Windows may not refresh startup-impact data shown in Task Manager's Startup tab.",
+            "Disabling it stops the periodic startup-app scan. Your startup apps still launch normally; only the background scan and its data refresh stop.",
+            "Minor: Windows may show stale or missing 'startup impact' ratings for your startup apps. A feature update may re-enable the task; Auto-apply re-disables it. Disable this one only if you're comfortable with the whole Application Experience folder off."),
+
+        [@"\Microsoft\Windows\Application Experience\PcaPatchDbTask"] = TaskRec(
+            @"\Microsoft\Windows\Application Experience\PcaPatchDbTask",
+            "PcaPatchDbTask",
+            "A scheduled task that updates the Program Compatibility Assistant (PCA) patch database. Like StartupAppTask, it has a minor functional role rather than being pure telemetry.",
+            "It contributes to the Application Experience scan load. The functional cost of disabling it is small: the PCA patch database stops refreshing.",
+            "Disabling it stops PCA database refreshes and the associated background work. The Program Compatibility Assistant still runs; it just stops pulling new compatibility-shim data.",
+            "Minor: the Program Compatibility Assistant may apply fewer automatic app-compatibility shims for old software. A feature update may re-enable the task; Auto-apply re-disables it. Disable this one only if you want the whole Application Experience folder off."),
+    };
+
+    private static SettingDetails TaskRec(
+        string taskPath, string display, string what, string why, string howItHelps, string risks)
+    {
+        return new SettingDetails(
+            SettingId: $"task:{taskPath.ToLowerInvariant()}",
+            DisplayName: display,
+            What: what,
+            Why: why,
+            HowItHelps: howItHelps,
+            Scenarios: Scenarios(
+                ("Competitive FPS", "Disabled"),
+                ("Streaming + game", "Disabled"),
+                ("Casual single-player", "Disabled"),
+                ("Productivity / mixed-use", "Disabled")),
+            Recommended: "Disabled",
+            Risks: risks,
+            ReversibleVia: $"schtasks /Change /TN \"{taskPath}\" /Enable  (verify: schtasks /Query /TN \"{taskPath}\" /FO LIST)");
     }
 }

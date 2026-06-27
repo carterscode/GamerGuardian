@@ -145,7 +145,13 @@ public partial class App : WpfApplication
             .Select(d => (IMonitoredSetting)new WindowsServiceMonitor(d));
         var aiAppMonitors = GamerGuardian.Services.WindowsAiAppCatalog.All
             .Select(d => (IMonitoredSetting)new WindowsAiAppMonitor(d));
-        _allMonitors = fixedMonitors.Concat(serviceMonitors).Concat(aiAppMonitors).ToArray();
+        var scheduledTaskMonitors = GamerGuardian.Services.ScheduledTaskCatalog.All
+            .Select(d => (IMonitoredSetting)new ScheduledTaskMonitor(d));
+        _allMonitors = fixedMonitors
+            .Concat(serviceMonitors)
+            .Concat(aiAppMonitors)
+            .Concat(scheduledTaskMonitors)
+            .ToArray();
         _monitor = new MonitorService(_store, _allMonitors, report => _notifier.ShowAsync(report));
         _monitor.AutoAppliedRebootRequired += items =>
         {
