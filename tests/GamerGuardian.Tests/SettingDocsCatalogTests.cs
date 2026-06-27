@@ -84,6 +84,21 @@ public class SettingDocsCatalogTests
     }
 
     [Fact]
+    public void EveryScheduledTask_HasDocsEntryResolvableByMonitorId()
+    {
+        foreach (var def in ScheduledTaskCatalog.All)
+        {
+            // Must resolve via the exact id the ScheduledTaskMonitor emits.
+            var id = $"task:{def.TaskPath.ToLowerInvariant()}";
+            var d = SettingDocsCatalog.Get(id);
+            Assert.NotNull(d);
+            Assert.False(string.IsNullOrWhiteSpace(d!.What), $"empty What for {id}");
+            Assert.False(string.IsNullOrWhiteSpace(d.Risks), $"empty Risks for {id}");
+            Assert.False(string.IsNullOrWhiteSpace(d.ReversibleVia), $"empty ReversibleVia for {id}");
+        }
+    }
+
+    [Fact]
     public void CpuPlan_HasMechanismApplyAndVerifyCommands()
     {
         Assert.Contains("PowerDuplicateScheme", SettingDocs.MechanismFor("cpuplan"));

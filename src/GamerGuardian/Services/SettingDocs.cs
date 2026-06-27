@@ -22,6 +22,11 @@ public static class SettingDocs
                 return $"reg add HKLM\\{po.PolicyKey} /v {po.PolicyValue} (Group Policy override; Windows reverts the standard sc.exe path)";
             return $"sc.exe stop / config (writes HKLM\\SYSTEM\\CurrentControlSet\\Services\\{name}\\Start)";
         }
+        if (settingId.StartsWith("task:"))
+        {
+            var path = settingId["task:".Length..];
+            return $"schtasks /Change /TN \"{path}\" /Disable (sets the Task Scheduler enabled flag)";
+        }
         if (settingId.StartsWith("ai.app:"))
         {
             var pkg = settingId["ai.app:".Length..];
@@ -115,6 +120,11 @@ public static class SettingDocs
         {
             var pkg = settingId["ai.app:".Length..];
             return $"Get-AppxPackage -Name '{pkg}' | Remove-AppxPackage";
+        }
+        if (settingId.StartsWith("task:"))
+        {
+            var path = settingId["task:".Length..];
+            return $"schtasks /Change /TN \"{path}\" /Disable";
         }
         if (settingId.StartsWith("hdr:"))
             return "(no direct PowerShell equivalent; uses DisplayConfigSetDeviceInfo via the CCD API)";
@@ -249,6 +259,11 @@ public static class SettingDocs
                 return $"(Get-ItemProperty 'HKLM:\\{po.PolicyKey}' -Name {po.PolicyValue} -EA SilentlyContinue).{po.PolicyValue}";
             return $"sc qc \"{name}\"   # look for START_TYPE";
         }
+        if (settingId.StartsWith("task:"))
+        {
+            var path = settingId["task:".Length..];
+            return $"schtasks /Query /TN \"{path}\" /XML   # <Settings><Enabled>false</Enabled> = disabled";
+        }
         return settingId switch
         {
             "hags" => @"(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers' -Name HwSchMode).HwSchMode",
@@ -325,6 +340,11 @@ public static class SettingDocs
         }
         if (settingId.StartsWith("ai.app:"))
             return "(no command-line restore -- reinstall from the Microsoft Store, or wait for Windows Update to re-provision)";
+        if (settingId.StartsWith("task:"))
+        {
+            var path = settingId["task:".Length..];
+            return $"schtasks /Change /TN \"{path}\" /Enable   # re-enable the scheduled task";
+        }
         if (settingId.StartsWith("hdr:") || settingId.StartsWith("refresh:")
             || settingId.StartsWith("resolution:") || settingId.StartsWith("drr:"))
             return "(no PowerShell equivalent -- flip it back in Settings > System > Display)";

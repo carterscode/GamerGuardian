@@ -457,4 +457,52 @@ public class RecommendedPresetTests
     {
         Assert.Throws<ArgumentNullException>(() => RecommendedPreset.ResetToDefaultsToDraft(null!));
     }
+
+    // ---- Application Experience scheduled tasks --------------------------------
+
+    [Fact]
+    public void Apply_StagesAllApplicationExperienceTasksDisabled()
+    {
+        var cfg = new AppConfig();
+        RecommendedPreset.ApplyToDraft(cfg, DualCcd());
+
+        foreach (var def in ScheduledTaskCatalog.All)
+        {
+            Assert.True(cfg.ScheduledTasks.ContainsKey(def.TaskPath), $"missing {def.TaskPath}");
+            var pref = cfg.ScheduledTasks[def.TaskPath];
+            Assert.Equal(ScheduledTaskTarget.Disabled, pref.Desired);
+            Assert.True(pref.Monitor);
+            Assert.True(pref.AutoApply);
+        }
+    }
+
+    [Fact]
+    public void ApplyExtreme_StagesAllApplicationExperienceTasksDisabled()
+    {
+        var cfg = new AppConfig();
+        RecommendedPreset.ApplyExtremeToDraft(cfg, SingleCcd());
+
+        foreach (var def in ScheduledTaskCatalog.All)
+        {
+            Assert.True(cfg.ScheduledTasks.TryGetValue(def.TaskPath, out var pref), $"missing {def.TaskPath}");
+            Assert.Equal(ScheduledTaskTarget.Disabled, pref!.Desired);
+            Assert.True(pref.Monitor && pref.AutoApply);
+        }
+    }
+
+    [Fact]
+    public void Reset_UnmanagesScheduledTasks()
+    {
+        var cfg = new AppConfig();
+        RecommendedPreset.ApplyToDraft(cfg, DualCcd());     // stage them disabled + monitored
+        RecommendedPreset.ResetToDefaultsToDraft(cfg);
+
+        Assert.NotEmpty(cfg.ScheduledTasks);
+        foreach (var (_, pref) in cfg.ScheduledTasks)
+        {
+            Assert.Equal(ScheduledTaskTarget.Default, pref.Desired);
+            Assert.False(pref.Monitor);
+            Assert.False(pref.AutoApply);
+        }
+    }
 }

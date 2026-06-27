@@ -98,6 +98,14 @@ Every setting here is managed via the Settings window. Toggle **Monitor** to hav
 - [Xbox Live Game Save](#xbox-live-game-save) (`service:XblGameSave`)
 - [Xbox Live Networking Service](#xbox-live-networking-service) (`service:XboxNetApiSvc`)
 
+**Windows scheduled tasks**
+
+- [Microsoft Compatibility Appraiser](#microsoft-compatibility-appraiser) (`task:\microsoft\windows\application experience\microsoft compatibility appraiser`)
+- [Microsoft Compatibility Appraiser (Exp)](#microsoft-compatibility-appraiser-exp) (`task:\microsoft\windows\application experience\microsoft compatibility appraiser exp`)
+- [PcaPatchDbTask](#pcapatchdbtask) (`task:\microsoft\windows\application experience\pcapatchdbtask`)
+- [ProgramDataUpdater](#programdataupdater) (`task:\microsoft\windows\application experience\programdataupdater`)
+- [StartupAppTask](#startupapptask) (`task:\microsoft\windows\application experience\startupapptask`)
+
 
 ---
 
@@ -3190,4 +3198,225 @@ sc.exe config "XboxNetApiSvc" start= auto; sc.exe start "XboxNetApiSvc"   # rest
 ```
 
 **Reversible via.** Set-Service -Name XboxNetApiSvc -StartupType Manual
+
+## Windows scheduled tasks
+
+### Microsoft Compatibility Appraiser
+
+`task:\microsoft\windows\application experience\microsoft compatibility appraiser` &nbsp; **Recommended:** Disabled
+
+**Why this is the recommendation.** The appraiser scan is well documented for spiking CPU and disk to ~100% while it runs (sometimes at startup) -- an unpredictable hitch source mid-game. It runs on a daily trigger whether or not you ever upgrade Windows.
+
+**What it does.** A Windows scheduled task that runs CompatTelRunner.exe to scan installed apps, drivers, and files, then writes compatibility + Windows-upgrade-readiness markers and sends telemetry to Microsoft. It's the engine behind the 'Microsoft Compatibility Telemetry' process you see in Task Manager.
+
+**How it helps.** Disabling the task stops the periodic compatibility scan and its CPU/disk spike. Windows Update still works; you only lose pre-update compatibility checks and Win11 upgrade-readiness signals, which don't matter on a gaming PC.
+
+**Pros & cons of each choice:**
+
+| Choice | Pro | Con |
+|---|---|---|
+| Disable / remove it (recommended) | Disabling the task stops the periodic compatibility scan and its CPU/disk spike. Windows Update still works; you only lose pre-update compatibility checks and Win11 upgrade-readiness signals, which don't matter on a gaming PC. | You give up automatic pre-update app-compatibility checks and Windows 11 upgrade-readiness data collection. A Windows feature update may re-enable the task; GamerGuardian's Auto-apply re-disables it. Re-enable any time with the reverse command. |
+| Leave it as Windows ships it | The feature it backs keeps working exactly as before -- nothing to re-enable later. | Keeps the background work running, so you don't get the resource/idle saving above. |
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive FPS | Disabled |
+| Streaming + game | Disabled |
+| Casual single-player | Disabled |
+| Productivity / mixed-use | Disabled |
+
+**Risks.** You give up automatic pre-update app-compatibility checks and Windows 11 upgrade-readiness data collection. A Windows feature update may re-enable the task; GamerGuardian's Auto-apply re-disables it. Re-enable any time with the reverse command.
+
+**Command line (PowerShell):**
+
+```powershell
+# Check the current value
+schtasks /Query /TN "\microsoft\windows\application experience\microsoft compatibility appraiser" /XML   # <Settings><Enabled>false</Enabled> = disabled
+
+# Apply the gaming-optimized value
+schtasks /Change /TN "\microsoft\windows\application experience\microsoft compatibility appraiser" /Disable
+
+# Reverse it (restore the Windows default)
+schtasks /Change /TN "\microsoft\windows\application experience\microsoft compatibility appraiser" /Enable   # re-enable the scheduled task
+```
+
+**Reversible via.** schtasks /Change /TN "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser" /Enable  (verify: schtasks /Query /TN "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser" /FO LIST)
+
+
+### Microsoft Compatibility Appraiser (Exp)
+
+`task:\microsoft\windows\application experience\microsoft compatibility appraiser exp` &nbsp; **Recommended:** Disabled
+
+**Why this is the recommendation.** Same periodic CPU/disk scan cost as the main appraiser. Absent on many builds, in which case there is nothing to disable.
+
+**What it does.** An experimental variant of the Compatibility Appraiser present on some newer Windows 11 builds. It performs the same compatibility/telemetry scan as the main appraiser task.
+
+**How it helps.** Disabling it stops the experimental appraiser scan. No user-facing functionality is lost. If the task isn't present on your build, GamerGuardian simply reports it as not present.
+
+**Pros & cons of each choice:**
+
+| Choice | Pro | Con |
+|---|---|---|
+| Disable / remove it (recommended) | Disabling it stops the experimental appraiser scan. No user-facing functionality is lost. If the task isn't present on your build, GamerGuardian simply reports it as not present. | Same as the main appraiser: only pre-update compatibility data collection is lost, and a feature update may re-enable it (Auto-apply re-disables). |
+| Leave it as Windows ships it | The feature it backs keeps working exactly as before -- nothing to re-enable later. | Keeps the background work running, so you don't get the resource/idle saving above. |
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive FPS | Disabled |
+| Streaming + game | Disabled |
+| Casual single-player | Disabled |
+| Productivity / mixed-use | Disabled |
+
+**Risks.** Same as the main appraiser: only pre-update compatibility data collection is lost, and a feature update may re-enable it (Auto-apply re-disables).
+
+**Command line (PowerShell):**
+
+```powershell
+# Check the current value
+schtasks /Query /TN "\microsoft\windows\application experience\microsoft compatibility appraiser exp" /XML   # <Settings><Enabled>false</Enabled> = disabled
+
+# Apply the gaming-optimized value
+schtasks /Change /TN "\microsoft\windows\application experience\microsoft compatibility appraiser exp" /Disable
+
+# Reverse it (restore the Windows default)
+schtasks /Change /TN "\microsoft\windows\application experience\microsoft compatibility appraiser exp" /Enable   # re-enable the scheduled task
+```
+
+**Reversible via.** schtasks /Change /TN "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser Exp" /Enable  (verify: schtasks /Query /TN "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser Exp" /FO LIST)
+
+
+### PcaPatchDbTask
+
+`task:\microsoft\windows\application experience\pcapatchdbtask` &nbsp; **Recommended:** Disabled
+
+**Why this is the recommendation.** It contributes to the Application Experience scan load. The functional cost of disabling it is small: the PCA patch database stops refreshing.
+
+**What it does.** A scheduled task that updates the Program Compatibility Assistant (PCA) patch database. Like StartupAppTask, it has a minor functional role rather than being pure telemetry.
+
+**How it helps.** Disabling it stops PCA database refreshes and the associated background work. The Program Compatibility Assistant still runs; it just stops pulling new compatibility-shim data.
+
+**Pros & cons of each choice:**
+
+| Choice | Pro | Con |
+|---|---|---|
+| Disable / remove it (recommended) | Disabling it stops PCA database refreshes and the associated background work. The Program Compatibility Assistant still runs; it just stops pulling new compatibility-shim data. | Minor: the Program Compatibility Assistant may apply fewer automatic app-compatibility shims for old software. A feature update may re-enable the task; Auto-apply re-disables it. Disable this one only if you want the whole Application Experience folder off. |
+| Leave it as Windows ships it | The feature it backs keeps working exactly as before -- nothing to re-enable later. | Keeps the background work running, so you don't get the resource/idle saving above. |
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive FPS | Disabled |
+| Streaming + game | Disabled |
+| Casual single-player | Disabled |
+| Productivity / mixed-use | Disabled |
+
+**Risks.** Minor: the Program Compatibility Assistant may apply fewer automatic app-compatibility shims for old software. A feature update may re-enable the task; Auto-apply re-disables it. Disable this one only if you want the whole Application Experience folder off.
+
+**Command line (PowerShell):**
+
+```powershell
+# Check the current value
+schtasks /Query /TN "\microsoft\windows\application experience\pcapatchdbtask" /XML   # <Settings><Enabled>false</Enabled> = disabled
+
+# Apply the gaming-optimized value
+schtasks /Change /TN "\microsoft\windows\application experience\pcapatchdbtask" /Disable
+
+# Reverse it (restore the Windows default)
+schtasks /Change /TN "\microsoft\windows\application experience\pcapatchdbtask" /Enable   # re-enable the scheduled task
+```
+
+**Reversible via.** schtasks /Change /TN "\Microsoft\Windows\Application Experience\PcaPatchDbTask" /Enable  (verify: schtasks /Query /TN "\Microsoft\Windows\Application Experience\PcaPatchDbTask" /FO LIST)
+
+
+### ProgramDataUpdater
+
+`task:\microsoft\windows\application experience\programdataupdater` &nbsp; **Recommended:** Disabled
+
+**Why this is the recommendation.** Pure background data collection with no user-facing function -- another contributor to the Application Experience scan load.
+
+**What it does.** A scheduled task in the Application Experience pipeline that collects program-inventory data (which apps are installed and used) for compatibility telemetry.
+
+**How it helps.** Disabling it stops the program-inventory telemetry collection and its background work. Nothing you interact with changes.
+
+**Pros & cons of each choice:**
+
+| Choice | Pro | Con |
+|---|---|---|
+| Disable / remove it (recommended) | Disabling it stops the program-inventory telemetry collection and its background work. Nothing you interact with changes. | Microsoft loses program-inventory telemetry from your machine. A feature update may re-enable the task; Auto-apply re-disables it. |
+| Leave it as Windows ships it | The feature it backs keeps working exactly as before -- nothing to re-enable later. | Keeps the background work running, so you don't get the resource/idle saving above. |
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive FPS | Disabled |
+| Streaming + game | Disabled |
+| Casual single-player | Disabled |
+| Productivity / mixed-use | Disabled |
+
+**Risks.** Microsoft loses program-inventory telemetry from your machine. A feature update may re-enable the task; Auto-apply re-disables it.
+
+**Command line (PowerShell):**
+
+```powershell
+# Check the current value
+schtasks /Query /TN "\microsoft\windows\application experience\programdataupdater" /XML   # <Settings><Enabled>false</Enabled> = disabled
+
+# Apply the gaming-optimized value
+schtasks /Change /TN "\microsoft\windows\application experience\programdataupdater" /Disable
+
+# Reverse it (restore the Windows default)
+schtasks /Change /TN "\microsoft\windows\application experience\programdataupdater" /Enable   # re-enable the scheduled task
+```
+
+**Reversible via.** schtasks /Change /TN "\Microsoft\Windows\Application Experience\ProgramDataUpdater" /Enable  (verify: schtasks /Query /TN "\Microsoft\Windows\Application Experience\ProgramDataUpdater" /FO LIST)
+
+
+### StartupAppTask
+
+`task:\microsoft\windows\application experience\startupapptask` &nbsp; **Recommended:** Disabled
+
+**Why this is the recommendation.** It contributes to the periodic Application Experience scan. The functional cost of disabling it is small: Windows may not refresh startup-impact data shown in Task Manager's Startup tab.
+
+**What it does.** A scheduled task that scans your startup apps for the Application Experience pipeline. Unlike the appraiser tasks, this one has a minor functional role (startup-app impact data), not pure telemetry.
+
+**How it helps.** Disabling it stops the periodic startup-app scan. Your startup apps still launch normally; only the background scan and its data refresh stop.
+
+**Pros & cons of each choice:**
+
+| Choice | Pro | Con |
+|---|---|---|
+| Disable / remove it (recommended) | Disabling it stops the periodic startup-app scan. Your startup apps still launch normally; only the background scan and its data refresh stop. | Minor: Windows may show stale or missing 'startup impact' ratings for your startup apps. A feature update may re-enable the task; Auto-apply re-disables it. Disable this one only if you're comfortable with the whole Application Experience folder off. |
+| Leave it as Windows ships it | The feature it backs keeps working exactly as before -- nothing to re-enable later. | Keeps the background work running, so you don't get the resource/idle saving above. |
+
+**Per-scenario recommendation:**
+
+| Scenario | Setting |
+|---|---|
+| Competitive FPS | Disabled |
+| Streaming + game | Disabled |
+| Casual single-player | Disabled |
+| Productivity / mixed-use | Disabled |
+
+**Risks.** Minor: Windows may show stale or missing 'startup impact' ratings for your startup apps. A feature update may re-enable the task; Auto-apply re-disables it. Disable this one only if you're comfortable with the whole Application Experience folder off.
+
+**Command line (PowerShell):**
+
+```powershell
+# Check the current value
+schtasks /Query /TN "\microsoft\windows\application experience\startupapptask" /XML   # <Settings><Enabled>false</Enabled> = disabled
+
+# Apply the gaming-optimized value
+schtasks /Change /TN "\microsoft\windows\application experience\startupapptask" /Disable
+
+# Reverse it (restore the Windows default)
+schtasks /Change /TN "\microsoft\windows\application experience\startupapptask" /Enable   # re-enable the scheduled task
+```
+
+**Reversible via.** schtasks /Change /TN "\Microsoft\Windows\Application Experience\StartupAppTask" /Enable  (verify: schtasks /Query /TN "\Microsoft\Windows\Application Experience\StartupAppTask" /FO LIST)
 

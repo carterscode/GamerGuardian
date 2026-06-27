@@ -598,6 +598,75 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+
+                            <ui:Card Padding="16" Margin="0,8,0,8">
+                                <StackPanel>
+                                    <TextBlock Text="Scheduled tasks" FontWeight="SemiBold" FontSize="14"/>
+                                    <TextBlock Text="The Windows &quot;Application Experience&quot; scheduled tasks run CompatTelRunner.exe, whose periodic compatibility/telemetry scans spike CPU and disk -- an unpredictable hitch source during gaming. Disabling them is safe and reversible; Windows Update keeps working. A feature update can re-enable them, so monitor + auto-apply re-disables on drift. These are included in the General tab's Recommended preset."
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </ui:Card>
+                            <ItemsControl x:Name="ScheduledTasksList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <ui:Card Padding="16" Margin="0,0,0,8">
+                                            <StackPanel>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                    <WrapPanel Margin="0,4,0,0">
+                                                        <Border Background="{DynamicResource SubtleFillColorTertiaryBrush}"
+                                                                CornerRadius="3" Padding="6,1" Margin="0,0,6,4">
+                                                            <TextBlock Text="{Binding TaskPath}"
+                                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                       FontSize="10" FontFamily="Consolas" TextWrapping="Wrap"/>
+                                                        </Border>
+                                                        <Border Visibility="{Binding RecommendedBadgeVisibility}"
+                                                                Background="{DynamicResource SystemFillColorSuccessBackgroundBrush}"
+                                                                CornerRadius="3" Padding="6,1" Margin="0,0,6,4">
+                                                            <TextBlock Text="recommended"
+                                                                       Foreground="{DynamicResource SystemFillColorSuccessBrush}"
+                                                                       FontSize="10" FontWeight="SemiBold"/>
+                                                        </Border>
+                                                        <Border Visibility="{Binding NotPresentBadgeVisibility}"
+                                                                Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                                                                CornerRadius="3" Padding="6,1" Margin="0,0,6,4">
+                                                            <TextBlock Text="not present"
+                                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                       FontSize="10" FontWeight="SemiBold"/>
+                                                        </Border>
+                                                    </WrapPanel>
+                                                    <TextBlock Text="{Binding Description}"
+                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                               FontSize="12" Margin="0,3,0,0"
+                                                               TextWrapping="Wrap"/>
+                                                    <TextBlock Text="{Binding CurrentText}"
+                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                               FontSize="11" Margin="0,6,0,0"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Orientation="Vertical"
+                                                            IsEnabled="{Binding IsPresent}">
+                                                    <CheckBox Content="Monitor" IsChecked="{Binding Monitor}"/>
+                                                    <CheckBox Content="Disable this task" IsChecked="{Binding DesiredDisabled}" Margin="0,4,0,4"/>
+                                                    <CheckBox Content="Auto-apply silently" IsChecked="{Binding AutoApply}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                                <Expander Header="Learn more" Margin="0,8,0,0"
+                                                          Visibility="{Binding LearnMoreVisibility}">
+                                                    <TextBox Text="{Binding LearnMoreContent, Mode=OneWay}"
+                                                             Style="{StaticResource CopyableLearnMoreText}"
+                                                             Margin="8,8,8,8"/>
+                                                </Expander>
+                                            </StackPanel>
+                                        </ui:Card>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>
