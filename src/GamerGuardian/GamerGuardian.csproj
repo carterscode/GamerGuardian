@@ -52,6 +52,18 @@
     <DefineConstants>$(DefineConstants);BETA</DefineConstants>
   </PropertyGroup>
 
+  <!-- Physically drop the update path from a beta compile. Gating only the call
+       sites with #if left UpdateService and UpdateAvailableWindow in the assembly,
+       URL literal and all, so "compiled out" was not true: the code was present and
+       callable, just uncalled. Removing the files is what makes the beta binary
+       genuinely incapable of reaching the update feed, and what lets the CI scan in
+       build.yml prove it by differential comparison against a stable build. -->
+  <ItemGroup Condition="'$(Beta)' == 'true'">
+    <Compile Remove="Services\UpdateService.cs" />
+    <Compile Remove="UI\UpdateAvailableWindow.xaml.cs" />
+    <Page Remove="UI\UpdateAvailableWindow.xaml" />
+  </ItemGroup>
+
   <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>

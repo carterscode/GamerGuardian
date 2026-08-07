@@ -26,3 +26,53 @@ jobs:
 
       - name: Test
         run: dotnet test GamerGuardian.sln -c Release --no-build --verbosity normal
+
+  # beta.yml is workflow_dispatch-only by design, so without this nothing routinely
+  # proves the BETA flavor still compiles. TreatWarningsAsErrors is on and
+  # #if-excluded code is invisible to the other compile, so the beta path can rot
+  # silently between manual dispatches.
+  beta-compile:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore GamerGuardian.sln
+
+      - name: Build the BETA flavor
+        run: dotnet build src/GamerGuardian/GamerGuardian.csproj -c Release -p:Beta=true --no-restore -o out-beta
+
+      # Differential proof that the update path really is absent from a beta build --
+      # and, just as importantly, that the check is capable of failing. Asserting only
+      # "absent in beta" would pass just as happily against a scan that can never
+      # match anything, which is exactly the trap the previous byte-scan of the
+      # compressed single-file EXE fell into.
+      - name: Build the stable flavor for comparison
+        run: dotnet build src/GamerGuardian/GamerGuardian.csproj -c Release --no-restore -o out-stable
+
+      - name: Assert the update path is present in stable and absent in beta
+        shell: pwsh
+        run: |
+          function Test-UpdateUrl($path) {
+            $bytes = [System.IO.File]::ReadAllBytes($path)
+            # .NET stores string literals as UTF-16 in the #US heap.
+            $text = [System.Text.Encoding]::Unicode.GetString($bytes)
+            return $text -match 'api\.github\.com/repos/carterscode/GamerGuardian/releases'
+          }
+          $stable = Test-UpdateUrl "out-stable/GamerGuardian.dll"
+          $beta   = Test-UpdateUrl "out-beta/GamerGuardian.dll"
+          Write-Host "stable contains update URL : $stable  (expected True)"
+          Write-Host "beta   contains update URL : $beta   (expected False)"
+
+          if (-not $stable) {
+            throw "The scan found no update URL in the STABLE build. The check is broken and would pass against anything -- fix the scan, do not trust the beta result."
+          }
+          if ($beta) {
+            throw "The BETA build still contains the update-feed URL. The update path was not compiled out."
+          }
+          Write-Host "OK: update path present in stable, absent in beta."

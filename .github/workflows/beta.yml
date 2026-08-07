@@ -81,19 +81,30 @@ jobs:
           -p:InformationalVersion=${{ steps.ver.outputs.version }}
           -o publish
 
-      # Fails the run if the BETA constant somehow did not take: a beta binary must
-      # not contain the update endpoint string at all.
-      - name: Verify the update path is absent from the binary
+      # Fails the run if the update path somehow survived into a beta build.
+      #
+      # Scans the managed assembly, NOT publish\GamerGuardian.exe. The shipped EXE is
+      # a single-file bundle published with EnableCompressionInSingleFile, so its
+      # assemblies are compressed: scanning the EXE's bytes finds nothing even in a
+      # stable build. An earlier version of this step did exactly that and passed on
+      # both flavors, which made it false assurance rather than a check. The DLL
+      # below is the same assembly that gets bundled into that EXE.
+      #
+      # build.yml proves this check can actually fail, by asserting the differential
+      # against a stable build. Here we only assert the absolute property.
+      - name: Verify the update path is absent from the beta assembly
         shell: pwsh
         run: |
-          $exe = "publish\GamerGuardian.exe"
-          $bytes = [System.IO.File]::ReadAllBytes($exe)
-          $text = [System.Text.Encoding]::Unicode.GetString($bytes) +
-                  [System.Text.Encoding]::UTF8.GetString($bytes)
+          $dll = Get-ChildItem -Recurse -Path "src/GamerGuardian/bin/Release" -Filter "GamerGuardian.dll" |
+                 Select-Object -First 1
+          if (-not $dll) { throw "Could not find the built GamerGuardian.dll to scan." }
+          $bytes = [System.IO.File]::ReadAllBytes($dll.FullName)
+          # .NET stores string literals as UTF-16 in the #US heap.
+          $text = [System.Text.Encoding]::Unicode.GetString($bytes)
           if ($text -match 'api\.github\.com/repos/carterscode/GamerGuardian/releases') {
             throw "BETA build still contains the update-feed URL -- the update path was not compiled out."
           }
-          Write-Host "OK: no update-feed URL found in the beta binary."
+          Write-Host "OK: no update-feed URL in $($dll.FullName)"
 
       - name: List artifacts
         shell: pwsh
