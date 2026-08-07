@@ -1,4 +1,6 @@
+using System.Globalization;
 using GamerGuardian.Models;
+using GamerGuardian.Native;
 
 namespace GamerGuardian.Services;
 
@@ -26,6 +28,74 @@ public static class CpuPlanDetails
     /// label from the catalog. Applied to both the plugged-in and on-battery rails.</summary>
     public static IReadOnlyList<string> Changes(CpuTuneResult r) =>
         r.Overrides.Select(o => o.Label).ToList();
+
+    /// <summary>One row of the side-by-side "Windows Balanced vs GamerGuardian"
+    /// comparison: the setting's friendly name and its value under each plan.
+    /// <paramref name="Differs"/> is true only when the base value is known AND
+    /// differs from the GamerGuardian value, so the UI can highlight the real
+    /// differences without falsely flagging a value it couldn't read.</summary>
+    public sealed record PlanComparisonRow(string Setting, string WindowsValue, string GamerGuardianValue, bool Differs);
+
+    /// <summary>
+    /// Builds the side-by-side comparison of the stock Windows base plan against the
+    /// GamerGuardian tune, one row per processor setting the tune touches. The base
+    /// (plugged-in) value is read through the injected <paramref name="readBaseAcValue"/>
+    /// delegate — the UI passes a live Powrprof reader against the installed Balanced
+    /// scheme; tests pass a stub. When a base value can't be read (setting hidden or
+    /// scheme missing) the row shows "Windows default" and is not flagged as differing.
+    /// </summary>
+    public static IReadOnlyList<PlanComparisonRow> Comparison(
+        CpuTuneResult r, Func<Guid, Guid, uint?> readBaseAcValue)
+    {
+        var rows = new List<PlanComparisonRow>(r.Overrides.Count);
+        foreach (var o in r.Overrides)
+        {
+            var (name, fmt) = DescribeSetting(o.Setting);
+            uint? baseVal = null;
+            if (readBaseAcValue is not null)
+            {
+                try { baseVal = readBaseAcValue(o.Subgroup, o.Setting); }
+                catch { baseVal = null; }
+            }
+            rows.Add(new PlanComparisonRow(
+                Setting: name,
+                WindowsValue: baseVal is uint w ? fmt(w) : "Windows default",
+                GamerGuardianValue: fmt(o.Value),
+                Differs: baseVal is uint b && b != o.Value));
+        }
+        return rows;
+    }
+
+    /// <summary>Friendly name + value formatter for each processor power setting the
+    /// tunes use. Keyed on the well-known setting GUID so it never drifts from what
+    /// the catalog actually writes.</summary>
+    private static (string name, Func<uint, string> fmt) DescribeSetting(Guid setting)
+    {
+        if (setting == Powrprof.SettingBoostMode) return ("Processor boost mode", BoostModeText);
+        if (setting == Powrprof.SettingCoreParkingMinCores) return ("Core parking — minimum cores", Percent);
+        if (setting == Powrprof.SettingCoreParkingMaxCores) return ("Core parking — maximum cores", Percent);
+        if (setting == Powrprof.SettingPerfIncreaseThreshold) return ("Performance-increase threshold", Percent);
+        if (setting == Powrprof.SettingIdleDemoteThreshold) return ("Idle-demote threshold", Percent);
+        if (setting == Powrprof.SettingMinProcessorState) return ("Minimum processor state", Percent);
+        if (setting == Powrprof.SettingMaxProcessorState) return ("Maximum processor state", Percent);
+        return ("Processor setting", Raw);
+    }
+
+    private static string Percent(uint v) => v.ToString(CultureInfo.InvariantCulture) + "%";
+    private static string Raw(uint v) => v.ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>Windows PERFBOOSTMODE value names.</summary>
+    private static string BoostModeText(uint v) => v switch
+    {
+        0 => "Disabled",
+        1 => "Enabled",
+        2 => "Aggressive",
+        3 => "Efficient Enabled",
+        4 => "Efficient Aggressive",
+        5 => "Aggressive at guaranteed",
+        6 => "Efficient Aggressive at guaranteed",
+        _ => v.ToString(CultureInfo.InvariantCulture),
+    };
 
     /// <summary>Why this specific recipe is a good fit for the detected CPU. Keyed
     /// on the parking strategy (the one dimension that actually changes the shape of
