@@ -200,7 +200,12 @@ public sealed class CpuPlanPref
 public sealed class PowerPlanPref
 {
     public bool Monitor { get; set; } = false;
-    public PowerPlanChoice Desired { get; set; } = PowerPlanChoice.HighPerformance;
+    // Balanced, not High Performance: every CpuTuneCatalog recipe recommends the
+    // Balanced prebuilt (High Performance globally disables core parking, which is
+    // wrong for asymmetric X3D parts like the 9950X3D). This default is the plan
+    // preselected in the Settings dropdown before the user picks one, so it must
+    // match the "Recommended: Balanced" hint rather than contradict it.
+    public PowerPlanChoice Desired { get; set; } = PowerPlanChoice.Balanced;
     /// <summary>Specific power scheme GUID the user picked. Takes precedence over <see cref="Desired"/> when set.</summary>
     public string? DesiredGuid { get; set; }
     /// <summary>Friendly name cached at selection time (for display when the GUID isn't currently installed).</summary>

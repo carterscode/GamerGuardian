@@ -56,9 +56,30 @@ public sealed record CpuTuneResult(
     /// stack (BIOS CPPC=Driver, V-Cache Optimizer service, Game Bar).</summary>
     public bool NeedsCcdRoutingStack => Parking == ParkingStrategy.ParkFrequencyCcd;
 
-    /// <summary>Stable friendly name for the GG-authored scheme.</summary>
+    /// <summary>The stock Windows scheme the optimized plan is cloned from. Every
+    /// recipe clones Balanced today (see <c>CpuTuneCatalog</c> and
+    /// <c>CpuPlanBuilder.BuildOrActivate</c>'s Create path, which resolves the
+    /// installed Balanced base). Surfaced in the plan name and the plan-details
+    /// view so the user knows which base personality their custom plan sits on.</summary>
+    public PowerPlanChoice BasePlan => PowerPlanChoice.Balanced;
+
+    /// <summary>Human-facing base-plan label used in the plan name and details view.</summary>
+    public string BasePlanDisplayName => BasePlan switch
+    {
+        PowerPlanChoice.Balanced => "Balanced",
+        PowerPlanChoice.HighPerformance => "High Performance",
+        PowerPlanChoice.PowerSaver => "Power Saver",
+        PowerPlanChoice.UltimatePerformance => "Ultimate Performance",
+        _ => "Balanced",
+    };
+
+    /// <summary>Stable friendly name for the GG-authored scheme. Includes the base
+    /// Windows plan so the user can see what the custom plan is derived from
+    /// (e.g. "GamerGuardian Gaming [9950X3D · Balanced]"). Changing this format
+    /// only renames the app's own scheme on the next build/re-tune — identity and
+    /// reuse are keyed on the stored GUID, not the name.</summary>
     public string PlanName =>
-        $"GamerGuardian Gaming [{(string.IsNullOrEmpty(Cpu.Model) ? "Generic" : Cpu.Model)}]";
+        $"GamerGuardian Gaming [{(string.IsNullOrEmpty(Cpu.Model) ? "Generic" : Cpu.Model)} · {BasePlanDisplayName}]";
 
     /// <summary>Deterministic hash of the resolved override set (machine- and
     /// run-independent), used by the plan builder to decide reuse vs re-tune.</summary>
