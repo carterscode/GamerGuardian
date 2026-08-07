@@ -88,6 +88,52 @@ public sealed class ConfigStoreTests : IDisposable
     }
 
     [Fact]
+    public void Load_ConfigWithRemovedConsolidateNotifications_LoadsWithoutResetting()
+    {
+        // consolidateNotifications was persisted for every user before it was
+        // removed, so every existing config.json on disk still carries it. It is now
+        // an unknown field and must be ignored, not treated as a parse failure --
+        // otherwise the removal would silently wipe everyone's settings on upgrade.
+        var dir = Dir("removed-field");
+        WriteConfig(dir, """
+        {
+          "launchAtStartup": false,
+          "pollIntervalSeconds": 61,
+          "consolidateNotifications": true,
+          "theme": "Light",
+          "global": {
+            "gameDvr": { "monitor": true, "desiredOn": false, "autoApply": true }
+          }
+        }
+        """);
+
+        var cfg = new ConfigStore(dir).Load();
+
+        Assert.False(cfg.LaunchAtStartup);
+        Assert.Equal(61, cfg.PollIntervalSeconds);
+        Assert.Equal(AppThemeChoice.Light, cfg.Theme);
+        Assert.True(cfg.Global.GameDvr.Monitor);
+        Assert.False(cfg.Global.GameDvr.DesiredOn);
+        Assert.True(cfg.Global.GameDvr.AutoApply);
+    }
+
+    [Fact]
+    public void Save_DropsTheRemovedField_OnNextWrite()
+    {
+        var dir = Dir("removed-field-save");
+        WriteConfig(dir, """
+        { "pollIntervalSeconds": 61, "consolidateNotifications": true }
+        """);
+
+        var store = new ConfigStore(dir);
+        store.Save(store.Load());
+
+        var written = File.ReadAllText(Path.Combine(dir, "config.json"));
+        Assert.DoesNotContain("consolidateNotifications", written, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(61, new ConfigStore(dir).Load().PollIntervalSeconds);
+    }
+
+    [Fact]
     public void Load_MissingFile_ReturnsDefaults()
     {
         var cfg = new ConfigStore(Dir("nothing-here")).Load();

@@ -72,7 +72,6 @@ public partial class SettingsWindow : FluentWindow
         _draft = AppConfigCloner.Clone(_config);
 
         LaunchAtStartupCheck.IsChecked = _draft.LaunchAtStartup;
-        ConsolidateCheck.IsChecked = _draft.ConsolidateNotifications;
         CheckForUpdatesCheck.IsChecked = _draft.CheckForUpdatesOnStartup;
         PollSecondsBox.Value = _draft.PollIntervalSeconds;
 
@@ -1252,7 +1251,6 @@ public partial class SettingsWindow : FluentWindow
     private void PersistFormToDraft()
     {
         _draft.LaunchAtStartup = LaunchAtStartupCheck.IsChecked == true;
-        _draft.ConsolidateNotifications = ConsolidateCheck.IsChecked == true;
         _draft.CheckForUpdatesOnStartup = CheckForUpdatesCheck.IsChecked == true;
         if (PollSecondsBox.Value is double pv && pv >= 5)
             _draft.PollIntervalSeconds = (int)pv;
