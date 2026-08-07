@@ -367,15 +367,14 @@ public sealed class MonitorService : IDisposable
                     AutoAppliedRebootRequired?.Invoke(rebootSettings);
             }
 
-            // Drifts that aren't auto-applied (or are in cooldown) still surface
-            // as a notification so the user knows something's drifting and can
-            // act manually. Settings the breaker has tripped are excluded: they're
-            // logged once (LogCircuitBreaker) and would otherwise re-notify every
-            // poll, swapping UAC spam for toast spam.
-            var prompt = drifted
-                .Where(a => !auto.Any(b => b.SettingId == a.SettingId))
-                .Where(a => !_breaker.IsTripped(a.SettingId, now))
-                .ToList();
+            // Notify only about drift the user asked to be notified about
+            // (Monitor on, Auto-apply off). A setting set to auto-apply — "silently
+            // change to my desired state" — must NEVER produce a notification, even
+            // on a tick where we couldn't apply it (verify-backoff or breaker
+            // cooldown). Surfacing a toast for a silent setting is exactly the
+            // "silent didn't mean silent" complaint: those failures are logged
+            // (LogApplyResults / LogCircuitBreaker) and retried, not shown.
+            var prompt = SelectNotifiable(drifted, id => _breaker.IsTripped(id, now));
             if (prompt.Count > 0)
                 await _onDriftAsync(new DriftReport(prompt));
 
@@ -392,6 +391,20 @@ public sealed class MonitorService : IDisposable
             lock (_lock) _running = false;
         }
     }
+
+    /// <summary>
+    /// The notification-eligibility rule, pulled out pure so it can be unit-tested
+    /// without a timer or the registry. A drifted setting is shown to the user only
+    /// when it is NOT set to auto-apply (auto-apply means "silently change", so it
+    /// never notifies) and is NOT currently tripped by the circuit breaker (tripped
+    /// settings are logged once and would otherwise re-notify every poll).
+    /// </summary>
+    public static List<DriftItem> SelectNotifiable(
+        IEnumerable<DriftItem> drifted, Func<string, bool> isTripped) =>
+        drifted
+            .Where(d => !d.AutoApply)
+            .Where(d => !isTripped(d.SettingId))
+            .ToList();
 
     public void Dispose()
     {
