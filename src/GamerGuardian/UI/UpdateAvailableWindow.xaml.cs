@@ -20,7 +20,10 @@ public partial class UpdateAvailableWindow : FluentWindow
 
         HeaderText.Text = $"GamerGuardian {info.Version} is available";
         SubText.Text = $"You're running {UpdateService.CurrentSemver()}.";
-        var notes = ReleaseNotesFormatter.ToPlainText(info.ReleaseNotes);
+        // Prefer the full version history (scrollable), falling back to just the
+        // newest release's notes if the changelog couldn't be fetched.
+        var source = string.IsNullOrWhiteSpace(info.History) ? info.ReleaseNotes : info.History;
+        var notes = ReleaseNotesFormatter.ToPlainText(source);
         NotesText.Text = string.IsNullOrWhiteSpace(notes)
             ? "(no release notes)"
             : notes;

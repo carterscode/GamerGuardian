@@ -2,6 +2,7 @@ using System.IO;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace GamerGuardian.Services;
 
@@ -10,7 +11,12 @@ public sealed record UpdateInfo(
     string ReleaseUrl,
     string InstallerUrl,
     long InstallerSize,
-    string ReleaseNotes);
+    string ReleaseNotes,
+    // The full, newest-first version history from CHANGELOG.md, so the update
+    // prompt can show everything (scrollable) rather than only the newest version's
+    // notes. Falls back to ReleaseNotes (the single newest section) when the
+    // changelog can't be fetched.
+    string History = "");
 
 public static class UpdateService
 {
@@ -23,6 +29,11 @@ public static class UpdateService
     // *stable* semver guarantees we always jump straight to the newest version.
     private const string ApiUrl =
         "https://api.github.com/repos/carterscode/GamerGuardian/releases?per_page=100";
+
+    // The curated, plain-English changelog on the default branch — the source of the
+    // full version history shown (scrollable) in the update prompt.
+    private const string ChangelogRawUrl =
+        "https://raw.githubusercontent.com/carterscode/GamerGuardian/main/CHANGELOG.md";
 
     /// <summary>One GitHub release, reduced to the fields the updater cares about.</summary>
     public sealed record ReleaseCandidate(
@@ -51,12 +62,41 @@ public static class UpdateService
             http.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
 
             var json = await http.GetStringAsync(ApiUrl, ct);
-            return SelectBestUpdate(ParseReleases(json), CurrentSemver());
+            var best = SelectBestUpdate(ParseReleases(json), CurrentSemver());
+            if (best is null) return null;
+
+            // Best-effort: enrich with the full changelog history so the prompt can
+            // show every version, not just the newest. Any failure (offline, 404,
+            // timeout) falls back to the single newest release's notes.
+            string history = best.ReleaseNotes;
+            try
+            {
+                var changelog = await http.GetStringAsync(ChangelogRawUrl, ct);
+                var extracted = ExtractVersionHistory(changelog);
+                if (!string.IsNullOrWhiteSpace(extracted)) history = extracted;
+            }
+            catch { /* keep the single-release fallback */ }
+
+            return best with { History = history };
         }
         catch
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Trims the changelog to just the released-version history: everything from the
+    /// first <c>## [x.y.z]</c> heading onward, dropping the file title, the intro
+    /// prose, and the <c>[Unreleased]</c> section (which describes work that isn't a
+    /// numbered release yet). Pure and unit-tested; returns the input trimmed when no
+    /// version heading is found.
+    /// </summary>
+    public static string ExtractVersionHistory(string? changelogMarkdown)
+    {
+        if (string.IsNullOrWhiteSpace(changelogMarkdown)) return string.Empty;
+        var m = Regex.Match(changelogMarkdown, @"(?m)^##\s*\[\d");
+        return m.Success ? changelogMarkdown[m.Index..].Trim() : changelogMarkdown.Trim();
     }
 
     /// <summary>
