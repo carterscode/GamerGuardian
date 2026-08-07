@@ -134,15 +134,22 @@ public partial class SettingsWindow : FluentWindow
         if (WindowTitleBar is not null)
             WindowTitleBar.Title += AppIdentity.DisplaySuffix;
 
-        // Land on Status. NavigationView.SelectedItem is read-only, so the initial
-        // content is set directly and the first item is marked active for the pane
-        // highlight; every later change comes through SelectionChanged.
-        if (MainNav.MenuItems.Count > 0 &&
-            MainNav.MenuItems[0] is Wpf.Ui.Controls.NavigationViewItem first)
+        // Land on Status -- but only once the NavigationView has applied its
+        // template. Calling ReplaceContent from the constructor throws inside
+        // NavigationView.UpdateContent, because the content host it writes into does
+        // not exist until the control loads. NavigationView.SelectedItem is
+        // read-only, so the first item is marked active for the pane highlight and
+        // the content is set directly; every later change comes through
+        // SelectionChanged.
+        Loaded += (_, _) =>
         {
-            first.IsActive = true;
-        }
-        Navigate("status");
+            if (MainNav.MenuItems.Count > 0 &&
+                MainNav.MenuItems[0] is Wpf.Ui.Controls.NavigationViewItem first)
+            {
+                first.IsActive = true;
+            }
+            Navigate("status");
+        };
     }
 
     /// <summary>

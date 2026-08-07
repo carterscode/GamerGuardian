@@ -227,13 +227,18 @@ public sealed class ConfigStoreTests : IDisposable
         Assert.Equal(22, new ConfigStore(dir).Load().PollIntervalSeconds);
     }
 
+#if !BETA
     [Fact]
     public void SeedConfigFrom_InStableBuild_IsAlwaysANoOp()
     {
-        // Wiring check against the real AppIdentity values, not temp paths.
+        // Wiring check against the real AppIdentity values, not temp paths. Only
+        // meaningful in a stable build, where source and target are the same folder.
+        // Under BETA they genuinely differ and seeding is the intended behavior, so
+        // asserting a no-op here would assert the opposite of what beta must do.
         Assert.False(ConfigStore.SeedConfigFrom(
             AppIdentity.StableConfigDirectory, AppIdentity.ConfigDirectory));
     }
+#endif
 
     [Fact]
     public void SeedConfigFrom_EmptyOrNullPaths_ReturnFalse()
