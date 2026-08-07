@@ -2,7 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
         <!-- Read-only, chrome-free TextBox used to render "Learn more" text so it
-             can be selected and copied (a TextBlock can't be) â€” lets users copy the
+             can be selected and copied (a TextBlock can't be) — lets users copy the
              PowerShell verify / apply / reverse commands straight out of the panel.
              The custom template drops all TextBox chrome and disables its scrollbars
              so it looks like plain text and doesn't swallow mouse-wheel scrolling. -->

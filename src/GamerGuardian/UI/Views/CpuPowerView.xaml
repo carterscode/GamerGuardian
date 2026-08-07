@@ -78,7 +78,7 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
                                         <TextBlock Text="Power plan" FontWeight="SemiBold"/>
-                                        <TextBlock Text="Active Windows power scheme â€” High Performance keeps CPU clocks elevated."
+                                        <TextBlock Text="Active Windows power scheme — High Performance keeps CPU clocks elevated."
                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                    FontSize="12" Margin="0,3,0,0"
                                                    TextWrapping="Wrap"/>

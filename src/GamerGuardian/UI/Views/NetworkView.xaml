@@ -2,7 +2,7 @@
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,8,8,0">
                         <StackPanel>
                             <ui:Card Padding="16" Margin="0,0,0,8">
-                                <TextBlock Text="Network latency tweaks. Network Throttling is a safe, well-established tweak. Nagle's algorithm and NIC power management are contested â€” their benefit varies by hardware and can make some connections worse, so read each Learn more and revert if your latency degrades."
+                                <TextBlock Text="Network latency tweaks. Network Throttling is a safe, well-established tweak. Nagle's algorithm and NIC power management are contested — their benefit varies by hardware and can make some connections worse, so read each Learn more and revert if your latency degrades."
                                            TextWrapping="Wrap"
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                             </ui:Card>
