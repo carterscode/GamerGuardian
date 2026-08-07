@@ -1493,22 +1493,22 @@ public partial class SettingsWindow : FluentWindow
 
         PlanDetailsList.Children.Add(new System.Windows.Controls.TextBlock
         {
-            Text = "Changes from stock (applied to both plugged-in and on-battery):",
+            Text = $"Side by side (plugged in) — bold values are what GamerGuardian changes:",
             FontWeight = FontWeights.SemiBold,
             FontSize = 12,
             TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 10, 0, 0),
+            Margin = new Thickness(0, 12, 0, 4),
         });
-        foreach (var change in CpuPlanDetails.Changes(r))
-        {
-            PlanDetailsList.Children.Add(new System.Windows.Controls.TextBlock
-            {
-                Text = "•  " + change,
-                FontSize = 12,
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(8, 2, 0, 0),
-            });
-        }
+
+        // Read the stock values live from the installed base scheme so the "Windows"
+        // column reflects this machine rather than a hardcoded guess (the app never
+        // trusts hardcoded power values — see the Power Saver GUID gotcha).
+        var baseGuid = PowerPlanMonitor.ResolveBalancedBase();
+        Func<Guid, Guid, uint?> readBase = baseGuid == Guid.Empty
+            ? (_, _) => null
+            : (sub, set) => Powrprof.ReadAcValue(baseGuid, sub, set);
+        var comparison = CpuPlanDetails.Comparison(r, readBase);
+        PlanDetailsList.Children.Add(BuildComparisonTable(comparison, r.BasePlanDisplayName));
 
         PlanDetailsList.Children.Add(new System.Windows.Controls.TextBlock
         {
@@ -1526,6 +1526,70 @@ public partial class SettingsWindow : FluentWindow
             Margin = new Thickness(0, 2, 0, 0),
             Foreground = secondary,
         });
+    }
+
+    /// <summary>
+    /// Builds the "Windows base vs GamerGuardian" comparison as a 3-column grid.
+    /// A value that GamerGuardian changes from the stock value is shown bold so the
+    /// real differences stand out from settings it merely pins to the same value.
+    /// </summary>
+    private System.Windows.Controls.Grid BuildComparisonTable(
+        IReadOnlyList<CpuPlanDetails.PlanComparisonRow> rows, string baseName)
+    {
+        var grid = new System.Windows.Controls.Grid();
+        grid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new GridLength(120) });
+        grid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new GridLength(120) });
+
+        var secondary = (System.Windows.Media.Brush)FindResource("TextFillColorSecondaryBrush");
+
+        void AddCell(int row, int col, string text, FontWeight weight, System.Windows.Media.Brush? fg)
+        {
+            var tb = new System.Windows.Controls.TextBlock
+            {
+                Text = text,
+                FontSize = 12,
+                FontWeight = weight,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(col == 0 ? 0 : 8, 3, 8, 3),
+            };
+            if (fg is not null) tb.Foreground = fg;
+            System.Windows.Controls.Grid.SetRow(tb, row);
+            System.Windows.Controls.Grid.SetColumn(tb, col);
+            grid.Children.Add(tb);
+        }
+
+        // Header row.
+        grid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
+        AddCell(0, 0, "Setting", FontWeights.SemiBold, null);
+        AddCell(0, 1, $"Windows {baseName}", FontWeights.SemiBold, null);
+        AddCell(0, 2, "GamerGuardian", FontWeights.SemiBold, null);
+
+        // Separator under the header.
+        grid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
+        var sep = new System.Windows.Controls.Border
+        {
+            Height = 1,
+            Background = (System.Windows.Media.Brush)FindResource("ControlStrokeColorDefaultBrush"),
+            Margin = new Thickness(0, 1, 0, 3),
+        };
+        System.Windows.Controls.Grid.SetRow(sep, 1);
+        System.Windows.Controls.Grid.SetColumn(sep, 0);
+        System.Windows.Controls.Grid.SetColumnSpan(sep, 3);
+        grid.Children.Add(sep);
+
+        for (int i = 0; i < rows.Count; i++)
+        {
+            int row = i + 2;
+            grid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
+            AddCell(row, 0, rows[i].Setting, FontWeights.Normal, null);
+            AddCell(row, 1, rows[i].WindowsValue, FontWeights.Normal, secondary);
+            // Bold the GamerGuardian value only where it actually differs from stock.
+            AddCell(row, 2, rows[i].GamerGuardianValue,
+                rows[i].Differs ? FontWeights.SemiBold : FontWeights.Normal, null);
+        }
+
+        return grid;
     }
 
     private void BuildDependencyRows(CpuTuneResult r)

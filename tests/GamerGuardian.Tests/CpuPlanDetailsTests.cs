@@ -113,4 +113,67 @@ public class CpuPlanDetailsTests
         var guid = GamerGuardian.Monitors.PowerPlanMonitor.ResolveDesiredGuid(new PowerPlanPref());
         Assert.Equal(GamerGuardian.Monitors.PowerPlanMonitor.Balanced, guid);
     }
+
+    // ---- Side-by-side comparison (Windows base vs GamerGuardian) ----
+
+    [Fact]
+    public void Comparison_HasOneRowPerOverride_WithFriendlyNamesAndValues()
+    {
+        var r = Amd("9950X3D"); // boost=Aggressive(2), min cores=50, max cores=100
+        // Derive each setting's GUID from the recipe's own overrides (Powrprof's GUIDs
+        // are internal), then stub the base reader: boost=Enabled(1), min=100, max=100.
+        Guid Setting(string labelPart) =>
+            r.Overrides.First(o => o.Label.Contains(labelPart, StringComparison.OrdinalIgnoreCase)).Setting;
+        var boostSetting = Setting("boost");
+        var minSetting = Setting("min cores");
+        var maxSetting = Setting("max cores");
+        var rows = CpuPlanDetails.Comparison(r, (sub, set) =>
+            set == boostSetting ? 1u :
+            set == minSetting ? 100u :
+            set == maxSetting ? 100u : (uint?)null);
+
+        Assert.Equal(r.Overrides.Count, rows.Count);
+
+        var boost = rows.Single(x => x.Setting.Contains("boost", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal("Enabled", boost.WindowsValue);
+        Assert.Equal("Aggressive", boost.GamerGuardianValue);
+        Assert.True(boost.Differs);
+
+        var minCores = rows.Single(x => x.Setting.Contains("minimum cores", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal("100%", minCores.WindowsValue);
+        Assert.Equal("50%", minCores.GamerGuardianValue);
+        Assert.True(minCores.Differs);
+
+        var maxCores = rows.Single(x => x.Setting.Contains("maximum cores", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal("100%", maxCores.WindowsValue);
+        Assert.Equal("100%", maxCores.GamerGuardianValue);
+        Assert.False(maxCores.Differs); // same value -> pinned, not a difference
+    }
+
+    [Fact]
+    public void Comparison_UnreadableBaseValue_ShowsWindowsDefault_AndNotFlagged()
+    {
+        var r = Amd("9950X3D");
+        var rows = CpuPlanDetails.Comparison(r, (_, _) => null);
+
+        Assert.All(rows, x => Assert.Equal("Windows default", x.WindowsValue));
+        Assert.All(rows, x => Assert.False(x.Differs));
+    }
+
+    [Fact]
+    public void Comparison_NullReader_DoesNotThrow()
+    {
+        var r = Amd("9800X3D");
+        var rows = CpuPlanDetails.Comparison(r, null!);
+        Assert.Equal(r.Overrides.Count, rows.Count);
+        Assert.All(rows, x => Assert.Equal("Windows default", x.WindowsValue));
+    }
+
+    [Fact]
+    public void Comparison_ReaderThatThrows_IsSwallowedPerRow()
+    {
+        var r = Amd("9800X3D");
+        var rows = CpuPlanDetails.Comparison(r, (_, _) => throw new InvalidOperationException("boom"));
+        Assert.All(rows, x => Assert.Equal("Windows default", x.WindowsValue));
+    }
 }
