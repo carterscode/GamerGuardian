@@ -1,12 +1,11 @@
 name: release
 
+# Releases are cut deliberately, never as a side effect of merging. A push to
+# main used to publish whenever it touched src/** or installer/**, which meant
+# every merged PR consumed a version and shipped an installer. Publishing now
+# requires an explicit act: push a v*.*.* tag, or run the workflow by hand.
 on:
   push:
-    branches: [main]
-    paths:
-      - 'src/**'
-      - 'installer/**'
-      - '.github/workflows/release.yml'
     tags: ['v*.*.*']
   workflow_dispatch:
     inputs:
@@ -47,7 +46,11 @@ jobs:
             $v = $manual
             $createTag = $true
           } else {
-            $latest = (git tag --list 'v*.*.*' --sort=-v:refname | Select-Object -First 1)
+            # Stable tags only. The 'v*.*.*' glob also matches prerelease tags
+            # like v0.1.65-beta.1, and $parts[2] would then be "65-beta", which
+            # [int] throws on -- failing the release. dev-build.yml has always
+            # filtered these out; release.yml did not.
+            $latest = (git tag --list 'v*.*.*' --sort=-v:refname | Where-Object { $_ -notmatch '-' } | Select-Object -First 1)
             if ([string]::IsNullOrWhiteSpace($latest)) { $latest = 'v0.0.0' }
             $parts = ($latest -replace '^v','').Split('.')
             $patch = [int]$parts[2] + 1
