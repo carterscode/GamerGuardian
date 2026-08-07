@@ -32,6 +32,26 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
+  <!-- Beta channel. Build with `-p:Beta=true` (see .github/workflows/beta.yml) to
+       define the BETA constant. A beta build keeps its config, change log and
+       diagnostics under a separate root, uses its own mutex and startup entry so it
+       can run beside a stable install, shows a BETA marker, and has the whole
+       update path compiled out — see Services/AppIdentity.cs.
+
+       A property with a default rather than a fourth Build Configuration: beta
+       builds are still Release builds plus one constant, so the Debug/Release
+       matrix, the determinism settings, and every publish flag stay as they are.
+
+       Note both paths must compile warning-free on their own, because
+       TreatWarningsAsErrors is on and #if-excluded code is invisible to the other
+       compile. CI builds both. -->
+  <PropertyGroup>
+    <Beta Condition="'$(Beta)' == ''">false</Beta>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Beta)' == 'true'">
+    <DefineConstants>$(DefineConstants);BETA</DefineConstants>
+  </PropertyGroup>
+
   <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>

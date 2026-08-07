@@ -104,6 +104,13 @@ public partial class SettingsWindow : FluentWindow
         LoadNetwork();
         LoadCpuTabs();
         UpdatePendingStatus();
+
+        // Beta marker on the window title and the title bar. Appended in code rather
+        // than in XAML so the markup stays identical between build flavors;
+        // DisplaySuffix is "" in a stable build, making both lines no-ops there.
+        Title += AppIdentity.DisplaySuffix;
+        if (WindowTitleBar is not null)
+            WindowTitleBar.Title += AppIdentity.DisplaySuffix;
     }
 
     /// <summary>
@@ -1027,10 +1034,27 @@ public partial class SettingsWindow : FluentWindow
 
     private async void CheckUpdatesNowButton_Click(object sender, RoutedEventArgs e)
     {
+#if BETA
+        // The whole update path is compiled out of a beta build. The button and its
+        // XAML stay exactly as they are -- only the body changes -- so there is no
+        // orphaned Click target and no unused handler, and the binary genuinely
+        // contains no call into UpdateService from here.
+        await Task.CompletedTask;
+        System.Windows.MessageBox.Show(
+            this,
+            "Updates are disabled in beta builds.",
+            "GamerGuardian",
+            System.Windows.MessageBoxButton.OK,
+            System.Windows.MessageBoxImage.Information);
+#else
         // Dev builds must never self-update. The startup check has always been
         // gated on this (App.OnStartup), but this manual path was not: clicking
         // "Check now" in a dev build would download the newest *stable* installer
         // and launch it over the running dev build. Same guard, both paths.
+        //
+        // Both guards coexist deliberately: BETA compiles the update path out of
+        // the binary entirely, while this runtime check covers the dev builds that
+        // are still compiled with the update path present.
         if (App.IsDevBuild())
         {
             System.Windows.MessageBox.Show(
@@ -1077,6 +1101,7 @@ public partial class SettingsWindow : FluentWindow
             btn.Content = prev;
             btn.IsEnabled = true;
         }
+#endif
     }
 
     /// <summary>Guards against re-entrant Apply / Save&amp;close while one is in flight.

@@ -102,7 +102,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <ui:TitleBar Grid.Row="0" Title="GamerGuardian">
+        <ui:TitleBar Grid.Row="0" x:Name="WindowTitleBar" Title="GamerGuardian">
             <ui:TitleBar.Icon>
                 <ui:SymbolIcon Symbol="Games24"/>
             </ui:TitleBar.Icon>

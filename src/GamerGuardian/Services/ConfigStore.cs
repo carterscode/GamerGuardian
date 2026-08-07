@@ -17,10 +17,11 @@ public sealed class ConfigStore
 
     public ConfigStore()
     {
-        ConfigDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "GamerGuardian");
-        ConfigPath = Path.Combine(ConfigDirectory, "config.json");
+        // Paths come from AppIdentity so a beta build's state lands under its own
+        // root -- and so ChangeLogger, which writes into the same folder, can never
+        // disagree about where that folder is.
+        ConfigDirectory = AppIdentity.ConfigDirectory;
+        ConfigPath = AppIdentity.ConfigFile;
     }
 
     public AppConfig Load()

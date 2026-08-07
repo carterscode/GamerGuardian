@@ -5,7 +5,11 @@ namespace GamerGuardian.Services;
 public static class StartupRegistration
 {
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    private const string ValueName = "GamerGuardian";
+
+    /// <summary>A beta build registers under its own value name rather than being
+    /// skipped: launch-at-startup is a feature testers need to exercise, and a
+    /// shared name would have the two builds overwrite each other's entry.</summary>
+    private const string ValueName = AppIdentity.StartupRegistryValueName;
 
     public static bool IsRegistered()
     {
