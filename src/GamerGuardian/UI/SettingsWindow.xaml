@@ -4,8 +4,8 @@
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         Title="GamerGuardian - Settings"
         Closing="OnWindowClosing"
-        Width="900" Height="720"
-        MinWidth="680" MinHeight="500"
+        Width="1150" Height="760"
+        MinWidth="920" MinHeight="560"
         WindowStartupLocation="CenterScreen"
         WindowBackdropType="Mica"
         ExtendsContentIntoTitleBar="True"
@@ -59,50 +59,50 @@
                                PaneDisplayMode="Left"
                                IsBackButtonVisible="Collapsed"
                                IsPaneToggleVisible="True"
-                               OpenPaneLength="210"
-                               SelectionChanged="MainNav_SelectionChanged">
+
+                               OpenPaneLength="210">
                 <ui:NavigationView.MenuItems>
 
                     <!-- Pinned above the groups: the drifted count, which is the only
                          status surface (see docs/ui-overhaul.md "Decided against"). -->
-                    <ui:NavigationViewItem Content="Status" Tag="status">
+                    <ui:NavigationViewItem Content="Status" Tag="status" Click="NavItem_Click">
                         <ui:NavigationViewItem.Icon>
                             <ui:SymbolIcon Symbol="Pulse24"/>
                         </ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
 
                     <ui:NavigationViewItemHeader Text="Performance"/>
-                    <ui:NavigationViewItem Content="Gaming" Tag="gaming">
+                    <ui:NavigationViewItem Content="Gaming" Tag="gaming" Click="NavItem_Click">
                         <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="Games24"/></ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
-                    <ui:NavigationViewItem Content="Display" Tag="display">
+                    <ui:NavigationViewItem Content="Display" Tag="display" Click="NavItem_Click">
                         <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="Desktop24"/></ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
-                    <ui:NavigationViewItem Content="CPU and power" Tag="cpupower">
+                    <ui:NavigationViewItem Content="CPU and power" Tag="cpupower" Click="NavItem_Click">
                         <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="DeveloperBoard24"/></ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
 
                     <ui:NavigationViewItemHeader Text="Privacy"/>
-                    <ui:NavigationViewItem Content="Telemetry" Tag="telemetry">
+                    <ui:NavigationViewItem Content="Telemetry" Tag="telemetry" Click="NavItem_Click">
                         <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="Eye24"/></ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
-                    <ui:NavigationViewItem Content="Windows AI" Tag="windowsai">
+                    <ui:NavigationViewItem Content="Windows AI" Tag="windowsai" Click="NavItem_Click">
                         <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="BrainCircuit24"/></ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
-                    <ui:NavigationViewItem Content="Network" Tag="network">
+                    <ui:NavigationViewItem Content="Network" Tag="network" Click="NavItem_Click">
                         <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="Globe24"/></ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
 
                     <ui:NavigationViewItemHeader Text="Cleanup"/>
-                    <ui:NavigationViewItem Content="Debloat" Tag="debloat">
+                    <ui:NavigationViewItem Content="Debloat" Tag="debloat" Click="NavItem_Click">
                         <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="Broom24"/></ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
-                    <ui:NavigationViewItem Content="Services" Tag="services">
+                    <ui:NavigationViewItem Content="Services" Tag="services" Click="NavItem_Click">
                         <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="Server24"/></ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
 
                     <ui:NavigationViewItemHeader Text="Reference"/>
-                    <ui:NavigationViewItem Content="BIOS" Tag="bios">
+                    <ui:NavigationViewItem Content="BIOS" Tag="bios" Click="NavItem_Click">
                         <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="DocumentBulletList24"/></ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
 
@@ -110,7 +110,7 @@
 
                 <!-- General sits in the footer, per the recorded navigation decision. -->
                 <ui:NavigationView.FooterMenuItems>
-                    <ui:NavigationViewItem Content="General" Tag="general">
+                    <ui:NavigationViewItem Content="General" Tag="general" Click="NavItem_Click">
                         <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="Settings24"/></ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
                 </ui:NavigationView.FooterMenuItems>

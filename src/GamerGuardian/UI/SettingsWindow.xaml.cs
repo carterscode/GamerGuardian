@@ -182,10 +182,36 @@ public partial class SettingsWindow : FluentWindow
         MainNav.ReplaceContent(view, null);
     }
 
-    private void MainNav_SelectionChanged(Wpf.Ui.Controls.NavigationView sender, RoutedEventArgs e)
+    /// <summary>
+    /// Nav item click. Wired per item rather than through
+    /// <c>NavigationView.SelectionChanged</c>, which never fires here: these items
+    /// have no <c>TargetPageType</c> (navigation is a content swap, not a page
+    /// service), so WPF-UI's internal navigate returns before raising it. The pane
+    /// looked completely dead as a result. NavigationViewItem derives from
+    /// ButtonBase, so Click is reliable regardless of the navigation machinery.
+    /// </summary>
+    private void NavItem_Click(object sender, RoutedEventArgs e)
     {
-        if (sender.SelectedItem is FrameworkElement fe && fe.Tag is string tag)
-            Navigate(tag);
+        if (sender is not Wpf.Ui.Controls.NavigationViewItem item) return;
+        SetActiveNavItem(item);
+        if (item.Tag is string tag) Navigate(tag);
+    }
+
+    /// <summary>
+    /// Drives the pane highlight by hand. NavigationView normally maintains this as
+    /// part of navigating; with navigation bypassed, nothing else clears the
+    /// previously active item and the highlight would stick to Status forever.
+    /// </summary>
+    private void SetActiveNavItem(Wpf.Ui.Controls.NavigationViewItem active)
+    {
+        foreach (var source in new[] { MainNav.MenuItems, MainNav.FooterMenuItems })
+        {
+            foreach (var entry in source)
+            {
+                if (entry is Wpf.Ui.Controls.NavigationViewItem nvi)
+                    nvi.IsActive = ReferenceEquals(nvi, active);
+            }
+        }
     }
 
     /// <summary>
