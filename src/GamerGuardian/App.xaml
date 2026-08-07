@@ -8,6 +8,11 @@
             <ResourceDictionary.MergedDictionaries>
                 <ui:ThemesDictionary Theme="Dark" />
                 <ui:ControlsDictionary />
+                <!-- Styles and templates shared by the Settings views. App-level so
+                     every extracted view resolves them; they used to live on
+                     SettingsWindow, which only worked while all the content was
+                     inside that one window. -->
+                <ResourceDictionary Source="UI/SharedResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

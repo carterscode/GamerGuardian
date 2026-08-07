@@ -1,0 +1,163 @@
+﻿<UserControl x:Class="GamerGuardian.UI.Views.CpuPowerView"              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"              d:DesignHeight="600" d:DesignWidth="760"              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"              mc:Ignorable="d">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,8,8,0">
+                        <StackPanel>
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <TextBlock Text="Detected CPU" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="CpuDetectedText" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                    <TextBlock x:Name="CpuTierText" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+                            </ui:Card>
+
+                            <ItemsControl x:Name="PowerTogglesList" Margin="0,0,0,4">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <ui:Card Padding="16" Margin="0,0,0,12">
+                                            <StackPanel>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                        <Border Visibility="{Binding RebootBadgeVisibility}"
+                                                                Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                                                                CornerRadius="3" Padding="6,1"
+                                                                HorizontalAlignment="Left"
+                                                                Margin="0,4,0,0">
+                                                            <TextBlock Text="reboot required"
+                                                                       Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                                                       FontSize="10" FontWeight="SemiBold"/>
+                                                        </Border>
+                                                        <TextBlock Text="{Binding Description}"
+                                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                   FontSize="12" Margin="0,3,0,0"
+                                                                   TextWrapping="Wrap"/>
+                                                        <WrapPanel Margin="0,6,0,0">
+                                                            <TextBlock Text="{Binding CurrentText}"
+                                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                       FontSize="11" Margin="0,0,12,2"/>
+                                                            <TextBlock Text="{Binding DefaultText}"
+                                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                       FontSize="11" Margin="0,0,12,2"/>
+                                                            <TextBlock Text="{Binding RecommendedText}"
+                                                                       Visibility="{Binding RecommendedTextVisibility}"
+                                                                       Foreground="{DynamicResource SystemFillColorSuccessBrush}"
+                                                                       FontSize="11" FontWeight="SemiBold" Margin="0,0,0,2"/>
+                                                        </WrapPanel>
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1" Orientation="Vertical">
+                                                        <CheckBox Content="Monitor" IsChecked="{Binding Monitor}"/>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
+                                                            <TextBlock Text="Want:" Margin="0,4,8,0"/>
+                                                            <RadioButton GroupName="{Binding GroupName}" Content="{Binding OnLabel}" IsChecked="{Binding DesiredOn}" Margin="0,0,8,0"/>
+                                                            <RadioButton GroupName="{Binding GroupName}" Content="{Binding OffLabel}" IsChecked="{Binding DesiredOff}"/>
+                                                        </StackPanel>
+                                                        <CheckBox Content="Auto-apply silently" IsChecked="{Binding AutoApply}"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                                <Expander Header="Learn more" Margin="0,8,0,0"
+                                                          Visibility="{Binding LearnMoreVisibility}">
+                                                    <TextBox Text="{Binding LearnMoreContent, Mode=OneWay}"
+                                                             Style="{StaticResource CopyableLearnMoreText}"
+                                                             Margin="8,8,8,8"/>
+                                                </Expander>
+                                            </StackPanel>
+                                        </ui:Card>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <TextBlock Text="Power plan" FontWeight="SemiBold"/>
+                                        <TextBlock Text="Active Windows power scheme â€” High Performance keeps CPU clocks elevated."
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   FontSize="12" Margin="0,3,0,0"
+                                                   TextWrapping="Wrap"/>
+                                        <WrapPanel Margin="0,6,0,0">
+                                            <TextBlock x:Name="PowerPlanCurrentText"
+                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                       FontSize="11" Margin="0,0,12,2"/>
+                                            <TextBlock Text="Default: Balanced"
+                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                       FontSize="11" Margin="0,0,12,2"/>
+                                            <TextBlock x:Name="PowerPlanRecommendedText"
+                                                       Foreground="{DynamicResource SystemFillColorSuccessBrush}"
+                                                       FontSize="11" FontWeight="SemiBold" Margin="0,0,0,2"/>
+                                        </WrapPanel>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Vertical">
+                                        <CheckBox x:Name="PowerPlanMonitorCheck" Content="Monitor"
+                                                  Checked="PowerPlanMonitorCheck_Changed"
+                                                  Unchecked="PowerPlanMonitorCheck_Changed"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
+                                            <TextBlock Text="Want:" Margin="0,6,8,0"/>
+                                            <ComboBox x:Name="PowerPlanCombo" Width="240"
+                                                      SelectionChanged="PowerPlanCombo_SelectionChanged"/>
+                                        </StackPanel>
+                                        <CheckBox x:Name="PowerPlanAutoApplyCheck" Content="Auto-apply silently"
+                                                  Checked="PowerPlanAutoApplyCheck_Changed"
+                                                  Unchecked="PowerPlanAutoApplyCheck_Changed"/>
+                                    </StackPanel>
+                                </Grid>
+                            </ui:Card>
+
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <TextBlock Text="Gaming power plan" FontWeight="SemiBold"/>
+                                        <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   Text="Switch to the best-matching prebuilt Windows plan, or build a GamerGuardian-authored plan tuned for your CPU. Your existing Windows plans are never modified or deleted -- the app only creates or re-tunes its own plan, and you can switch back at any time."/>
+                                        <TextBlock x:Name="CpuPlanStatusText" Margin="0,8,0,0" FontSize="11" TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <ui:Button x:Name="SuggestPrebuiltButton" Content="Suggest best prebuilt"
+                                                   MinWidth="180" Margin="0,0,0,8"
+                                                   Click="SuggestPrebuiltButton_Click"/>
+                                        <ui:Button x:Name="BuildOptimizedButton" Content="Build optimized plan"
+                                                   Appearance="Primary" MinWidth="180"
+                                                   Click="BuildOptimizedButton_Click"/>
+                                    </StackPanel>
+                                </Grid>
+                            </ui:Card>
+
+                            <ui:CardExpander x:Name="PlanDetailsExpander" Margin="0,0,0,8" IsExpanded="False">
+                                <ui:CardExpander.Icon>
+                                    <ui:SymbolIcon Symbol="Info24"/>
+                                </ui:CardExpander.Icon>
+                                <ui:CardExpander.Header>
+                                    <TextBlock x:Name="PlanDetailsHeader" Text="What this plan changes"
+                                               FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                </ui:CardExpander.Header>
+                                <StackPanel x:Name="PlanDetailsList" Margin="0,4,0,0"/>
+                            </ui:CardExpander>
+
+                            <ui:Card x:Name="CcdDependencyCard" Padding="16" Margin="0,0,0,8" Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBlock Text="Dual-CCD routing dependencies" FontWeight="SemiBold"/>
+                                    <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="On this CPU the power plan is necessary but not sufficient. Game threads only stay on the cache CCD when these are also in place:"/>
+                                    <StackPanel x:Name="CcdDependencyList" Margin="0,8,0,0"/>
+                                    <TextBlock FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"
+                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                               Text="State is read once when this window opens. Restart GamerGuardian to re-check."/>
+                                </StackPanel>
+                            </ui:Card>
+                        </StackPanel>
+                    </ScrollViewer>
+</UserControl>

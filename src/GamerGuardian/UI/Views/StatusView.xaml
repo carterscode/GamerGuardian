@@ -1,0 +1,70 @@
+<UserControl x:Class="GamerGuardian.UI.Views.StatusView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="760">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,8,8,0">
+        <StackPanel>
+
+            <ui:Card Padding="16" Margin="0,0,0,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                        <TextBlock x:Name="DriftHeadlineText"
+                                   Text="Everything matches your preferences"
+                                   FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="DriftSubText"
+                                   Margin="0,4,0,0" FontSize="12" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="Settings you monitor are checked in the background. Anything that drifts from what you asked for shows up here."/>
+                    </StackPanel>
+                    <Border Grid.Column="1" x:Name="DriftCountBadge"
+                            Background="{DynamicResource SystemFillColorSuccessBackgroundBrush}"
+                            CornerRadius="8" Padding="18,10" VerticalAlignment="Center">
+                        <TextBlock x:Name="DriftCountText" Text="0"
+                                   FontSize="30" FontWeight="Bold"
+                                   HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource SystemFillColorSuccessBrush}"/>
+                    </Border>
+                </Grid>
+            </ui:Card>
+
+            <ui:Card Padding="16" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="Drifted by section" FontWeight="SemiBold"/>
+                    <TextBlock Margin="0,4,0,0" FontSize="12" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="Only monitored settings are counted. Settings set to auto-apply are corrected silently and drop off this list on the next scan."/>
+                    <StackPanel x:Name="SectionCountsList" Margin="0,10,0,0"/>
+                </StackPanel>
+            </ui:Card>
+
+            <ui:Card Padding="16" Margin="0,0,0,8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                        <TextBlock Text="Monitoring" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="PauseStateText"
+                                   Margin="0,4,0,0" FontSize="12" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="Running."/>
+                    </StackPanel>
+                    <ui:Button x:Name="PauseToggleButton" Grid.Column="1"
+                               Content="Pause monitoring" MinWidth="150"
+                               VerticalAlignment="Center"
+                               Click="PauseToggleButton_Click"/>
+                </Grid>
+            </ui:Card>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
