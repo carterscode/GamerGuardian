@@ -1185,6 +1185,20 @@ public partial class SettingsWindow : FluentWindow
                 System.Windows.MessageBoxImage.Information);
         }
 
+        // Surface a single restart prompt for any reboot-requiring change that
+        // actually landed this pass. Deferred to the end on purpose: ApplyAndVerify
+        // ran every drifted setting first, so a bulk apply (e.g. the Extreme preset)
+        // flags reboot across the whole batch and prompts once here, not per setting.
+        // RebootPrompt shows an UNOWNED window so it survives the Close() below —
+        // the ApplyResultsWindow is owned by this window and would be destroyed with
+        // it on Save & close, which is why bulk applies used to reboot-flag nothing.
+        var rebootDescriptions = results
+            .Where(r => r.RequiresReboot && r.Verified)
+            .Select(r => r.Description)
+            .ToList();
+        if (rebootDescriptions.Count > 0)
+            RebootPrompt.Show(rebootDescriptions);
+
         if (closeAfter) Close();
     }
 
@@ -1673,6 +1687,17 @@ public partial class SettingsWindow : FluentWindow
                         "or (on dual-CCD X3D) the BIOS/driver/Game Bar dependencies aren't in place, see the Apply Results window for details.",
                         "GamerGuardian", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                 }
+
+                // Consistency with the main Apply path: any reboot-required change
+                // that landed raises the shared restart prompt. Power-plan actions
+                // don't need a reboot today, so this is a no-op guard that keeps
+                // every apply path honest if that ever changes.
+                var rebootDescriptions = results
+                    .Where(r => r.RequiresReboot && r.Verified)
+                    .Select(r => r.Description)
+                    .ToList();
+                if (rebootDescriptions.Count > 0)
+                    RebootPrompt.Show(rebootDescriptions);
             }
         }
         catch (Exception ex)
