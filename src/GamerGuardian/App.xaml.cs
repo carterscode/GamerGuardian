@@ -71,6 +71,13 @@ public partial class App : WpfApplication
             return;
         }
 
+#if BETA
+        // First launch of a beta build with no state of its own: start from the
+        // stable install's settings rather than from defaults. One-way copy -- the
+        // stable config is read and never written. No-ops on every later launch.
+        ConfigStore.SeedConfigFrom(AppIdentity.StableConfigDirectory, AppIdentity.ConfigDirectory);
+#endif
+
         _store = new ConfigStore();
         ChangeLogger.LogSessionStart();
         var cfg = _store.Load();
