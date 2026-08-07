@@ -32,7 +32,6 @@
                 </Grid.ColumnDefinitions>
                 <ui:Button Grid.Column="0" Content="Open change log" MinWidth="140" Click="OpenLogButton_Click"/>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <ui:Button x:Name="RebootButton" Content="Reboot now" MinWidth="110" Margin="0,0,8,0" Visibility="Collapsed" Click="RebootButton_Click"/>
                     <ui:Button x:Name="CloseButton" Content="Close" Appearance="Primary" MinWidth="90" Click="CloseButton_Click"/>
                 </StackPanel>
             </Grid>

@@ -154,19 +154,7 @@ public partial class App : WpfApplication
             .ToArray();
         _monitor = new MonitorService(_store, _allMonitors, report => _notifier.ShowAsync(report));
         _monitor.AutoAppliedRebootRequired += items =>
-        {
-            var descriptions = items.Select(i => i.Description).ToList();
-            Dispatcher.BeginInvoke(() =>
-            {
-                try
-                {
-                    var win = new GamerGuardian.UI.RebootPendingWindow(descriptions);
-                    win.Closed += (_, _) => ReleaseWindow(win);
-                    win.Show();
-                }
-                catch { }
-            });
-        };
+            GamerGuardian.Services.RebootPrompt.Show(items.Select(i => i.Description).ToList());
 
         _tray = new TrayIconHost();
         _tray.OpenSettingsRequested += ShowSettings;

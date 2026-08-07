@@ -17,10 +17,10 @@ public partial class ApplyResultsWindow : FluentWindow
             : $"Applied {ok} of {results.Count} settings ({fail} failed)";
         SubText.Text = "Each row shows the value before, what you wanted, and the actual value re-read from the OS after apply. The 'Mechanism' line tells you exactly where the change was written; the PowerShell snippet lets you verify the same value yourself outside the app.";
 
+        // The per-row "reboot to take effect" badge stays; the restart prompt
+        // itself is now the app-level, unowned RebootPrompt (raised by the caller)
+        // so it survives Save & close and matches the auto-apply path.
         ItemsList.ItemsSource = results.Select(r => new ResultRow(r)).ToList();
-
-        if (results.Any(r => r.RequiresReboot && r.Verified))
-            RebootButton.Visibility = Visibility.Visible;
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();
@@ -35,12 +35,6 @@ public partial class ApplyResultsWindow : FluentWindow
             ItemsList.ItemsSource = null;
         }
         catch { }
-    }
-
-    private void RebootButton_Click(object sender, RoutedEventArgs e)
-    {
-        GamerGuardian.Services.RebootHelper.ForceRebootNow();
-        Close();
     }
 
     private void CopyButton_Click(object sender, RoutedEventArgs e)

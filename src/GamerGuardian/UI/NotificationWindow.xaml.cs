@@ -28,10 +28,22 @@ public partial class NotificationWindow : FluentWindow
     {
         ApplyButton.IsEnabled = false;
         DismissButton.IsEnabled = false;
+        // Applying from a drift notification is still an apply — if a reboot-required
+        // setting was among them, the user needs the same restart prompt they'd get
+        // from the Settings Apply button. Only items whose Apply didn't throw are
+        // flagged (a declined UAC prompt shouldn't claim a reboot is pending).
+        var rebootDescriptions = new List<string>();
         foreach (var item in _report.Items)
         {
-            try { await item.Apply(); } catch { }
+            try
+            {
+                await item.Apply();
+                if (item.RequiresReboot) rebootDescriptions.Add(item.Description);
+            }
+            catch { }
         }
+        if (rebootDescriptions.Count > 0)
+            Services.RebootPrompt.Show(rebootDescriptions);
         Close();
     }
 
