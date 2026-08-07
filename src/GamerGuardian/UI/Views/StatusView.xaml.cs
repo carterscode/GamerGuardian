@@ -1,3 +1,6 @@
+using System.Linq;
+using Brush = System.Windows.Media.Brush;
+using SymbolRegular = Wpf.Ui.Controls.SymbolRegular;
 using System.Windows;
 using System.Windows.Controls;
 using GamerGuardian.Models;
@@ -21,7 +24,63 @@ public partial class StatusView : System.Windows.Controls.UserControl
 {
     private MonitorService? _monitor;
 
-    public StatusView() => InitializeComponent();
+    public StatusView()
+    {
+        InitializeComponent();
+        BuildSystemCards();
+    }
+
+    /// <summary>
+    /// Fills the "This PC" grid. Read once at construction: none of it changes while
+    /// the window is open, and the reads touch the registry and display APIs, so
+    /// re-running them on every drift tick would be waste.
+    /// </summary>
+    private void BuildSystemCards()
+    {
+        try
+        {
+            // Icon + accent per card. Tinted chips are the one visual idea taken
+            // from Sparkle's dashboard; the card set is GamerGuardian's own -- each
+            // one is context for settings the app actually manages, which is why
+            // there is no storage card.
+            // Accent is the theme-brush stem: "<stem>Brush" is the icon colour and
+            // "<stem>BackgroundBrush" the chip fill. Both are WPF-UI theme brushes,
+            // so the chips re-colour correctly in light and dark.
+            var meta = new (SymbolRegular Icon, string Stem)[]
+            {
+                (SymbolRegular.DeveloperBoard24, "SystemFillColorAttention"), // CPU
+                (SymbolRegular.Desktop24,        "SystemFillColorSuccess"),   // GPU
+                (SymbolRegular.Ram20,            "SystemFillColorCaution"),   // Memory
+                (SymbolRegular.Window24,         "SystemFillColorAttention"), // Windows
+                (SymbolRegular.DualScreen20,     "SystemFillColorSuccess"),   // Displays
+                (SymbolRegular.BatteryCharge24,  "SystemFillColorCaution"),   // Power plan
+            };
+
+            var cards = SystemInfo.All();
+            var rows = new List<SystemCardRow>(cards.Count);
+            for (int i = 0; i < cards.Count; i++)
+            {
+                var m = meta[i % meta.Length];
+                rows.Add(new SystemCardRow(
+                    cards[i],
+                    m.Icon,
+                    AccentBrush(m.Stem + "Brush", "TextFillColorPrimaryBrush"),
+                    AccentBrush(m.Stem + "BackgroundBrush", "ControlFillColorDefaultBrush")));
+            }
+            SystemCardsList.ItemsSource = rows;
+        }
+        catch { /* informational only -- never break the window */ }
+    }
+
+    /// <summary>
+    /// Theme brush by key, falling back to a brush that always exists. A missing
+    /// accent must degrade to a plain chip rather than take the window down --
+    /// which is exactly what an earlier wrong key name did.
+    /// </summary>
+    private Brush AccentBrush(string key, string fallbackKey) =>
+        TryFindResource(key) as Brush
+        ?? TryFindResource(fallbackKey) as Brush
+        ?? System.Windows.Media.Brushes.Gray;
 
     /// <summary>Attach to the live monitor. Safe to call with null (design time,
     /// or a window constructed without a monitor service).</summary>
@@ -160,3 +219,27 @@ public partial class StatusView : System.Windows.Controls.UserControl
         RefreshPause();
     }
 }
+
+/// <summary>One card in the Status page's This PC grid, with its icon and accent
+/// resolved to brushes so the DataTemplate can bind them directly.</summary>
+public sealed class SystemCardRow
+{
+    public SystemCardRow(SystemInfoCard card, SymbolRegular icon, Brush accent, Brush accentBackground)
+    {
+        Title = card.Title;
+        Subtitle = card.Subtitle;
+        Rows = card.Rows.Select(r => new SystemCardValue(r.Label, r.Value)).ToList();
+        Icon = icon;
+        Accent = accent;
+        AccentBackground = accentBackground;
+    }
+
+    public string Title { get; }
+    public string Subtitle { get; }
+    public IReadOnlyList<SystemCardValue> Rows { get; }
+    public SymbolRegular Icon { get; }
+    public Brush Accent { get; }
+    public Brush AccentBackground { get; }
+}
+
+public sealed record SystemCardValue(string Label, string Value);
