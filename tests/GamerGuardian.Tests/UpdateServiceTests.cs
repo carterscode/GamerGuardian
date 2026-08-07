@@ -157,4 +157,70 @@ public class UpdateServiceTests
     {
         Assert.Empty(UpdateService.ParseReleases("""{ "message": "Not Found" }"""));
     }
+
+    // ---- ExtractVersionHistory: full scrollable history in the update prompt ----
+
+    private const string SampleChangelog = """
+        # Changelog
+
+        Intro prose that should not appear in the prompt.
+
+        ## [Unreleased]
+
+        ### Changed
+        - Not released yet — must be dropped.
+
+        ## [0.1.64] - 2026-08-07
+
+        ### Changed
+        - Newest thing.
+
+        ## [0.1.63] - 2026-08-07
+
+        ### Added
+        - Older thing.
+
+        ## [0.1.0] - 2026-05-06
+
+        ### Added
+        - Initial release.
+        """;
+
+    [Fact]
+    public void ExtractVersionHistory_DropsTitleIntroAndUnreleased_StartsAtNewestVersion()
+    {
+        var history = UpdateService.ExtractVersionHistory(SampleChangelog);
+
+        Assert.StartsWith("## [0.1.64]", history);
+        Assert.DoesNotContain("# Changelog", history);
+        Assert.DoesNotContain("Intro prose", history);
+        Assert.DoesNotContain("[Unreleased]", history);
+        Assert.DoesNotContain("Not released yet", history);
+    }
+
+    [Fact]
+    public void ExtractVersionHistory_KeepsEveryReleasedVersion_NewestToOldest()
+    {
+        var history = UpdateService.ExtractVersionHistory(SampleChangelog);
+
+        Assert.Contains("## [0.1.64]", history);
+        Assert.Contains("## [0.1.63]", history);
+        Assert.Contains("## [0.1.0]", history);
+        Assert.True(history.IndexOf("0.1.64") < history.IndexOf("0.1.0")); // newest first
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ExtractVersionHistory_EmptyInput_ReturnsEmpty(string? input)
+    {
+        Assert.Equal(string.Empty, UpdateService.ExtractVersionHistory(input));
+    }
+
+    [Fact]
+    public void ExtractVersionHistory_NoVersionHeadings_ReturnsTrimmedInput()
+    {
+        Assert.Equal("just some notes", UpdateService.ExtractVersionHistory("  just some notes  "));
+    }
 }

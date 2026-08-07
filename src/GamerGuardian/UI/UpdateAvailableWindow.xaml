@@ -32,10 +32,10 @@
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                        FontSize="12"
                        Margin="0,0,0,12"/>
-            <TextBlock Text="Release notes" FontWeight="SemiBold" Margin="0,0,0,4"/>
+            <TextBlock Text="Release notes — scroll for older versions" FontWeight="SemiBold" Margin="0,0,0,4"/>
             <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                     BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,0,12">
-                <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer MaxHeight="320" VerticalScrollBarVisibility="Auto">
                     <TextBlock x:Name="NotesText"
                                TextWrapping="Wrap"
                                FontSize="12"
