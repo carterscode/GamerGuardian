@@ -60,9 +60,16 @@ jobs:
         run: |
           function Test-UpdateUrl($path) {
             $bytes = [System.IO.File]::ReadAllBytes($path)
-            # .NET stores string literals as UTF-16 in the #US heap.
-            $text = [System.Text.Encoding]::Unicode.GetString($bytes)
-            return $text -match 'api\.github\.com/repos/carterscode/GamerGuardian/releases'
+            # .NET stores string literals as UTF-16 in the #US heap, but at arbitrary
+            # byte offsets. Decoding the file as UTF-16 from offset 0 only sees
+            # literals that happen to start on an even boundary -- an odd-aligned one
+            # decodes to garbage and is missed. Measured: the BETA marker literal in
+            # this very assembly is odd-aligned while the update URL is even-aligned,
+            # so a single-alignment scan is a coin flip. Check both.
+            $even = [System.Text.Encoding]::Unicode.GetString($bytes, 0, $bytes.Length - ($bytes.Length % 2))
+            $odd  = [System.Text.Encoding]::Unicode.GetString($bytes, 1, $bytes.Length - 1 - (($bytes.Length - 1) % 2))
+            $pattern = 'api\.github\.com/repos/carterscode/GamerGuardian/releases'
+            return [regex]::IsMatch($even, $pattern) -or [regex]::IsMatch($odd, $pattern)
           }
           $stable = Test-UpdateUrl "out-stable/GamerGuardian.dll"
           $beta   = Test-UpdateUrl "out-beta/GamerGuardian.dll"
