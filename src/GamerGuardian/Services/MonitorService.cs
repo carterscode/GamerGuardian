@@ -66,6 +66,38 @@ public sealed class MonitorService : IDisposable
     public event Action<bool>? PauseChanged;
     public event Action<IReadOnlyList<DriftItem>>? AutoAppliedRebootRequired;
 
+    /// <summary>
+    /// The settings currently observed as drifted, keyed by setting id. This is the
+    /// same filtered set the scan already computes (monitored settings whose observed
+    /// value differs from the desired one), published so the UI can count drift —
+    /// per section or in total — without re-running <c>CheckDrift</c>.
+    ///
+    /// <para>Replaced wholesale on each publish, so the reference a caller holds is
+    /// an immutable snapshot and safe to enumerate on any thread.</para>
+    /// </summary>
+    public IReadOnlyDictionary<string, DriftItem> CurrentDrift => _publishedDrift;
+
+    /// <summary>
+    /// Raised after a scan finishes, when the set of drifted setting ids has changed
+    /// since the previous publish. Carries the same snapshot as
+    /// <see cref="CurrentDrift"/>.
+    ///
+    /// <para><b>Raised on a background thread</b> (the poll timer), like
+    /// <see cref="AutoAppliedRebootRequired"/> — a UI handler must marshal to the
+    /// dispatcher before touching controls.</para>
+    /// </summary>
+    public event Action<IReadOnlyDictionary<string, DriftItem>>? DriftChanged;
+
+    private static readonly IReadOnlyDictionary<string, DriftItem> EmptyDrift =
+        new Dictionary<string, DriftItem>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Published snapshot, and also the accumulator across ticks (each
+    /// publish replaces it with a freshly built dictionary, so it is never mutated
+    /// in place). Single-writer: only <see cref="TickAsync"/> publishes, and the
+    /// <see cref="_running"/> guard means ticks never overlap. Volatile so a reader
+    /// on another thread sees the newest one.</summary>
+    private volatile IReadOnlyDictionary<string, DriftItem> _publishedDrift = EmptyDrift;
+
     public void SetPaused(bool paused)
     {
         if (_userPaused == paused) return;
@@ -301,6 +333,13 @@ public sealed class MonitorService : IDisposable
                 .Where(d => !_breaker.IsTripped(d.SettingId, now))
                 .Where(d => !_autoApplyBackoff.TryGetValue(d.SettingId, out var until) || now >= until)
                 .ToList();
+            // Ids auto-applied and verified this tick. They are no longer drifted, so
+            // the published snapshot drops them -- otherwise the count would report
+            // drift the app just corrected, for as long as a full tier re-check away
+            // (up to the 10-minute stable backstop). Bookkeeping only: nothing below
+            // reads this to decide whether to apply.
+            var appliedAndVerified = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
             if (auto.Count > 0)
             {
                 // Split into corrective (was previously verified, now drifted)
@@ -347,6 +386,7 @@ public sealed class MonitorService : IDisposable
                         _autoApplyBackoff.Remove(allResults[i].SettingId);
                         _lastVerified[allResults[i].SettingId] = new LastVerified(
                             allResults[i].RawAfter, allResults[i].After, now);
+                        appliedAndVerified.Add(allResults[i].SettingId);
                     }
                     else
                     {
@@ -378,6 +418,9 @@ public sealed class MonitorService : IDisposable
             if (prompt.Count > 0)
                 await _onDriftAsync(new DriftReport(prompt));
 
+            // The scan is finished: publish what is drifting now.
+            PublishDrift(tier, drifted, appliedAndVerified);
+
             if (++_ticksSinceTrim >= 5)
             {
                 _ticksSinceTrim = 0;
@@ -390,6 +433,61 @@ public sealed class MonitorService : IDisposable
         {
             lock (_lock) _running = false;
         }
+    }
+
+    /// <summary>
+    /// Merges this tick's findings into the accumulated drift set and publishes a
+    /// fresh immutable snapshot, raising <see cref="DriftChanged"/> when the set of
+    /// drifted ids actually changed.
+    ///
+    /// <para>The merge is tier-scoped: a tick only re-checks its own tier, so only
+    /// that tier's entries are authoritative. On a volatile-only fast poll a stable
+    /// setting's absence from <paramref name="drifted"/> means "not checked", not
+    /// "no longer drifting" — the same reasoning the circuit-breaker recovery sweep
+    /// uses. Clearing everything here would make the count flicker to near-zero on
+    /// every 30-second display poll.</para>
+    ///
+    /// <para>Pure bookkeeping: it observes the scan, it never influences it.</para>
+    /// </summary>
+    private void PublishDrift(MonitorTier? tier, List<DriftItem> drifted, HashSet<string> appliedAndVerified)
+    {
+        var previous = _publishedDrift;
+        var snapshot = MergeDrift(previous, tier, drifted, appliedAndVerified);
+
+        // A count surface only cares about which ids are drifting, so an unchanged
+        // id set raises nothing and the UI doesn't re-render on every quiet poll.
+        bool changed = snapshot.Count != previous.Count
+                       || !snapshot.Keys.All(previous.ContainsKey);
+
+        _publishedDrift = snapshot;
+        if (changed) DriftChanged?.Invoke(snapshot);
+    }
+
+    /// <summary>
+    /// The merge rule, pure so it can be unit-tested without timers or the registry
+    /// (same approach as <see cref="SelectNotifiable"/>). Returns a new dictionary;
+    /// neither argument is mutated.
+    /// </summary>
+    public static Dictionary<string, DriftItem> MergeDrift(
+        IReadOnlyDictionary<string, DriftItem> previous,
+        MonitorTier? tier,
+        IEnumerable<DriftItem> drifted,
+        IReadOnlySet<string> appliedAndVerified)
+    {
+        var merged = new Dictionary<string, DriftItem>(StringComparer.OrdinalIgnoreCase);
+
+        // Carry forward only the tiers this tick did NOT re-check.
+        foreach (var (id, item) in previous)
+            if (tier is not null && MonitorVolatility.TierFor(id) != tier.Value)
+                merged[id] = item;
+
+        foreach (var d in drifted)
+            merged[d.SettingId] = d;
+
+        foreach (var id in appliedAndVerified)
+            merged.Remove(id);
+
+        return merged;
     }
 
     /// <summary>
