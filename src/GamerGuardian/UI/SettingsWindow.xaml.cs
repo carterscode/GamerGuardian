@@ -40,6 +40,10 @@ public partial class SettingsWindow : FluentWindow
     public ObservableCollection<ServiceRow> ServiceRows { get; } = new();
     public ObservableCollection<ScheduledTaskRow> ScheduledTaskRows { get; } = new();
     private bool _suppressPresetEvents;
+    /// <summary>Set while LoadGlobals seeds the power-plan combo, so the
+    /// SelectionChanged handler ignores the programmatic selection and doesn't
+    /// stage a phantom pending change.</summary>
+    private bool _loadingPowerPlan;
     /// <summary>
     /// Number of staged preference toggles since the window opened (or since
     /// the last successful Apply). Drives the "N pending changes" status text
@@ -849,10 +853,24 @@ public partial class SettingsWindow : FluentWindow
         PowerPlanCombo.ItemsSource = planItems;
         PowerPlanCombo.DisplayMemberPath = nameof(PowerPlanItem.Name);
 
-        var savedGuid = PowerPlanMonitor.ResolveDesiredGuid(g.PowerPlan);
-        PowerPlanCombo.SelectedItem = planItems.FirstOrDefault(p => p.Guid == savedGuid)
-            ?? (active is Guid a ? planItems.FirstOrDefault(p => p.Guid == a) : null)
-            ?? planItems.FirstOrDefault();
+        // Preselect priority: the user's own explicit pick, else the CPU-aware
+        // recommended prebuilt (Balanced) so the "Want" dropdown agrees with the
+        // "Recommended:" hint instead of defaulting to High Performance, else the
+        // currently-active plan. Suppress the handler while we set this: reflecting
+        // saved/recommended state into the combo is not a user edit, so it must not
+        // stage a phantom pending change or log a PREF line on every open.
+        Guid? explicitPick = !string.IsNullOrEmpty(g.PowerPlan.DesiredGuid)
+            && Guid.TryParse(g.PowerPlan.DesiredGuid, out var eg) ? eg : null;
+        var preselect = explicitPick
+            ?? (planItems.Any(p => p.Guid == recPlanGuid) ? recPlanGuid : (Guid?)null)
+            ?? active;
+        _loadingPowerPlan = true;
+        try
+        {
+            PowerPlanCombo.SelectedItem = planItems.FirstOrDefault(p => p.Guid == preselect)
+                ?? planItems.FirstOrDefault();
+        }
+        finally { _loadingPowerPlan = false; }
     }
 
     private static bool? SafeRead(Func<bool?> f)
@@ -950,6 +968,9 @@ public partial class SettingsWindow : FluentWindow
 
     private void PowerPlanCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        // Ignore the selection we set ourselves while loading — only a real user
+        // change should stage a pending edit.
+        if (_loadingPowerPlan) return;
         if (PowerPlanCombo.SelectedItem is not PowerPlanItem pi) return;
         var oldGuid = _draft.Global.PowerPlan.DesiredGuid;
         var oldName = _draft.Global.PowerPlan.DesiredName;
@@ -1428,7 +1449,69 @@ public partial class SettingsWindow : FluentWindow
             CcdDependencyCard.Visibility = Visibility.Collapsed;
         }
 
+        BuildPlanDetails(r);
         BuildBiosRows(r);
+    }
+
+    /// <summary>
+    /// Fills the collapsible "What this plan changes" section: the base Windows
+    /// plan it clones, the exact processor settings it overrides (its diff from
+    /// stock), and why that recipe fits the detected CPU. All text comes from the
+    /// pure <see cref="CpuPlanDetails"/> helper so it stays in step with the recipe.
+    /// </summary>
+    private void BuildPlanDetails(CpuTuneResult r)
+    {
+        if (PlanDetailsList is null) return;
+        PlanDetailsList.Children.Clear();
+
+        if (PlanDetailsHeader is not null)
+            PlanDetailsHeader.Text = $"What the optimized plan changes (vs Windows {r.BasePlanDisplayName})";
+
+        var secondary = (System.Windows.Media.Brush)FindResource("TextFillColorSecondaryBrush");
+
+        PlanDetailsList.Children.Add(new System.Windows.Controls.TextBlock
+        {
+            Text = CpuPlanDetails.BaseSummary(r),
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = secondary,
+        });
+
+        PlanDetailsList.Children.Add(new System.Windows.Controls.TextBlock
+        {
+            Text = "Changes from stock (applied to both plugged-in and on-battery):",
+            FontWeight = FontWeights.SemiBold,
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 10, 0, 0),
+        });
+        foreach (var change in CpuPlanDetails.Changes(r))
+        {
+            PlanDetailsList.Children.Add(new System.Windows.Controls.TextBlock
+            {
+                Text = "•  " + change,
+                FontSize = 12,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(8, 2, 0, 0),
+            });
+        }
+
+        PlanDetailsList.Children.Add(new System.Windows.Controls.TextBlock
+        {
+            Text = "Why this suits your CPU:",
+            FontWeight = FontWeights.SemiBold,
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 10, 0, 0),
+        });
+        PlanDetailsList.Children.Add(new System.Windows.Controls.TextBlock
+        {
+            Text = CpuPlanDetails.Rationale(r),
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 2, 0, 0),
+            Foreground = secondary,
+        });
     }
 
     private void BuildDependencyRows(CpuTuneResult r)
