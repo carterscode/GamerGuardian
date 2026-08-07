@@ -20,9 +20,10 @@ public partial class UpdateAvailableWindow : FluentWindow
 
         HeaderText.Text = $"GamerGuardian {info.Version} is available";
         SubText.Text = $"You're running {UpdateService.CurrentSemver()}.";
-        NotesText.Text = string.IsNullOrWhiteSpace(info.ReleaseNotes)
+        var notes = ReleaseNotesFormatter.ToPlainText(info.ReleaseNotes);
+        NotesText.Text = string.IsNullOrWhiteSpace(notes)
             ? "(no release notes)"
-            : info.ReleaseNotes;
+            : notes;
 
         Loaded += (_, _) =>
         {

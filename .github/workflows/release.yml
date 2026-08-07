@@ -123,10 +123,11 @@ jobs:
         shell: pwsh
         run: |
           # Pull the section for this version out of CHANGELOG.md so the GitHub
-          # release shows curated, user-facing notes. Falls back to the
-          # [Unreleased] section (newest work not yet version-stamped), then to a
-          # generic line. GitHub's auto-generated "What's Changed" PR list is
-          # still appended after this (generate_release_notes: true).
+          # release (and the in-app update prompt that displays this text) shows
+          # curated, plain-English notes. Falls back to the [Unreleased] section
+          # (newest work not yet version-stamped), then to a generic line. This is
+          # the ENTIRE release body — the raw "What's Changed" PR list is off (see
+          # generate_release_notes below).
           $version = '${{ steps.ver.outputs.version }}'
           $cl = Get-Content -Raw CHANGELOG.md
           function Get-Section($text, $header) {
@@ -203,10 +204,12 @@ jobs:
         with:
           tag_name: v${{ steps.ver.outputs.version }}
           name: GamerGuardian ${{ steps.ver.outputs.version }}
-          # Curated CHANGELOG section (+ any VirusTotal URLs) becomes the body;
-          # generate_release_notes appends GitHub's "What's Changed" PR list and
-          # the Full Changelog link after it.
-          generate_release_notes: true
+          # The curated CHANGELOG section (+ any VirusTotal URLs) is the ENTIRE
+          # body. generate_release_notes is intentionally off: its auto "What's
+          # Changed" list of raw "Merge pull request #NN" titles is exactly the
+          # noise that made the release notes — and the in-app update prompt that
+          # displays this body — look bad.
+          generate_release_notes: false
           body_path: release-notes.md
           target_commitish: ${{ github.sha }}
           files: |
