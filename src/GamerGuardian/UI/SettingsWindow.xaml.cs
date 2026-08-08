@@ -1027,6 +1027,22 @@ public partial class SettingsWindow : FluentWindow
 
     private async void CheckUpdatesNowButton_Click(object sender, RoutedEventArgs e)
     {
+        // Dev builds must never self-update. The startup check has always been
+        // gated on this (App.OnStartup), but this manual path was not: clicking
+        // "Check now" in a dev build would download the newest *stable* installer
+        // and launch it over the running dev build. Same guard, both paths.
+        if (App.IsDevBuild())
+        {
+            System.Windows.MessageBox.Show(
+                this,
+                $"This is a development build (v{UpdateService.CurrentSemver()}). "
+                + "Automatic updates are disabled so it can't replace itself with a release build.",
+                "GamerGuardian",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Information);
+            return;
+        }
+
         var btn = CheckUpdatesNowButton;
         var prev = btn.Content;
         btn.IsEnabled = false;
