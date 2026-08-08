@@ -1752,40 +1752,49 @@ public partial class SettingsWindow : FluentWindow
     {
         _cpuPower.CcdDependencyList.Children.Clear();
 
-        var svc = CpuPlanStatus.ReadAmdVCacheService();
+        var svcInfo = CpuPlanStatus.ReadAmdVCacheService();
+        var svc = svcInfo.State;
         var gameBar = CpuPlanStatus.ReadGameBarEnabled();
         var activeGuid = Powrprof.GetActiveScheme();
         bool planActive = _config.Global.CpuPlan.BuiltSchemeGuid is { } bg
                           && Guid.TryParse(bg, out var bgGuid) && bgGuid == activeGuid;
 
-        // Checkable: AMD 3D V-Cache Optimizer service.
+        // Checkable: AMD 3D V-Cache Optimizer service. Naming what was found makes
+        // the row diagnosable -- "not detected" with no evidence sent people off to
+        // reinstall drivers they already had.
+        var found = svcInfo.ServiceName is { } n ? $" [{n}]" : "";
         AddDependencyRow(svc switch
         {
-            CcdServiceState.Running => "✓  AMD 3D V-Cache Optimizer service: running",
-            CcdServiceState.Stopped => "⚠  AMD 3D V-Cache Optimizer service: stopped -- start it (AMD Adrenalin / Services)",
-            _ => "—  AMD 3D V-Cache Optimizer service: not detected (install AMD chipset drivers)",
+            CcdServiceState.Running => $"✓  AMD 3D V-Cache Optimizer service: running{found}",
+            // Auto-start and stopped is how this service idles; it starts when it has
+            // routing work. Saying so beats telling the user to fix a non-problem.
+            CcdServiceState.Idle => $"✓  AMD 3D V-Cache Optimizer service: installed, idle{found} -- normal; it starts when a game needs routing",
+            CcdServiceState.Disabled => $"⚠  AMD 3D V-Cache Optimizer service: disabled{found} -- set its start type back to Automatic",
+            _ => "—  AMD 3D V-Cache Optimizer service: not found. This ships with the AMD *chipset* driver, which is a separate download from Adrenalin (the GPU driver).",
         });
 
-        // Checkable: Xbox Game Bar.
+        // Checkable: Windows Game Mode. Named for what it actually reads -- the row
+        // used to say "Xbox Game Bar", which is a different thing.
         AddDependencyRow(gameBar switch
         {
-            true => "✓  Xbox Game Bar: enabled (game detection signal)",
-            false => "⚠  Xbox Game Bar: disabled -- re-enable so games are detected",
-            null => "—  Xbox Game Bar: unknown",
+            true => "✓  Windows Game Mode: on (the game-detection signal the optimizer rides on)",
+            false => "⚠  Windows Game Mode: off -- turn it on so games are detected",
+            null => "—  Windows Game Mode: unreadable",
         });
 
         // Advisory: BIOS CPPC -- cannot be read.
-        AddDependencyRow("Advisory  BIOS \"CPPC Dynamic Preferred Cores\" = Driver (the app cannot read BIOS state)");
+        AddDependencyRow($"Advisory  BIOS \"CPPC Dynamic Preferred Cores\" = {CpuTuneCatalog.PreferredCppcValue} (the app cannot read BIOS state)");
 
         var status = CpuPlanStatus.DependencyStatus(planActive, svc, gameBar);
         var summary = status switch
         {
             CcdDependencyStatus.Met =>
-                "Checkable dependencies look good. Still verify BIOS CPPC=Driver in your firmware -- the app can't read it, so it never claims full confirmation.",
+                $"Checkable dependencies look good. Still set BIOS CPPC={CpuTuneCatalog.PreferredCppcValue} in your firmware -- the app can't read it, so it never claims full confirmation.",
             CcdDependencyStatus.PartlyUnmet =>
                 "At least one dependency is unmet -- the optimized plan won't route games to the cache CCD until it's fixed.",
             _ =>
-                "Can't confirm the AMD routing stack (service not detected). Install AMD chipset drivers + the 3D V-Cache Optimizer.",
+                "The AMD 3D V-Cache Optimizer service isn't installed. It comes with the AMD chipset driver (separate from the Adrenalin GPU driver). Note that setting BIOS CPPC="
+                + $"{CpuTuneCatalog.PreferredCppcValue} routes games to the cache CCD without depending on this service at all.",
         };
         var summaryBlock = new System.Windows.Controls.TextBlock
         {
@@ -1841,6 +1850,19 @@ public partial class SettingsWindow : FluentWindow
                 Margin = new Thickness(0, 2, 0, 0),
                 Foreground = (System.Windows.Media.Brush)FindResource("TextFillColorSecondaryBrush"),
             });
+            // Settings with a real tradeoff show the other option rather than
+            // presenting one value as the only correct answer.
+            if (b.Alternative is { } alt)
+            {
+                block.Children.Add(new System.Windows.Controls.TextBlock
+                {
+                    Text = "Alternative: " + alt,
+                    FontSize = 12,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(0, 4, 0, 0),
+                    Foreground = (System.Windows.Media.Brush)FindResource("TextFillColorTertiaryBrush"),
+                });
+            }
             _bios.BiosGuidanceList.Children.Add(block);
             first = false;
         }

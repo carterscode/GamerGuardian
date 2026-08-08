@@ -170,7 +170,7 @@ powercfg /setactive SCHEME_BALANCED   # restore the Balanced plan
 
 | Choice | Pro | Con |
 |---|---|---|
-| Build the optimized plan (recommended) | A Balanced clone tuned to your CPU -- aggressive boost and the right core-parking -- without High Performance's heat/boost cost. | For asymmetric dual-CCD X3D it isn't enough alone; it relies on BIOS CPPC=Driver + the AMD V-Cache service the app can't set. |
+| Build the optimized plan (recommended) | A Balanced clone tuned to your CPU -- aggressive boost and the right core-parking -- without High Performance's heat/boost cost. | For asymmetric dual-CCD X3D it isn't enough alone; it relies on the BIOS "CPPC Dynamic Preferred Cores" setting the app cannot set -- Cache pins games to the V-Cache CCD, Driver routes dynamically via the AMD V-Cache service. |
 | Keep Balanced / a stock plan | Zero setup, and fine on most modern CPUs whose own boost is already good. | Misses the per-CPU parking/boost tuning (notably for X3D chips). |
 
 **Per-scenario recommendation:**
@@ -178,11 +178,11 @@ powercfg /setactive SCHEME_BALANCED   # restore the Balanced plan
 | Scenario | Setting |
 |---|---|
 | Single-CCD X3D (9850X3D / 9800X3D / 7800X3D) | Build optimized -- no parking, aggressive boost |
-| Asymmetric dual-CCD X3D (9950X3D / 7950X3D) | Build optimized -- parks frequency CCD; also verify BIOS CPPC=Driver + AMD V-Cache service + Game Bar |
+| Asymmetric dual-CCD X3D (9950X3D / 7950X3D) | Build optimized -- parks frequency CCD; also set BIOS CPPC=Cache (or Driver + the AMD V-Cache service + Game Mode) |
 | Non-X3D / Intel hybrid | Build optimized (no parking / leave Thread Director) or suggest Balanced |
 | Unknown CPU | Build optimized uses a labeled generic tune, or suggest the best prebuilt plan |
 
-**Risks.** Low. The plan is additive -- your existing Windows plans are never modified or deleted, and you can switch back at any time. For asymmetric dual-CCD X3D the power plan alone is not sufficient: it depends on the AMD CCD-routing stack (BIOS CPPC=Driver, the 3D V-Cache Optimizer service, and Xbox Game Bar), which the app surfaces but cannot set.
+**Risks.** Low. The plan is additive -- your existing Windows plans are never modified or deleted, and you can switch back at any time. For asymmetric dual-CCD X3D the power plan alone is not sufficient: which CCD a game lands on is decided by the BIOS "CPPC Dynamic Preferred Cores" setting. Cache pins games to the V-Cache CCD outright; Driver routes them dynamically and then also depends on the 3D V-Cache Optimizer service and Xbox Game Bar game-detection. The app surfaces this but cannot set it.
 
 **Command line (PowerShell):**
 

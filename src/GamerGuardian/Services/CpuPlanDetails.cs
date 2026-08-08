@@ -106,9 +106,11 @@ public static class CpuPlanDetails
             return "Your CPU has two core clusters (CCDs) but only one carries the extra 3D V-Cache "
                 + "that games benefit from. This plan parks the other, higher-frequency cluster during "
                 + "light loads so Windows keeps game threads on the cache cluster, while still unparking "
-                + "every core under heavy multi-threaded work. It depends on the AMD 3D V-Cache Optimizer "
-                + "service, Xbox Game Bar game-detection, and BIOS \"CPPC = Driver\" to route correctly "
-                + "(see the dependency checklist above).";
+                + "every core under heavy multi-threaded work. The power plan alone does not decide which "
+                + "cluster a game lands on: that comes from the BIOS setting \"CPPC Dynamic Preferred "
+                + $"Cores\". Setting it to {CpuTuneCatalog.PreferredCppcValue} pins games to the cache cluster outright; leaving it on "
+                + "Driver instead routes them dynamically and depends on the AMD 3D V-Cache Optimizer "
+                + "service plus Xbox Game Bar recognising the game (see the dependency checklist above).";
 
         if (r.IsGeneric)
             return "A conservative, safe tune: it only raises boost aggressiveness and makes no "
