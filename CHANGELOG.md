@@ -16,7 +16,7 @@ Versions before 1.0.0 are pre-release: features and defaults may still change.
 
 ## [Unreleased]
 
-## [0.1.65] - 2026-08-07
+## [0.1.67] - 2026-08-07
 
 The biggest visual change since the app was first released: the window has been
 rebuilt around a grouped sidebar, and it now has a home screen.
@@ -46,6 +46,24 @@ rebuilt around a grouped sidebar, and it now has a home screen.
 - **A GitHub-dark colour scheme.** The app is recoloured to match GitHub's dark
   theme: a deep navy-black canvas, cards that actually read as cards, and
   GitHub's green, amber and red for status. Light theme is unchanged.
+
+## [0.1.66] - 2026-08-07
+
+### Added
+- **The full history in the upgrade prompt.** When a new version is offered, the
+  "what's new" panel now scrolls through every version's notes rather than only
+  the newest one, so you can catch up on anything you skipped.
+
+## [0.1.65] - 2026-08-07
+
+### Added
+- **A settings comparison for custom power plans.** The plan details view now
+  shows a side-by-side chart of the stock Windows values against the ones
+  GamerGuardian sets, so you can see exactly what a custom plan changes.
+
+## [0.1.64] - 2026-08-07
+
+### Changed
 - **Clearer upgrade notes.** The "what's new" text shown when a new version is
   offered is now plain-English highlights only — no more raw list of internal
   pull-request titles — and Markdown formatting is cleaned up so it reads
