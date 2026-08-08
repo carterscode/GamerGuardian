@@ -13,8 +13,12 @@ namespace GamerGuardian.Services;
 /// </summary>
 public enum CcdServiceState
 {
-    /// <summary>No service matching the optimizer was found at all.</summary>
+    /// <summary>The service list was read and nothing matching was in it.</summary>
     NotInstalled,
+    /// <summary>The service list could not be read, so absence is not established.
+    /// Distinct from <see cref="NotInstalled"/> on purpose: the panel used to state
+    /// "isn't installed" as fact in both cases.</summary>
+    Unreadable,
     /// <summary>Present and currently running.</summary>
     Running,
     /// <summary>Present, start mode is Automatic or Manual, not running right now.
@@ -53,7 +57,7 @@ public static class CpuPlanStatus
     public static CcdDependencyStatus DependencyStatus(
         bool planActive, CcdServiceState service, bool? gameBarEnabled)
     {
-        if (service == CcdServiceState.NotInstalled)
+        if (service is CcdServiceState.NotInstalled or CcdServiceState.Unreadable)
             return CcdDependencyStatus.Unknown;
         // A Disabled start mode is the only service state the user must act on.
         // Idle is normal: the optimizer is demand-driven and sits stopped until a
@@ -83,23 +87,77 @@ public static class CpuPlanStatus
     {
         try
         {
-            foreach (var sc in System.ServiceProcess.ServiceController.GetServices())
+            using var services = Registry.LocalMachine.OpenSubKey(
+                @"SYSTEM\CurrentControlSet\Services", writable: false);
+            if (services is null) return new CcdServiceInfo(CcdServiceState.Unreadable, null, null);
+
+            // The registry is enumerated rather than ServiceController.GetServices(),
+            // which returns Win32 services only. AMD ships this as an INF driver
+            // package that registers BOTH a kernel driver ("amd3dvcache") and a
+            // user-mode helper ("amd3dvcacheSvc"), and on a machine where only the
+            // driver is registered GetServices() sees nothing and the panel claimed
+            // the whole routing stack was missing. This key holds every service type.
+            CcdServiceInfo? best = null;
+            foreach (var name in services.GetSubKeyNames())
             {
-                using (sc)
-                {
-                    if (!LooksLikeVCacheOptimizer(sc.ServiceName, sc.DisplayName)) continue;
+                if (!LooksLikeVCacheOptimizer(name, null)) continue;
 
-                    var state = sc.Status == System.ServiceProcess.ServiceControllerStatus.Running
-                        ? CcdServiceState.Running
-                        : IsDisabled(sc.ServiceName) ? CcdServiceState.Disabled : CcdServiceState.Idle;
+                using var k = services.OpenSubKey(name, writable: false);
+                if (k is null) continue;
 
-                    return new CcdServiceInfo(state, sc.ServiceName, sc.DisplayName);
-                }
+                var display = CleanDisplayName(k.GetValue("DisplayName") as string);
+                // Start: 4 == SERVICE_DISABLED.
+                bool disabled = k.GetValue("Start") is int start && start == 4;
+
+                var state = disabled
+                    ? CcdServiceState.Disabled
+                    : IsRunning(name) ? CcdServiceState.Running : CcdServiceState.Idle;
+
+                var info = new CcdServiceInfo(state, name, display);
+                // Prefer the most reassuring signal: something running beats
+                // something idle, and either beats a disabled entry.
+                if (best is null || Rank(state) > Rank(best.State)) best = info;
             }
-        }
-        catch { /* enumeration denied or unavailable -- fall through */ }
 
-        return new CcdServiceInfo(CcdServiceState.NotInstalled, null, null);
+            return best ?? new CcdServiceInfo(CcdServiceState.NotInstalled, null, null);
+        }
+        catch
+        {
+            // Read failed -- say so rather than reporting absence we did not observe.
+            return new CcdServiceInfo(CcdServiceState.Unreadable, null, null);
+        }
+
+        static int Rank(CcdServiceState s) => s switch
+        {
+            CcdServiceState.Running => 3,
+            CcdServiceState.Idle => 2,
+            CcdServiceState.Disabled => 1,
+            _ => 0,
+        };
+    }
+
+    /// <summary>
+    /// Registry DisplayName values on INF-installed services are indirect strings
+    /// like <c>@oem46.inf,%amd3dvcacheSvc.DisplayName%;AMD 3D V-Cache Performance
+    /// Optimizer Service</c>. The readable fallback is the part after the last
+    /// semicolon. Pure, so it is unit-tested.
+    /// </summary>
+    public static string? CleanDisplayName(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        if (!raw.StartsWith('@')) return raw;
+        int semi = raw.LastIndexOf(';');
+        return semi >= 0 && semi < raw.Length - 1 ? raw[(semi + 1)..].Trim() : null;
+    }
+
+    private static bool IsRunning(string serviceName)
+    {
+        try
+        {
+            using var sc = new System.ServiceProcess.ServiceController(serviceName);
+            return sc.Status == System.ServiceProcess.ServiceControllerStatus.Running;
+        }
+        catch { return false; }
     }
 
     /// <summary>Matches the optimizer by service name or display name. Pure, so the
@@ -116,21 +174,6 @@ public static class CpuPlanStatus
         static bool Contains(string? haystack, string needle) =>
             haystack is not null &&
             haystack.Contains(needle, StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <summary>Start mode from the registry. ServiceController exposes StartType
-    /// only on .NET Core 3.0+ for some platforms, and reading the key is the same
-    /// registry-first approach the rest of the app uses.</summary>
-    private static bool IsDisabled(string serviceName)
-    {
-        try
-        {
-            using var k = Registry.LocalMachine.OpenSubKey(
-                $@"SYSTEM\CurrentControlSet\Services\{serviceName}", writable: false);
-            // 4 == SERVICE_DISABLED
-            return k?.GetValue("Start") is int start && start == 4;
-        }
-        catch { return false; }
     }
 
     /// <summary>
