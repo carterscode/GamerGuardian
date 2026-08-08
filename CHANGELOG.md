@@ -16,6 +16,25 @@ Versions before 1.0.0 are pre-release: features and defaults may still change.
 
 ## [Unreleased]
 
+## [0.1.69] - 2026-08-08
+
+### Fixed
+- **The AMD 3D V-Cache Optimizer is now detected properly.** 0.1.68 still reported
+  it as missing on machines that had it. AMD installs it as two separate pieces — a
+  kernel driver and a helper service — and the app was only ever looking at the
+  second one, so a PC carrying the first looked like it had nothing installed. It
+  now finds either, and tells you which one it found.
+- **The panel no longer claims the optimizer "isn't installed" when it simply
+  couldn't check.** Being unable to read and having read and found nothing are now
+  reported as different things.
+- **Clearer advice when the optimizer really is absent.** The panel names the
+  download it comes in ("AMD Chipset Software", listed inside it as "AMD 3D V-Cache
+  Performance Optimizer Driver") instead of saying "chipset driver", and makes the
+  important point up front: on the recommended CPPC = Cache setting the optimizer
+  is not needed at all, so its absence is not a problem to fix. It only matters if
+  you choose CPPC = Driver instead.
+- **Stray asterisks no longer appear in the dependency text.**
+
 ## [0.1.68] - 2026-08-08
 
 ### Added
