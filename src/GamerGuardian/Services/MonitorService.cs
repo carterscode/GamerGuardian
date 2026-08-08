@@ -533,13 +533,14 @@ public sealed class MonitorService : IDisposable
     /// whatever the last poll published — reporting 0 for up to ten minutes after
     /// Verify had just said otherwise.</para>
     /// </summary>
-    /// <param name="monitoredDrift">Drifted items that are monitored. Unmonitored
-    /// settings must not be passed: the published set is what the Status count
-    /// reports, and that count is defined as monitored settings only.</param>
-    public void PublishManualScan(IEnumerable<DriftItem> monitoredDrift)
+    /// <param name="drifted">Everything Verify found. Unmonitored items are filtered
+    /// out here rather than at the call site: the published set is what the Status
+    /// count reports, and that count is defined as monitored settings only, so the
+    /// filter belongs with the guarantee.</param>
+    public void PublishManualScan(IEnumerable<DriftItem> drifted)
     {
-        var drifted = monitoredDrift.Where(d => d.IsMonitored).ToList();
-        Publish(previous => MergeDrift(previous, tier: null, drifted, EmptyApplied));
+        var monitored = drifted.Where(d => d.IsMonitored).ToList();
+        Publish(previous => MergeDrift(previous, tier: null, monitored, EmptyApplied));
     }
 
     private static readonly IReadOnlySet<string> EmptyApplied =
