@@ -16,6 +16,47 @@ Versions before 1.0.0 are pre-release: features and defaults may still change.
 
 ## [Unreleased]
 
+## [0.1.68] - 2026-08-08
+
+### Added
+- **"Verify all" now shows you what drifted, and can fix it.** It used to report a
+  bare count in a pop-up — one setting had drifted, but not which one, and nothing
+  to click. You now get a list: each setting, what it is now, what you asked for,
+  where to find it, and whether it is being monitored. One button puts them all
+  back, applying and re-reading each value to confirm it took.
+
+### Fixed
+- **Verify and the Status page no longer contradict each other.** Verify could
+  report drift while the Status count still showed 0. Two reasons: Verify never
+  told the rest of the app what it found, and it counted settings you had switched
+  monitoring off for, which the Status page deliberately does not count. Verify now
+  publishes what it finds, and says in plain words when the difference is down to
+  unmonitored settings.
+- **Fixing a setting by hand now updates the drifted count straight away.** It used
+  to keep counting the setting you had just corrected until the next background
+  scan came round — as much as ten minutes later.
+- **The dual-CCD dependency panel no longer tells you to install drivers you already
+  have.** It looked for the AMD 3D V-Cache Optimizer service under a short list of
+  guessed names, two of which do not exist on any real install. It now finds the
+  service whatever it is called and tells you the name it found.
+- **A stopped AMD V-Cache Optimizer service is no longer reported as a problem.**
+  The service is meant to sit idle until a game needs it; the panel was telling
+  people to go and start it for no reason.
+- **"Xbox Game Bar: unknown" is fixed.** The check only looked at one of the two
+  registry values Windows uses, so a machine that had never had that value written
+  came back as unknown. It now reads both and falls back to the Windows default.
+  The row is also labelled correctly — it reads Game Mode, which is not the same
+  thing as Game Bar.
+
+### Changed
+- **BIOS advice for 9950X3D / 7950X3D / 9900X3D / 7900X3D now recommends "CPPC
+  Dynamic Preferred Cores = Cache".** Cache keeps games on the cluster carrying the
+  3D V-Cache without relying on Xbox Game Bar recognising the game, which it often
+  does not for launchers other than Steam, emulators and older titles. AMD's own
+  "Driver" setting is still shown as the alternative, with the reason to pick each:
+  Driver suits a machine that also does heavy multi-threaded work, Cache suits a
+  gaming PC. Option names vary between motherboard vendors.
+
 ## [0.1.67] - 2026-08-07
 
 The biggest visual change since the app was first released: the window has been
