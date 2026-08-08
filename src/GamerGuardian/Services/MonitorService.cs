@@ -93,10 +93,19 @@ public sealed class MonitorService : IDisposable
 
     /// <summary>Published snapshot, and also the accumulator across ticks (each
     /// publish replaces it with a freshly built dictionary, so it is never mutated
-    /// in place). Single-writer: only <see cref="TickAsync"/> publishes, and the
-    /// <see cref="_running"/> guard means ticks never overlap. Volatile so a reader
-    /// on another thread sees the newest one.</summary>
+    /// in place). Volatile so a reader on another thread sees the newest one.
+    ///
+    /// <para>Three writers, not one: the poll tick, a manual Verify
+    /// (<see cref="PublishManualScan"/>), and a verified apply
+    /// (<see cref="RecordVerifiedApplies"/>). The latter two run on the UI thread
+    /// and can land mid-tick, so every publish takes <see cref="_publishLock"/> —
+    /// the <see cref="_running"/> guard only serialises ticks against each
+    /// other.</para></summary>
     private volatile IReadOnlyDictionary<string, DriftItem> _publishedDrift = EmptyDrift;
+
+    /// <summary>Serialises the read-modify-write in <see cref="Publish"/>. Distinct
+    /// from <see cref="_lock"/>, which guards the tick re-entrancy flag.</summary>
+    private readonly object _publishLock = new();
 
     public void SetPaused(bool paused)
     {
@@ -205,15 +214,43 @@ public sealed class MonitorService : IDisposable
     /// Without this, the very first background tick after a manual Apply would
     /// misread "no prior verified value" and skip the EXTRESET detection until
     /// the second tick after the eventual revert.
+    ///
+    /// <para>Also drops the verified ids from the published drift snapshot. A
+    /// setting the user just fixed is not drifting any more, and leaving it in the
+    /// snapshot meant the Status count kept reporting it until that setting's tier
+    /// was next scanned — up to ten minutes for a stable setting. The auto-apply
+    /// path already did this via <c>appliedAndVerified</c>; the manual path did
+    /// not.</para>
     /// </summary>
     public void RecordVerifiedApplies(IEnumerable<ApplyResult> results)
     {
         var now = DateTimeOffset.UtcNow;
+        var verified = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var r in results)
         {
             if (!r.Verified) continue;
             _lastVerified[r.SettingId] = new LastVerified(r.RawAfter, r.After, now);
+            verified.Add(r.SettingId);
         }
+
+        if (verified.Count > 0) Publish(previous => WithoutResolved(previous, verified));
+    }
+
+    /// <summary>
+    /// The snapshot minus the settings just fixed. Pure so it can be unit-tested
+    /// without timers or the registry, like <see cref="MergeDrift"/>.
+    ///
+    /// <para>Deliberately not expressed as a <see cref="MergeDrift"/> call: that
+    /// takes a tier and would either replace the whole snapshot (<c>tier: null</c>)
+    /// or only the matching tier. This removes ids and keeps everything else,
+    /// whatever tier it belongs to.</para>
+    /// </summary>
+    public static Dictionary<string, DriftItem> WithoutResolved(
+        IReadOnlyDictionary<string, DriftItem> previous, IReadOnlySet<string> resolvedIds)
+    {
+        var merged = new Dictionary<string, DriftItem>(previous, StringComparer.OrdinalIgnoreCase);
+        foreach (var id in resolvedIds) merged.Remove(id);
+        return merged;
     }
 
     /// <summary>
@@ -449,19 +486,64 @@ public sealed class MonitorService : IDisposable
     ///
     /// <para>Pure bookkeeping: it observes the scan, it never influences it.</para>
     /// </summary>
-    private void PublishDrift(MonitorTier? tier, List<DriftItem> drifted, HashSet<string> appliedAndVerified)
+    private void PublishDrift(MonitorTier? tier, List<DriftItem> drifted, HashSet<string> appliedAndVerified) =>
+        Publish(previous => MergeDrift(previous, tier, drifted, appliedAndVerified));
+
+    /// <summary>
+    /// Swaps in a new snapshot and raises <see cref="DriftChanged"/> when the set of
+    /// drifted ids actually changed.
+    ///
+    /// <para>The read-modify-write is locked because a manual Verify or a verified
+    /// apply can publish from the UI thread while a poll tick is publishing from the
+    /// timer thread; without it one of the two updates is silently lost. The event is
+    /// raised <b>outside</b> the lock — a handler that marshals to the dispatcher and
+    /// blocks would otherwise deadlock the next publisher.</para>
+    /// </summary>
+    private void Publish(Func<IReadOnlyDictionary<string, DriftItem>, Dictionary<string, DriftItem>> mutate)
     {
-        var previous = _publishedDrift;
-        var snapshot = MergeDrift(previous, tier, drifted, appliedAndVerified);
+        IReadOnlyDictionary<string, DriftItem> snapshot;
+        bool changed;
+        lock (_publishLock)
+        {
+            var previous = _publishedDrift;
+            snapshot = mutate(previous);
 
-        // A count surface only cares about which ids are drifting, so an unchanged
-        // id set raises nothing and the UI doesn't re-render on every quiet poll.
-        bool changed = snapshot.Count != previous.Count
-                       || !snapshot.Keys.All(previous.ContainsKey);
+            // A count surface only cares about which ids are drifting, so an
+            // unchanged id set raises nothing and the UI doesn't re-render on every
+            // quiet poll.
+            changed = snapshot.Count != previous.Count
+                      || !snapshot.Keys.All(previous.ContainsKey);
 
-        _publishedDrift = snapshot;
+            _publishedDrift = snapshot;
+        }
         if (changed) DriftChanged?.Invoke(snapshot);
     }
+
+    /// <summary>
+    /// Publishes the findings of a manual, full re-read of every monitor — the
+    /// "Verify all" button.
+    ///
+    /// <para>Verify checks every setting, so this is a full scan and replaces the
+    /// snapshot wholesale, exactly as a <c>tier: null</c> tick does. Nothing is
+    /// applied and no notification is raised: Verify's contract is that it reports
+    /// and never changes anything.</para>
+    ///
+    /// <para>Without this the two surfaces disagreed. Verify ran its own drift check
+    /// and told the user a setting had drifted, while the Status count kept showing
+    /// whatever the last poll published — reporting 0 for up to ten minutes after
+    /// Verify had just said otherwise.</para>
+    /// </summary>
+    /// <param name="monitoredDrift">Drifted items that are monitored. Unmonitored
+    /// settings must not be passed: the published set is what the Status count
+    /// reports, and that count is defined as monitored settings only.</param>
+    public void PublishManualScan(IEnumerable<DriftItem> monitoredDrift)
+    {
+        var drifted = monitoredDrift.Where(d => d.IsMonitored).ToList();
+        Publish(previous => MergeDrift(previous, tier: null, drifted, EmptyApplied));
+    }
+
+    private static readonly IReadOnlySet<string> EmptyApplied =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// The merge rule, pure so it can be unit-tested without timers or the registry

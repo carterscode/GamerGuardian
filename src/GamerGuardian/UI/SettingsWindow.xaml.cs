@@ -1935,16 +1935,24 @@ public partial class SettingsWindow : FluentWindow
     }
 
     /// <summary>
-    /// Re-reads every monitored setting against the committed config and
-    /// writes a [SNAPSHOT] entry to changes.log. Nothing is applied. A status
-    /// popup tells the user where to look.
+    /// Re-reads every setting against the committed config and writes a [SNAPSHOT]
+    /// entry to changes.log. Nothing is applied here.
+    ///
+    /// <para>Verify is a full re-read of every monitor, so its monitored findings are
+    /// published to the <see cref="MonitorService"/> as a full scan. Without that the
+    /// two surfaces contradicted each other: Verify would report a drifted setting
+    /// while the Status count kept showing the last poll's number — 0, for up to ten
+    /// minutes.</para>
+    ///
+    /// <para>When something has drifted the user gets a list and a way to fix it,
+    /// rather than a count in a MessageBox with nowhere to go.</para>
     /// </summary>
     private void VerifyAllButton_Click(object sender, RoutedEventArgs e)
     {
         try
         {
             var rows = new List<(string, string, string, string, bool)>();
-            int drifting = 0;
+            var drifted = new List<DriftItem>();
             foreach (var m in _monitors)
             {
                 IEnumerable<DriftItem> items;
@@ -1953,22 +1961,51 @@ public partial class SettingsWindow : FluentWindow
                 foreach (var d in items)
                 {
                     rows.Add((d.SettingId, d.DisplayLabel, d.CurrentValue, d.DesiredValue, false));
-                    drifting++;
+                    drifted.Add(d);
                 }
             }
             ChangeLogger.LogStateSnapshot(rows);
-            var msg = drifting == 0
-                ? "All monitored settings match your preferences. Snapshot written to changes.log."
-                : $"{drifting} setting(s) currently drifting from your preferences. Snapshot written to changes.log -- nothing was applied.";
-            System.Windows.MessageBox.Show(this, msg, "GamerGuardian -- Verify all",
-                System.Windows.MessageBoxButton.OK,
-                drifting == 0 ? System.Windows.MessageBoxImage.Information : System.Windows.MessageBoxImage.Warning);
+
+            // Only monitored drift is published: the Status count is defined as
+            // monitored settings, and Verify checks everything.
+            _monitorService?.PublishManualScan(drifted);
+
+            if (drifted.Count == 0)
+            {
+                System.Windows.MessageBox.Show(this,
+                    "Everything matches your preferences. Snapshot written to changes.log.",
+                    "GamerGuardian -- Verify all",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                return;
+            }
+
+            var win = new VerifyResultsWindow(drifted, _monitors, _config, _monitorService) { Owner = this };
+            win.Fixed += OnVerifyFixApplied;
+            win.ShowDialog();
         }
         catch (Exception ex)
         {
             System.Windows.MessageBox.Show(this, "Verify all failed: " + ex.Message, "GamerGuardian",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
         }
+    }
+
+    /// <summary>Reload the form after a Verify fix — the values on screen were read
+    /// before the apply and are now stale.</summary>
+    private void OnVerifyFixApplied()
+    {
+        try
+        {
+            RebaseDraftFromConfig();
+            LoadGlobals();
+            LoadDisplays();
+            LoadServices();
+            LoadWindowsAi();
+            LoadCpuTabs();
+            UpdatePendingStatus();
+            Saved?.Invoke();
+        }
+        catch { /* a refresh failure must not break the fix that already succeeded */ }
     }
 
     private void CancelButton_Click(object sender, RoutedEventArgs e)
