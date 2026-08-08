@@ -71,10 +71,32 @@ public static class CpuTuneCatalog
 
     // ---- BIOS guidance (advisory only) ----
 
+    /// <summary>
+    /// What to set "CPPC Dynamic Preferred Cores" to on an asymmetric dual-CCD X3D.
+    /// Referenced by the dependency panel so the advice reads the same everywhere.
+    /// </summary>
+    public const string PreferredCppcValue = "Cache";
+
     private static IReadOnlyList<BiosRecommendation> BiosAmdDualCcd() => new[]
     {
-        new BiosRecommendation("CPPC Dynamic Preferred Cores", "Driver",
-            "Lets the AMD 3D V-Cache Optimizer route game threads to the cache CCD; 'Auto' makes the kernel ignore the optimizer."),
+        // Cache rather than Driver, for a gaming-first machine.
+        //
+        // Driver is AMD's official configuration: it hands preferred-core ranking to
+        // the chipset driver's 3D V-Cache Optimizer, which switches CCDs depending on
+        // whether Xbox Game Bar recognises the foreground app as a game. That
+        // detection is the weak link -- it misses non-Steam launchers, emulators and
+        // plenty of older or indie titles, and when it misses, the game runs on the
+        // frequency CCD and loses most of the V-Cache benefit.
+        //
+        // Cache pins preferred cores to the V-Cache CCD outright, so routing does not
+        // depend on detection working. The cost is that heavily multi-threaded
+        // non-gaming work no longer gets first claim on the faster CCD.
+        new BiosRecommendation("CPPC Dynamic Preferred Cores", PreferredCppcValue,
+            "Pins preferred cores to the CCD carrying the 3D V-Cache, so games land there without depending on Xbox Game Bar recognising them. "
+            + "Option names vary by board vendor and AGESA version; some boards label the choices Auto / Driver / Frequency / Cache.",
+            Alternative: "Driver -- AMD's official setting. It switches CCDs dynamically via the 3D V-Cache Optimizer service, "
+            + "so productivity work can still use the faster CCD, but game routing then depends on Xbox Game Bar detecting the title. "
+            + "Prefer it if you run heavy multi-threaded work on the same machine; prefer Cache if this is mainly a gaming PC."),
         new BiosRecommendation("EXPO / Memory profile", "Enabled", "Runs RAM at its rated speed/timings."),
         new BiosRecommendation("Global C-States", "Auto / Enabled", "Required for proper boost behavior; do not disable."),
         new BiosRecommendation("Resizable BAR (Smart Access Memory)", "Enabled", "Improves GPU memory access in many games."),

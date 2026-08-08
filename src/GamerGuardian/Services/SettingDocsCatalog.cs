@@ -416,11 +416,11 @@ public static class SettingDocsCatalog
             HowItHelps: "Aggressive boost lets the CPU reach and hold its gaming clocks; correct parking keeps game threads on the right cores; faster ramp thresholds reduce clock-up latency. All without the heat/boost-headroom cost of High Performance.",
             Scenarios: Scenarios(
                 ("Single-CCD X3D (9850X3D / 9800X3D / 7800X3D)", "Build optimized -- no parking, aggressive boost"),
-                ("Asymmetric dual-CCD X3D (9950X3D / 7950X3D)", "Build optimized -- parks frequency CCD; also verify BIOS CPPC=Driver + AMD V-Cache service + Game Bar"),
+                ("Asymmetric dual-CCD X3D (9950X3D / 7950X3D)", "Build optimized -- parks frequency CCD; also set BIOS CPPC=Cache (or Driver + the AMD V-Cache service + Game Mode)"),
                 ("Non-X3D / Intel hybrid", "Build optimized (no parking / leave Thread Director) or suggest Balanced"),
                 ("Unknown CPU", "Build optimized uses a labeled generic tune, or suggest the best prebuilt plan")),
             Recommended: "Build optimized for your CPU (or suggest Balanced)",
-            Risks: "Low. The plan is additive -- your existing Windows plans are never modified or deleted, and you can switch back at any time. For asymmetric dual-CCD X3D the power plan alone is not sufficient: it depends on the AMD CCD-routing stack (BIOS CPPC=Driver, the 3D V-Cache Optimizer service, and Xbox Game Bar), which the app surfaces but cannot set.",
+            Risks: "Low. The plan is additive -- your existing Windows plans are never modified or deleted, and you can switch back at any time. For asymmetric dual-CCD X3D the power plan alone is not sufficient: which CCD a game lands on is decided by the BIOS \"CPPC Dynamic Preferred Cores\" setting. Cache pins games to the V-Cache CCD outright; Driver routes them dynamically and then also depends on the 3D V-Cache Optimizer service and Xbox Game Bar game-detection. The app surfaces this but cannot set it.",
             ReversibleVia: "Switch the active plan back via Settings > System > Power, or 'powercfg /setactive SCHEME_BALANCED'. The GamerGuardian plan can be deleted from the legacy Power control panel if you no longer want it."),
 
         // ---- System toggles -----------------------------------------------
@@ -1235,7 +1235,7 @@ public static class SettingDocsCatalog
             ("Balanced (default)", "Lets modern CPUs' boost algorithms run (often better than a pegged plan) and saves power when idle.", "A few ms of clock-ramp latency at the start of bursts on older CPUs.")),
 
         ["cpuplan"] = Pc(
-            ("Build the optimized plan (recommended)", "A Balanced clone tuned to your CPU -- aggressive boost and the right core-parking -- without High Performance's heat/boost cost.", "For asymmetric dual-CCD X3D it isn't enough alone; it relies on BIOS CPPC=Driver + the AMD V-Cache service the app can't set."),
+            ("Build the optimized plan (recommended)", "A Balanced clone tuned to your CPU -- aggressive boost and the right core-parking -- without High Performance's heat/boost cost.", "For asymmetric dual-CCD X3D it isn't enough alone; it relies on the BIOS \"CPPC Dynamic Preferred Cores\" setting the app cannot set -- Cache pins games to the V-Cache CCD, Driver routes dynamically via the AMD V-Cache service."),
             ("Keep Balanced / a stock plan", "Zero setup, and fine on most modern CPUs whose own boost is already good.", "Misses the per-CPU parking/boost tuning (notably for X3D chips).")),
 
         ["powerthrottling"] = Pc(

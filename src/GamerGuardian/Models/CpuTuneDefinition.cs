@@ -20,7 +20,11 @@ public enum ParkingStrategy { Default, NoParking, ParkFrequencyCcd }
 public sealed record PowerOverride(Guid Subgroup, Guid Setting, uint Value, string Label);
 
 /// <summary>An advisory BIOS recommendation (never read or applied by the app).</summary>
-public sealed record BiosRecommendation(string Name, string RecommendedValue, string Rationale);
+/// <param name="Alternative">A second defensible value and when to prefer it, for
+/// settings where there is a real tradeoff rather than one right answer. Null when
+/// the setting has a single sensible value.</param>
+public sealed record BiosRecommendation(
+    string Name, string RecommendedValue, string Rationale, string? Alternative = null);
 
 /// <summary>
 /// One catalog entry: how to recognize a CPU class and the gaming-optimized
