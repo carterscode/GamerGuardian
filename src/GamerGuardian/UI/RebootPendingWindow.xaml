@@ -16,7 +16,8 @@
          FluentWindow.Background at load to let the backdrop show through, so a
          value set in XAML is discarded. Painting the root panel is what actually
          puts the palette behind the title bar, the navigation pane and the footer. -->
-    <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
+    <Grid Background="{DynamicResource ApplicationBackgroundBrush}"
+          TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>

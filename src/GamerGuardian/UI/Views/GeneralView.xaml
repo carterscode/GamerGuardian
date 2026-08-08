@@ -1,4 +1,7 @@
-﻿<UserControl x:Class="GamerGuardian.UI.Views.GeneralView"              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"              d:DesignHeight="600" d:DesignWidth="760"              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"              mc:Ignorable="d">
+﻿<!-- Foreground is set on the root because a bare TextBlock defaults to Black:
+     nothing above a view supplies one, so any text that is not inside a control
+     that sets its own renders black on the dark canvas. Descendants inherit this. -->
+<UserControl x:Class="GamerGuardian.UI.Views.GeneralView"              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"              d:DesignHeight="600" d:DesignWidth="760"              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"              mc:Ignorable="d" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,8,8,0">
                         <StackPanel>
                             <ui:Card Padding="16" Margin="0,0,0,12">
