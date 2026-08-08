@@ -111,7 +111,7 @@ public class CpuPlanStatusTests
         // not.
         var info = CpuPlanStatus.ReadAmdVCacheService();
 
-        if (info.State == CcdServiceState.NotInstalled)
+        if (info.State is CcdServiceState.NotInstalled or CcdServiceState.Unreadable)
         {
             Assert.Null(info.ServiceName);
         }
@@ -120,6 +120,63 @@ public class CpuPlanStatusTests
             Assert.False(string.IsNullOrWhiteSpace(info.ServiceName));
             Assert.True(CpuPlanStatus.LooksLikeVCacheOptimizer(info.ServiceName, info.DisplayName));
         }
+    }
+
+    [Fact]
+    public void ServiceUnreadable_IsUnknownNotAbsent()
+    {
+        // The panel used to state "isn't installed" as fact when the read had simply
+        // failed. Unreadable and NotInstalled both mean "can't confirm the stack",
+        // but only one of them justifies telling the user to install something.
+        Assert.Equal(CcdDependencyStatus.Unknown,
+            CpuPlanStatus.DependencyStatus(planActive: true, CcdServiceState.Unreadable, gameBarEnabled: true));
+    }
+
+    [Fact]
+    public void Matcher_FindsTheKernelDriverAsWellAsTheWin32Service()
+    {
+        // AMD's INF package registers BOTH: a kernel driver "amd3dvcache" and a
+        // user-mode helper "amd3dvcacheSvc". ServiceController.GetServices() returns
+        // Win32 services only, so a machine carrying just the driver looked like it
+        // had no routing stack at all. Both must match.
+        Assert.True(CpuPlanStatus.LooksLikeVCacheOptimizer("amd3dvcache", null));
+        Assert.True(CpuPlanStatus.LooksLikeVCacheOptimizer("amd3dvcacheSvc", null));
+    }
+
+    // ---- Display names -----------------------------------------------------
+
+    [Fact]
+    public void CleanDisplayName_ResolvesTheIndirectStringInfInstalledServicesUse()
+    {
+        // Verified against the real key: INF-installed services store DisplayName as
+        // an indirect string whose readable fallback follows the last semicolon.
+        Assert.Equal("AMD 3D V-Cache Performance Optimizer Service",
+            CpuPlanStatus.CleanDisplayName(
+                "@oem46.inf,%amd3dvcacheSvc.DisplayName%;AMD 3D V-Cache Performance Optimizer Service"));
+    }
+
+    [Fact]
+    public void CleanDisplayName_LeavesAPlainNameAlone()
+    {
+        Assert.Equal("AMD 3D V-Cache Performance Optimizer Service",
+            CpuPlanStatus.CleanDisplayName("AMD 3D V-Cache Performance Optimizer Service"));
+    }
+
+    [Fact]
+    public void CleanDisplayName_ReturnsNullRatherThanAnUnresolvedIndirectString()
+    {
+        // Showing "@oem46.inf,%amd3dvcacheSvc.DisplayName%" in the panel would be
+        // worse than showing nothing.
+        Assert.Null(CpuPlanStatus.CleanDisplayName("@oem46.inf,%amd3dvcacheSvc.DisplayName%"));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void CleanDisplayName_HandlesMissingValues(string? raw)
+    {
+        Assert.Null(CpuPlanStatus.CleanDisplayName(raw));
     }
 
     [Fact]

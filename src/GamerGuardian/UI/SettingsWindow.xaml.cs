@@ -1765,12 +1765,16 @@ public partial class SettingsWindow : FluentWindow
         var found = svcInfo.ServiceName is { } n ? $" [{n}]" : "";
         AddDependencyRow(svc switch
         {
-            CcdServiceState.Running => $"✓  AMD 3D V-Cache Optimizer service: running{found}",
+            CcdServiceState.Running => $"✓  AMD 3D V-Cache Optimizer: running{found}",
             // Auto-start and stopped is how this service idles; it starts when it has
             // routing work. Saying so beats telling the user to fix a non-problem.
-            CcdServiceState.Idle => $"✓  AMD 3D V-Cache Optimizer service: installed, idle{found} -- normal; it starts when a game needs routing",
-            CcdServiceState.Disabled => $"⚠  AMD 3D V-Cache Optimizer service: disabled{found} -- set its start type back to Automatic",
-            _ => "—  AMD 3D V-Cache Optimizer service: not found. This ships with the AMD *chipset* driver, which is a separate download from Adrenalin (the GPU driver).",
+            CcdServiceState.Idle => $"✓  AMD 3D V-Cache Optimizer: installed, idle{found} -- normal; it starts when a game needs routing",
+            CcdServiceState.Disabled => $"⚠  AMD 3D V-Cache Optimizer: disabled{found} -- set its start type back to Automatic",
+            CcdServiceState.Unreadable => "—  AMD 3D V-Cache Optimizer: could not read the service list, so its state is unknown",
+            // Only needed on the Driver path. Naming the package matters: it is the
+            // "AMD Chipset Software" download, not Adrenalin, and inside it the
+            // component is listed as "AMD 3D V-Cache Performance Optimizer Driver".
+            _ => $"—  AMD 3D V-Cache Optimizer: not installed. Only needed if you set CPPC to Driver; it comes with the \"AMD Chipset Software\" package (not the Adrenalin GPU driver). Not required on the recommended CPPC={CpuTuneCatalog.PreferredCppcValue} path.",
         });
 
         // Checkable: Windows Game Mode. Named for what it actually reads -- the row
@@ -1792,9 +1796,11 @@ public partial class SettingsWindow : FluentWindow
                 $"Checkable dependencies look good. Still set BIOS CPPC={CpuTuneCatalog.PreferredCppcValue} in your firmware -- the app can't read it, so it never claims full confirmation.",
             CcdDependencyStatus.PartlyUnmet =>
                 "At least one dependency is unmet -- the optimized plan won't route games to the cache CCD until it's fixed.",
+            _ when svc == CcdServiceState.Unreadable =>
+                $"Couldn't read the service list, so the AMD optimizer's state is unknown. Setting BIOS CPPC={CpuTuneCatalog.PreferredCppcValue} routes games to the cache CCD regardless of it.",
             _ =>
-                "The AMD 3D V-Cache Optimizer service isn't installed. It comes with the AMD chipset driver (separate from the Adrenalin GPU driver). Note that setting BIOS CPPC="
-                + $"{CpuTuneCatalog.PreferredCppcValue} routes games to the cache CCD without depending on this service at all.",
+                $"Set BIOS CPPC={CpuTuneCatalog.PreferredCppcValue} and you're done -- that pins games to the cache CCD on its own, with no dependency on the AMD optimizer or on Xbox Game Bar detecting the game. "
+                + "The optimizer is only required if you choose CPPC=Driver instead, and it ships in the \"AMD Chipset Software\" package rather than with Adrenalin.",
         };
         var summaryBlock = new System.Windows.Controls.TextBlock
         {
