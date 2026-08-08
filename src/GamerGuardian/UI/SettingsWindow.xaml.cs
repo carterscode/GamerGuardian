@@ -28,6 +28,22 @@ public partial class SettingsWindow : FluentWindow
     private readonly IReadOnlyList<IMonitoredSetting> _monitors;
     private readonly MonitorService? _monitorService;
     private readonly Action _exitApp;
+
+    // One instance per navigation destination, created once and kept alive. Held
+    // rather than rebuilt on navigation so scroll position, expander state and
+    // selection survive moving between sections -- and so the Load*() methods below
+    // keep a stable target to write into, exactly as they did with the TabControl.
+    private readonly Views.StatusView _status = new();
+    private readonly Views.GeneralView _general = new();
+    private readonly Views.GamingView _gaming = new();
+    private readonly Views.DisplayView _display = new();
+    private readonly Views.CpuPowerView _cpuPower = new();
+    private readonly Views.TelemetryView _telemetry = new();
+    private readonly Views.WindowsAiView _windowsAi = new();
+    private readonly Views.NetworkView _network = new();
+    private readonly Views.DebloatView _debloat = new();
+    private readonly Views.ServicesView _services = new();
+    private readonly Views.BiosView _bios = new();
     public ObservableCollection<DisplayRow> DisplayRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> GlobalToggleRows { get; } = new();
     public ObservableCollection<GlobalToggleRow> PrivacyToggleRows { get; } = new();
@@ -71,28 +87,34 @@ public partial class SettingsWindow : FluentWindow
         _config = store.Load();
         _draft = AppConfigCloner.Clone(_config);
 
-        LaunchAtStartupCheck.IsChecked = _draft.LaunchAtStartup;
-        ConsolidateCheck.IsChecked = _draft.ConsolidateNotifications;
-        CheckForUpdatesCheck.IsChecked = _draft.CheckForUpdatesOnStartup;
-        PollSecondsBox.Value = _draft.PollIntervalSeconds;
+        // Views forward their interactive handlers back here; this window still owns
+        // the draft and every apply path, exactly as it did behind the TabControl.
+        _general.Owner = this;
+        _services.Owner = this;
+        _cpuPower.Owner = this;
+        _status.Bind(_monitorService);
 
-        ThemeCombo.ItemsSource = Enum.GetValues<AppThemeChoice>();
-        ThemeCombo.SelectedItem = _draft.Theme;
+        _general.LaunchAtStartupCheck.IsChecked = _draft.LaunchAtStartup;
+        _general.CheckForUpdatesCheck.IsChecked = _draft.CheckForUpdatesOnStartup;
+        _general.PollSecondsBox.Value = _draft.PollIntervalSeconds;
+
+        _general.ThemeCombo.ItemsSource = Enum.GetValues<AppThemeChoice>();
+        _general.ThemeCombo.SelectedItem = _draft.Theme;
 
         VersionLink.Content = GetVersionDisplay();
         VersionLink.ToolTip = GetVersionTooltip();
 
-        DisplaysList.ItemsSource = DisplayRows;
-        GlobalTogglesList.ItemsSource = GlobalToggleRows;
-        PrivacyTogglesList.ItemsSource = PrivacyToggleRows;
-        DebloatAdsList.ItemsSource = DebloatAdsRows;
-        DebloatBackgroundList.ItemsSource = DebloatBackgroundRows;
-        NetworkTogglesList.ItemsSource = NetworkToggleRows;
-        PowerTogglesList.ItemsSource = PowerToggleRows;
-        ServicesList.ItemsSource = ServiceRows;
-        ScheduledTasksList.ItemsSource = ScheduledTaskRows;
-        WindowsAiRows.ItemsSource = WindowsAiRowsCollection;
-        WindowsAiAppRows.ItemsSource = WindowsAiAppRowsCollection;
+        _display.DisplaysList.ItemsSource = DisplayRows;
+        _gaming.GlobalTogglesList.ItemsSource = GlobalToggleRows;
+        _telemetry.PrivacyTogglesList.ItemsSource = PrivacyToggleRows;
+        _debloat.DebloatAdsList.ItemsSource = DebloatAdsRows;
+        _debloat.DebloatBackgroundList.ItemsSource = DebloatBackgroundRows;
+        _network.NetworkTogglesList.ItemsSource = NetworkToggleRows;
+        _cpuPower.PowerTogglesList.ItemsSource = PowerToggleRows;
+        _services.ServicesList.ItemsSource = ServiceRows;
+        _services.ScheduledTasksList.ItemsSource = ScheduledTaskRows;
+        _windowsAi.WindowsAiRows.ItemsSource = WindowsAiRowsCollection;
+        _windowsAi.WindowsAiAppRows.ItemsSource = WindowsAiAppRowsCollection;
 
         LoadGlobals();
         LoadDisplays();
@@ -104,6 +126,92 @@ public partial class SettingsWindow : FluentWindow
         LoadNetwork();
         LoadCpuTabs();
         UpdatePendingStatus();
+
+        // Beta marker on the window title and the title bar. Appended in code rather
+        // than in XAML so the markup stays identical between build flavors;
+        // DisplaySuffix is "" in a stable build, making both lines no-ops there.
+        Title += AppIdentity.DisplaySuffix;
+        if (WindowTitleBar is not null)
+            WindowTitleBar.Title += AppIdentity.DisplaySuffix;
+
+        // Land on Status -- but only once the NavigationView has applied its
+        // template. Calling ReplaceContent from the constructor throws inside
+        // NavigationView.UpdateContent, because the content host it writes into does
+        // not exist until the control loads. NavigationView.SelectedItem is
+        // read-only, so the first item is marked active for the pane highlight and
+        // the content is set directly; every later change comes through
+        // SelectionChanged.
+        Loaded += (_, _) =>
+        {
+            if (MainNav.MenuItems.Count > 0 &&
+                MainNav.MenuItems[0] is Wpf.Ui.Controls.NavigationViewItem first)
+            {
+                first.IsActive = true;
+            }
+            Navigate("status");
+        };
+    }
+
+    /// <summary>
+    /// Maps a navigation item's Tag to its view. The views are long-lived fields, so
+    /// this is a content swap rather than a page construction -- no page service, no
+    /// per-navigation rebuild, and no loss of scroll or expander state.
+    /// </summary>
+    private void Navigate(string? tag)
+    {
+        System.Windows.UIElement view = tag switch
+        {
+            "status" => _status,
+            "gaming" => _gaming,
+            "display" => _display,
+            "cpupower" => _cpuPower,
+            "telemetry" => _telemetry,
+            "windowsai" => _windowsAi,
+            "network" => _network,
+            "debloat" => _debloat,
+            "services" => _services,
+            "bios" => _bios,
+            "general" => _general,
+            _ => _status,
+        };
+
+        // Refresh the drift numbers on arrival so Status is current even if no scan
+        // finished while the window was open.
+        if (ReferenceEquals(view, _status)) _status.Refresh();
+
+        MainNav.ReplaceContent(view, null);
+    }
+
+    /// <summary>
+    /// Nav item click. Wired per item rather than through
+    /// <c>NavigationView.SelectionChanged</c>, which never fires here: these items
+    /// have no <c>TargetPageType</c> (navigation is a content swap, not a page
+    /// service), so WPF-UI's internal navigate returns before raising it. The pane
+    /// looked completely dead as a result. NavigationViewItem derives from
+    /// ButtonBase, so Click is reliable regardless of the navigation machinery.
+    /// </summary>
+    private void NavItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Wpf.Ui.Controls.NavigationViewItem item) return;
+        SetActiveNavItem(item);
+        if (item.Tag is string tag) Navigate(tag);
+    }
+
+    /// <summary>
+    /// Drives the pane highlight by hand. NavigationView normally maintains this as
+    /// part of navigating; with navigation bypassed, nothing else clears the
+    /// previously active item and the highlight would stick to Status forever.
+    /// </summary>
+    private void SetActiveNavItem(Wpf.Ui.Controls.NavigationViewItem active)
+    {
+        foreach (var source in new[] { MainNav.MenuItems, MainNav.FooterMenuItems })
+        {
+            foreach (var entry in source)
+            {
+                if (entry is Wpf.Ui.Controls.NavigationViewItem nvi)
+                    nvi.IsActive = ReferenceEquals(nvi, active);
+            }
+        }
     }
 
     /// <summary>
@@ -399,8 +507,8 @@ public partial class SettingsWindow : FluentWindow
         _suppressPresetEvents = true;
         try
         {
-            ServicesPresetGaming.IsChecked = matchesGaming;
-            ServicesPresetDefault.IsChecked = matchesDefault;
+            _services.ServicesPresetGaming.IsChecked = matchesGaming;
+            _services.ServicesPresetDefault.IsChecked = matchesDefault;
         }
         finally { _suppressPresetEvents = false; }
     }
@@ -410,13 +518,13 @@ public partial class SettingsWindow : FluentWindow
         : r.DesiredManual ? ServiceTargetState.Manual
         : ServiceTargetState.Default;
 
-    private void ServicesPresetGaming_Checked(object sender, RoutedEventArgs e)
+    internal void ServicesPresetGaming_Checked(object sender, RoutedEventArgs e)
     {
         if (_suppressPresetEvents) return;
         ApplyServicesPreset(useRecommended: true);
     }
 
-    private void ServicesPresetDefault_Checked(object sender, RoutedEventArgs e)
+    internal void ServicesPresetDefault_Checked(object sender, RoutedEventArgs e)
     {
         if (_suppressPresetEvents) return;
         ApplyServicesPreset(useRecommended: false);
@@ -832,7 +940,7 @@ public partial class SettingsWindow : FluentWindow
         var planNames = PowerPlanMonitor.ListAvailablePlans();
         var active = SafeRunGuid(PowerPlanMonitor.GetActivePlan);
         var activeName = active is not null && planNames.TryGetValue(active.Value, out var name) ? name : "unknown";
-        PowerPlanCurrentText.Text = $"Current: {activeName}";
+        _cpuPower.PowerPlanCurrentText.Text = $"Current: {activeName}";
         // CPU-aware recommendation: the prebuilt plan the catalog picks for this
         // CPU (Balanced on modern CPUs -- never blindly High Performance), shown
         // by its installed plan name so it matches the dropdown. Mirrors what the
@@ -842,16 +950,16 @@ public partial class SettingsWindow : FluentWindow
         var recPlanName = planNames.TryGetValue(recPlanGuid, out var rpn)
             ? rpn
             : planRecipe.RecommendedPrebuilt.ToString();
-        PowerPlanRecommendedText.Text = $"Recommended: {recPlanName}";
-        PowerPlanMonitorCheck.IsChecked = g.PowerPlan.Monitor;
-        PowerPlanAutoApplyCheck.IsChecked = g.PowerPlan.AutoApply;
+        _cpuPower.PowerPlanRecommendedText.Text = $"Recommended: {recPlanName}";
+        _cpuPower.PowerPlanMonitorCheck.IsChecked = g.PowerPlan.Monitor;
+        _cpuPower.PowerPlanAutoApplyCheck.IsChecked = g.PowerPlan.AutoApply;
 
         var planItems = planNames
             .OrderBy(kv => kv.Value, StringComparer.OrdinalIgnoreCase)
             .Select(kv => new PowerPlanItem(kv.Key, kv.Value))
             .ToList();
-        PowerPlanCombo.ItemsSource = planItems;
-        PowerPlanCombo.DisplayMemberPath = nameof(PowerPlanItem.Name);
+        _cpuPower.PowerPlanCombo.ItemsSource = planItems;
+        _cpuPower.PowerPlanCombo.DisplayMemberPath = nameof(PowerPlanItem.Name);
 
         // Preselect priority: the user's own explicit pick, else the CPU-aware
         // recommended prebuilt (Balanced) so the "Want" dropdown agrees with the
@@ -867,7 +975,7 @@ public partial class SettingsWindow : FluentWindow
         _loadingPowerPlan = true;
         try
         {
-            PowerPlanCombo.SelectedItem = planItems.FirstOrDefault(p => p.Guid == preselect)
+            _cpuPower.PowerPlanCombo.SelectedItem = planItems.FirstOrDefault(p => p.Guid == preselect)
                 ?? planItems.FirstOrDefault();
         }
         finally { _loadingPowerPlan = false; }
@@ -960,18 +1068,18 @@ public partial class SettingsWindow : FluentWindow
         return $"Informational: {info}\nFile: {fileV}\n.NET: {rt}\nBuild: {build}\n\nClick to open releases page";
     }
 
-    private void ThemeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    internal void ThemeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (ThemeCombo.SelectedItem is AppThemeChoice c)
+        if (_general.ThemeCombo.SelectedItem is AppThemeChoice c)
             ThemeService.Apply(c);
     }
 
-    private void PowerPlanCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    internal void PowerPlanCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         // Ignore the selection we set ourselves while loading — only a real user
         // change should stage a pending edit.
         if (_loadingPowerPlan) return;
-        if (PowerPlanCombo.SelectedItem is not PowerPlanItem pi) return;
+        if (_cpuPower.PowerPlanCombo.SelectedItem is not PowerPlanItem pi) return;
         var oldGuid = _draft.Global.PowerPlan.DesiredGuid;
         var oldName = _draft.Global.PowerPlan.DesiredName;
         if (oldGuid == pi.Guid.ToString()) return;
@@ -983,9 +1091,9 @@ public partial class SettingsWindow : FluentWindow
         UpdatePendingStatus();
     }
 
-    private void PowerPlanMonitorCheck_Changed(object sender, RoutedEventArgs e)
+    internal void PowerPlanMonitorCheck_Changed(object sender, RoutedEventArgs e)
     {
-        var v = PowerPlanMonitorCheck.IsChecked == true;
+        var v = _cpuPower.PowerPlanMonitorCheck.IsChecked == true;
         if (_draft.Global.PowerPlan.Monitor == v) return;
         var before = _draft.Global.PowerPlan.Monitor;
         _draft.Global.PowerPlan.Monitor = v;
@@ -994,9 +1102,9 @@ public partial class SettingsWindow : FluentWindow
         UpdatePendingStatus();
     }
 
-    private void PowerPlanAutoApplyCheck_Changed(object sender, RoutedEventArgs e)
+    internal void PowerPlanAutoApplyCheck_Changed(object sender, RoutedEventArgs e)
     {
-        var v = PowerPlanAutoApplyCheck.IsChecked == true;
+        var v = _cpuPower.PowerPlanAutoApplyCheck.IsChecked == true;
         if (_draft.Global.PowerPlan.AutoApply == v) return;
         var before = _draft.Global.PowerPlan.AutoApply;
         _draft.Global.PowerPlan.AutoApply = v;
@@ -1005,7 +1113,7 @@ public partial class SettingsWindow : FluentWindow
         UpdatePendingStatus();
     }
 
-    private void OpenChangeLogButton_Click(object sender, RoutedEventArgs e)
+    internal void OpenChangeLogButton_Click(object sender, RoutedEventArgs e)
     {
         try
         {
@@ -1025,12 +1133,29 @@ public partial class SettingsWindow : FluentWindow
         catch { }
     }
 
-    private async void CheckUpdatesNowButton_Click(object sender, RoutedEventArgs e)
+    internal async void CheckUpdatesNowButton_Click(object sender, RoutedEventArgs e)
     {
+#if BETA
+        // The whole update path is compiled out of a beta build. The button and its
+        // XAML stay exactly as they are -- only the body changes -- so there is no
+        // orphaned Click target and no unused handler, and the binary genuinely
+        // contains no call into UpdateService from here.
+        await Task.CompletedTask;
+        System.Windows.MessageBox.Show(
+            this,
+            "Updates are disabled in beta builds.",
+            "GamerGuardian",
+            System.Windows.MessageBoxButton.OK,
+            System.Windows.MessageBoxImage.Information);
+#else
         // Dev builds must never self-update. The startup check has always been
         // gated on this (App.OnStartup), but this manual path was not: clicking
         // "Check now" in a dev build would download the newest *stable* installer
         // and launch it over the running dev build. Same guard, both paths.
+        //
+        // Both guards coexist deliberately: BETA compiles the update path out of
+        // the binary entirely, while this runtime check covers the dev builds that
+        // are still compiled with the update path present.
         if (App.IsDevBuild())
         {
             System.Windows.MessageBox.Show(
@@ -1043,7 +1168,7 @@ public partial class SettingsWindow : FluentWindow
             return;
         }
 
-        var btn = CheckUpdatesNowButton;
+        var btn = _general.CheckUpdatesNowButton;
         var prev = btn.Content;
         btn.IsEnabled = false;
         btn.Content = "Checking…";
@@ -1077,6 +1202,7 @@ public partial class SettingsWindow : FluentWindow
             btn.Content = prev;
             btn.IsEnabled = true;
         }
+#endif
     }
 
     /// <summary>Guards against re-entrant Apply / Save&amp;close while one is in flight.
@@ -1226,17 +1352,16 @@ public partial class SettingsWindow : FluentWindow
     /// </summary>
     private void PersistFormToDraft()
     {
-        _draft.LaunchAtStartup = LaunchAtStartupCheck.IsChecked == true;
-        _draft.ConsolidateNotifications = ConsolidateCheck.IsChecked == true;
-        _draft.CheckForUpdatesOnStartup = CheckForUpdatesCheck.IsChecked == true;
-        if (PollSecondsBox.Value is double pv && pv >= 5)
+        _draft.LaunchAtStartup = _general.LaunchAtStartupCheck.IsChecked == true;
+        _draft.CheckForUpdatesOnStartup = _general.CheckForUpdatesCheck.IsChecked == true;
+        if (_general.PollSecondsBox.Value is double pv && pv >= 5)
             _draft.PollIntervalSeconds = (int)pv;
-        if (ThemeCombo.SelectedItem is AppThemeChoice tc)
+        if (_general.ThemeCombo.SelectedItem is AppThemeChoice tc)
             _draft.Theme = tc;
 
-        _draft.Global.PowerPlan.Monitor = PowerPlanMonitorCheck.IsChecked == true;
-        _draft.Global.PowerPlan.AutoApply = PowerPlanAutoApplyCheck.IsChecked == true;
-        if (PowerPlanCombo.SelectedItem is PowerPlanItem pi)
+        _draft.Global.PowerPlan.Monitor = _cpuPower.PowerPlanMonitorCheck.IsChecked == true;
+        _draft.Global.PowerPlan.AutoApply = _cpuPower.PowerPlanAutoApplyCheck.IsChecked == true;
+        if (_cpuPower.PowerPlanCombo.SelectedItem is PowerPlanItem pi)
         {
             _draft.Global.PowerPlan.DesiredGuid = pi.Guid.ToString();
             _draft.Global.PowerPlan.DesiredName = pi.Name;
@@ -1287,15 +1412,30 @@ public partial class SettingsWindow : FluentWindow
         base.OnClosed(e);
         try
         {
-            DisplaysList.ItemsSource = null;
-            GlobalTogglesList.ItemsSource = null;
-            PrivacyTogglesList.ItemsSource = null;
-            DebloatAdsList.ItemsSource = null;
-            DebloatBackgroundList.ItemsSource = null;
-            NetworkTogglesList.ItemsSource = null;
-            PowerTogglesList.ItemsSource = null;
-            ServicesList.ItemsSource = null;
-            ScheduledTasksList.ItemsSource = null;
+            // Unsubscribe Status from the monitor first: it holds handlers on a
+            // long-lived service, so leaving them attached would keep this whole
+            // window graph alive after close -- the exact leak shape the app's
+            // memory hygiene exists to prevent.
+            _status.Detach();
+
+            // Drop the navigation content and the views' own references so the
+            // visual tree is reachable for collection.
+            MainNav.ReplaceContent(null!, null);
+            _general.Owner = null;
+            _services.Owner = null;
+            _cpuPower.Owner = null;
+
+            _windowsAi.WindowsAiRows.ItemsSource = null;
+            _windowsAi.WindowsAiAppRows.ItemsSource = null;
+            _display.DisplaysList.ItemsSource = null;
+            _gaming.GlobalTogglesList.ItemsSource = null;
+            _telemetry.PrivacyTogglesList.ItemsSource = null;
+            _debloat.DebloatAdsList.ItemsSource = null;
+            _debloat.DebloatBackgroundList.ItemsSource = null;
+            _network.NetworkTogglesList.ItemsSource = null;
+            _cpuPower.PowerTogglesList.ItemsSource = null;
+            _services.ServicesList.ItemsSource = null;
+            _services.ScheduledTasksList.ItemsSource = null;
             DisplayRows.Clear();
             GlobalToggleRows.Clear();
             PrivacyToggleRows.Clear();
@@ -1333,10 +1473,10 @@ public partial class SettingsWindow : FluentWindow
     /// that adds new settings to the preset can be picked up by the user
     /// re-clicking this button -- only the new deltas land.</para>
     /// </summary>
-    private void ApplyRecommendedPresetButton_Click(object sender, RoutedEventArgs e) =>
+    internal void ApplyRecommendedPresetButton_Click(object sender, RoutedEventArgs e) =>
         RunPreset("Recommended preset", () => RecommendedPreset.ApplyToDraft(_draft));
 
-    private void ApplyExtremePresetButton_Click(object sender, RoutedEventArgs e)
+    internal void ApplyExtremePresetButton_Click(object sender, RoutedEventArgs e)
     {
         var confirm = System.Windows.MessageBox.Show(this,
             "Apply EXTREME staging will turn on every gaming tweak GamerGuardian knows -- "
@@ -1353,7 +1493,7 @@ public partial class SettingsWindow : FluentWindow
         RunPreset("Extreme preset", () => RecommendedPreset.ApplyExtremeToDraft(_draft));
     }
 
-    private void ResetToDefaultsButton_Click(object sender, RoutedEventArgs e)
+    internal void ResetToDefaultsButton_Click(object sender, RoutedEventArgs e)
     {
         var confirm = System.Windows.MessageBox.Show(this,
             "Reset all to defaults will stage every setting back to its Windows default and turn "
@@ -1401,9 +1541,9 @@ public partial class SettingsWindow : FluentWindow
         LoadNetwork();
         LoadCpuTabs();
 
-        if (RecommendedStatusText is not null)
+        if (_general.RecommendedStatusText is not null)
         {
-            RecommendedStatusText.Text = result.SettingsChanged == 0
+            _general.RecommendedStatusText.Text = result.SettingsChanged == 0
                 ? $"{presetName}: all {result.SettingsAlreadyCorrect} setting(s) already in that state. Nothing to do."
                 : $"{presetName}: staged {result.SettingsChanged} setting(s); {result.SettingsAlreadyCorrect} already correct. Click Apply or Save & close to commit.";
         }
@@ -1444,9 +1584,9 @@ public partial class SettingsWindow : FluentWindow
         var r = CpuTuneCatalog.Resolve(cpu);
         _cpuRecipe = r;
 
-        if (CpuDetectedText is null) return; // XAML not ready yet
+        if (_cpuPower.CpuDetectedText is null) return; // XAML not ready yet
 
-        CpuDetectedText.Text = cpu.IsDetected
+        _cpuPower.CpuDetectedText.Text = cpu.IsDetected
             ? cpu.RawModel
             : "CPU: not detected -- using a generic tune";
 
@@ -1462,21 +1602,21 @@ public partial class SettingsWindow : FluentWindow
             CcdTopology.Dual => ", dual-CCD",
             _ => "",
         };
-        CpuTierText.Text =
+        _cpuPower.CpuTierText.Text =
             $"Recipe: {tier}{topo}, parking: {ParkingText(r.Parking)}. Recommended prebuilt plan: {r.RecommendedPrebuilt}.";
 
-        CpuPlanStatusText.Text = r.IsGeneric
+        _cpuPower.CpuPlanStatusText.Text = r.IsGeneric
             ? "No CPU-specific recipe -- 'Build optimized' creates a safe generic tune (aggressive boost, no parking changes)."
             : $"'Build optimized' will create: {r.PlanName}.";
 
         if (r.NeedsCcdRoutingStack)
         {
-            CcdDependencyCard.Visibility = Visibility.Visible;
+            _cpuPower.CcdDependencyCard.Visibility = Visibility.Visible;
             BuildDependencyRows(r);
         }
         else
         {
-            CcdDependencyCard.Visibility = Visibility.Collapsed;
+            _cpuPower.CcdDependencyCard.Visibility = Visibility.Collapsed;
         }
 
         BuildPlanDetails(r);
@@ -1491,15 +1631,15 @@ public partial class SettingsWindow : FluentWindow
     /// </summary>
     private void BuildPlanDetails(CpuTuneResult r)
     {
-        if (PlanDetailsList is null) return;
-        PlanDetailsList.Children.Clear();
+        if (_cpuPower.PlanDetailsList is null) return;
+        _cpuPower.PlanDetailsList.Children.Clear();
 
-        if (PlanDetailsHeader is not null)
-            PlanDetailsHeader.Text = $"What the optimized plan changes (vs Windows {r.BasePlanDisplayName})";
+        if (_cpuPower.PlanDetailsHeader is not null)
+            _cpuPower.PlanDetailsHeader.Text = $"What the optimized plan changes (vs Windows {r.BasePlanDisplayName})";
 
         var secondary = (System.Windows.Media.Brush)FindResource("TextFillColorSecondaryBrush");
 
-        PlanDetailsList.Children.Add(new System.Windows.Controls.TextBlock
+        _cpuPower.PlanDetailsList.Children.Add(new System.Windows.Controls.TextBlock
         {
             Text = CpuPlanDetails.BaseSummary(r),
             FontSize = 12,
@@ -1507,7 +1647,7 @@ public partial class SettingsWindow : FluentWindow
             Foreground = secondary,
         });
 
-        PlanDetailsList.Children.Add(new System.Windows.Controls.TextBlock
+        _cpuPower.PlanDetailsList.Children.Add(new System.Windows.Controls.TextBlock
         {
             Text = $"Side by side (plugged in) — bold values are what GamerGuardian changes:",
             FontWeight = FontWeights.SemiBold,
@@ -1524,9 +1664,9 @@ public partial class SettingsWindow : FluentWindow
             ? (_, _) => null
             : (sub, set) => Powrprof.ReadAcValue(baseGuid, sub, set);
         var comparison = CpuPlanDetails.Comparison(r, readBase);
-        PlanDetailsList.Children.Add(BuildComparisonTable(comparison, r.BasePlanDisplayName));
+        _cpuPower.PlanDetailsList.Children.Add(BuildComparisonTable(comparison, r.BasePlanDisplayName));
 
-        PlanDetailsList.Children.Add(new System.Windows.Controls.TextBlock
+        _cpuPower.PlanDetailsList.Children.Add(new System.Windows.Controls.TextBlock
         {
             Text = "Why this suits your CPU:",
             FontWeight = FontWeights.SemiBold,
@@ -1534,7 +1674,7 @@ public partial class SettingsWindow : FluentWindow
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 10, 0, 0),
         });
-        PlanDetailsList.Children.Add(new System.Windows.Controls.TextBlock
+        _cpuPower.PlanDetailsList.Children.Add(new System.Windows.Controls.TextBlock
         {
             Text = CpuPlanDetails.Rationale(r),
             FontSize = 12,
@@ -1610,7 +1750,7 @@ public partial class SettingsWindow : FluentWindow
 
     private void BuildDependencyRows(CpuTuneResult r)
     {
-        CcdDependencyList.Children.Clear();
+        _cpuPower.CcdDependencyList.Children.Clear();
 
         var svc = CpuPlanStatus.ReadAmdVCacheService();
         var gameBar = CpuPlanStatus.ReadGameBarEnabled();
@@ -1655,12 +1795,12 @@ public partial class SettingsWindow : FluentWindow
             Margin = new Thickness(0, 8, 0, 0),
             FontWeight = FontWeights.SemiBold,
         };
-        CcdDependencyList.Children.Add(summaryBlock);
+        _cpuPower.CcdDependencyList.Children.Add(summaryBlock);
     }
 
     private void AddDependencyRow(string text)
     {
-        CcdDependencyList.Children.Add(new System.Windows.Controls.TextBlock
+        _cpuPower.CcdDependencyList.Children.Add(new System.Windows.Controls.TextBlock
         {
             Text = text,
             TextWrapping = TextWrapping.Wrap,
@@ -1670,12 +1810,12 @@ public partial class SettingsWindow : FluentWindow
 
     private void BuildBiosRows(CpuTuneResult r)
     {
-        if (BiosGuidanceList is null) return;
-        BiosGuidanceList.Children.Clear();
+        if (_bios.BiosGuidanceList is null) return;
+        _bios.BiosGuidanceList.Children.Clear();
 
         if (r.Bios.Count == 0)
         {
-            BiosGuidanceList.Children.Add(new System.Windows.Controls.TextBlock
+            _bios.BiosGuidanceList.Children.Add(new System.Windows.Controls.TextBlock
             {
                 Text = "No CPU-specific BIOS recommendations are available for your processor.",
                 TextWrapping = TextWrapping.Wrap,
@@ -1701,7 +1841,7 @@ public partial class SettingsWindow : FluentWindow
                 Margin = new Thickness(0, 2, 0, 0),
                 Foreground = (System.Windows.Media.Brush)FindResource("TextFillColorSecondaryBrush"),
             });
-            BiosGuidanceList.Children.Add(block);
+            _bios.BiosGuidanceList.Children.Add(block);
             first = false;
         }
     }
@@ -1713,10 +1853,10 @@ public partial class SettingsWindow : FluentWindow
         _ => "leave default",
     };
 
-    private async void BuildOptimizedButton_Click(object sender, RoutedEventArgs e) =>
+    internal async void BuildOptimizedButton_Click(object sender, RoutedEventArgs e) =>
         await RunCpuActionAsync(CpuPlanApply.BuildOptimizedDriftItem, (System.Windows.Controls.ContentControl)sender, "Building…");
 
-    private async void SuggestPrebuiltButton_Click(object sender, RoutedEventArgs e) =>
+    internal async void SuggestPrebuiltButton_Click(object sender, RoutedEventArgs e) =>
         await RunCpuActionAsync(CpuPlanApply.SuggestPrebuiltDriftItem, (System.Windows.Controls.ContentControl)sender, "Applying…");
 
     private async Task RunCpuActionAsync(

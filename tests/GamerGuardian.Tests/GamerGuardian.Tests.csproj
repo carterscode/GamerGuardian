@@ -22,4 +22,22 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\GamerGuardian\GamerGuardian.csproj" />
   </ItemGroup>
+
+  <!-- The BETA flavor removes Services/UpdateService.cs from the app compile, so
+       tests that reference it cannot build against a beta app. Mirror the
+       exclusion here, which makes `dotnet test -p:Beta=true` run exactly the tests
+       that apply to a beta build instead of failing to compile.
+
+       The default (non-beta) run is unaffected and still covers UpdateService. -->
+  <ItemGroup Condition="'$(Beta)' == 'true'">
+    <Compile Remove="UpdateServiceTests.cs" />
+  </ItemGroup>
+
+  <!-- Define BETA here too, so identity tests can assert the beta values rather
+       than the stable ones. Without this the test project compiles non-beta while
+       the app under test compiles beta, and the identity assertions fail against
+       an app that is behaving correctly. -->
+  <PropertyGroup Condition="'$(Beta)' == 'true'">
+    <DefineConstants>$(DefineConstants);BETA</DefineConstants>
+  </PropertyGroup>
 </Project>

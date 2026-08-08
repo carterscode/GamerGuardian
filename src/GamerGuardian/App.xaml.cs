@@ -64,12 +64,19 @@ public partial class App : WpfApplication
             }
         }
 
-        _singleInstanceMutex = new Mutex(initiallyOwned: true, "GamerGuardian.SingleInstance", out bool created);
+        _singleInstanceMutex = new Mutex(initiallyOwned: true, AppIdentity.MutexName, out bool created);
         if (!created)
         {
             Shutdown();
             return;
         }
+
+#if BETA
+        // First launch of a beta build with no state of its own: start from the
+        // stable install's settings rather than from defaults. One-way copy -- the
+        // stable config is read and never written. No-ops on every later launch.
+        ConfigStore.SeedConfigFrom(AppIdentity.StableConfigDirectory, AppIdentity.ConfigDirectory);
+#endif
 
         _store = new ConfigStore();
         ChangeLogger.LogSessionStart();
@@ -189,8 +196,12 @@ public partial class App : WpfApplication
         bool isFirstRun = !System.IO.File.Exists(_store.ConfigPath);
         if (isFirstRun || e.Args.Any(a => a == "--show-settings")) ShowSettings();
 
+#if !BETA
         if (cfg.CheckForUpdatesOnStartup && !IsDevBuild())
             _ = Task.Run(async () => await CheckForUpdatesAsync());
+#endif
+        // BETA: the update path is compiled out, not disabled at runtime -- a beta
+        // build contains no code that can reach the update feed or replace itself.
 
         _ = Dispatcher.BeginInvoke(() =>
         {
@@ -199,6 +210,7 @@ public partial class App : WpfApplication
         }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
     }
 
+#if !BETA
     private async Task CheckForUpdatesAsync()
     {
         try
@@ -230,6 +242,7 @@ public partial class App : WpfApplication
         }
         catch (Exception ex) { LogException("UpdateCheck", ex); }
     }
+#endif
 
     private void ShowSettings()
     {
@@ -309,7 +322,7 @@ public partial class App : WpfApplication
     {
         try
         {
-            var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gamerguardian_error.log");
+            var path = AppIdentity.ErrorLogFile;
             // Cap at ~1 MB by rotating to .1
             try
             {
@@ -401,7 +414,7 @@ public partial class App : WpfApplication
                 () => GamerGuardian.Monitors.ResolutionMonitor.GetCurrent(d.GdiDeviceName)?.ToString() ?? "(null)");
         }
 
-        var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gamerguardian_selftest.txt");
+        var path = AppIdentity.SelfTestFile;
         System.IO.File.WriteAllLines(path, log);
         Environment.ExitCode = log.Any(l => l.StartsWith("FAIL")) ? 1 : 0;
     }

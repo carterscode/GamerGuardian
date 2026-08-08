@@ -18,33 +18,68 @@ namespace GamerGuardian.Services;
 /// recommendation. Reversibility is included on every entry so a worried
 /// user can see how to undo any change before they make it.</para>
 /// </summary>
+/// <summary>
+/// The family a setting id belongs to, as determined by its prefix. See
+/// <see cref="SettingDocsCatalog.ParseId"/> — that method is the only place the
+/// prefix convention is implemented.
+/// </summary>
+public enum SettingIdKind
+{
+    /// <summary>No recognized prefix — a global setting id such as "hags", and also
+    /// the bare, colon-less display ids ("hdr", "refresh", "resolution", "drr").</summary>
+    Global,
+    Service,
+    AiApp,
+    ScheduledTask,
+    Hdr,
+    RefreshRate,
+    Resolution,
+    Drr,
+}
+
 public static class SettingDocsCatalog
 {
+    /// <summary>
+    /// Splits a setting id into the family its prefix names and the remainder after
+    /// that prefix. This is the single implementation of the id-prefix convention
+    /// (<c>service:</c>, <c>ai.app:</c>, <c>task:</c>, <c>hdr:</c>, <c>refresh:</c>,
+    /// <c>resolution:</c>, <c>drr:</c>) shared by <see cref="Get"/> and
+    /// <see cref="SettingSectionMap"/> so the two can never drift apart.
+    ///
+    /// <para>An id with no recognized prefix is <see cref="SettingIdKind.Global"/>
+    /// and the remainder is the whole id. Note the bare display ids ("hdr",
+    /// "refresh", "resolution", "drr") carry no colon and so parse as Global —
+    /// callers that care must handle both spellings.</para>
+    /// </summary>
+    public static (SettingIdKind Kind, string Remainder) ParseId(string? settingId)
+    {
+        if (settingId is null) return (SettingIdKind.Global, string.Empty);
+        if (settingId.StartsWith("service:")) return (SettingIdKind.Service, settingId["service:".Length..]);
+        if (settingId.StartsWith("ai.app:")) return (SettingIdKind.AiApp, settingId["ai.app:".Length..]);
+        if (settingId.StartsWith("task:")) return (SettingIdKind.ScheduledTask, settingId["task:".Length..]);
+        if (settingId.StartsWith("hdr:")) return (SettingIdKind.Hdr, settingId["hdr:".Length..]);
+        if (settingId.StartsWith("refresh:")) return (SettingIdKind.RefreshRate, settingId["refresh:".Length..]);
+        if (settingId.StartsWith("resolution:")) return (SettingIdKind.Resolution, settingId["resolution:".Length..]);
+        if (settingId.StartsWith("drr:")) return (SettingIdKind.Drr, settingId["drr:".Length..]);
+        return (SettingIdKind.Global, settingId);
+    }
+
     public static SettingDetails? Get(string settingId)
     {
         if (settingId is null) return null;
 
-        if (settingId.StartsWith("service:"))
+        var (kind, rest) = ParseId(settingId);
+        return kind switch
         {
-            var name = settingId["service:".Length..];
-            return Services.TryGetValue(name, out var d) ? d : null;
-        }
-        if (settingId.StartsWith("ai.app:"))
-        {
-            var pkg = settingId["ai.app:".Length..];
-            return AiApps.TryGetValue(pkg, out var d) ? d : null;
-        }
-        if (settingId.StartsWith("task:"))
-        {
-            var path = settingId["task:".Length..];
-            return ScheduledTasks.TryGetValue(path, out var d) ? d : null;
-        }
-        if (settingId.StartsWith("hdr:")) return Hdr;
-        if (settingId.StartsWith("refresh:")) return RefreshRate;
-        if (settingId.StartsWith("resolution:")) return Resolution;
-        if (settingId.StartsWith("drr:")) return Drr;
-
-        return Globals.TryGetValue(settingId, out var g) ? g : null;
+            SettingIdKind.Service => Services.TryGetValue(rest, out var s) ? s : null,
+            SettingIdKind.AiApp => AiApps.TryGetValue(rest, out var a) ? a : null,
+            SettingIdKind.ScheduledTask => ScheduledTasks.TryGetValue(rest, out var t) ? t : null,
+            SettingIdKind.Hdr => Hdr,
+            SettingIdKind.RefreshRate => RefreshRate,
+            SettingIdKind.Resolution => Resolution,
+            SettingIdKind.Drr => Drr,
+            _ => Globals.TryGetValue(rest, out var g) ? g : null,
+        };
     }
 
     /// <summary>Every documented setting. Used by docs generation and tests.</summary>

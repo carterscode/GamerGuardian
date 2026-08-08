@@ -1,0 +1,124 @@
+name: beta
+
+# Manual only. There is deliberately no push trigger and no tag trigger, so this
+# cannot fire as a side effect of committing, merging, or tagging anything.
+on:
+  workflow_dispatch:
+
+# Read-only token. This workflow cannot create a release, push a tag, or write to
+# the repository even if a step tried to: the GITHUB_TOKEN it is handed has no
+# write scope. The beta EXE leaves as a workflow artifact and nothing else.
+permissions:
+  contents: read
+
+concurrency:
+  group: beta-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  beta:
+    runs-on: windows-latest
+    # No permissions block here either -- the job inherits the read-only set above.
+    # release.yml needs contents/id-token/attestations write to publish; this one
+    # intentionally has none of them.
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Resolve beta version
+        id: ver
+        shell: pwsh
+        run: |
+          # Same shape as dev-build.yml: a numeric base for AssemblyVersion and
+          # FileVersion (which must stay a pure a.b.c.d), and a descriptive
+          # InformationalVersion carrying the -beta.<sha> suffix. AppIdentity parses
+          # the sha back out of it for the in-app BETA marker.
+          # Stable tags only -- 'v*.*.*' also matches prerelease tags, and [int] on
+          # a "65-beta" patch component throws.
+          $latest = (git tag --list 'v*.*.*' --sort=-v:refname | Where-Object { $_ -notmatch '-' } | Select-Object -First 1)
+          if ([string]::IsNullOrWhiteSpace($latest)) { $latest = 'v0.0.0' }
+          $parts = ($latest -replace '^v','').Split('.')
+          $patch = [int]$parts[2] + 1
+          $base = "$($parts[0]).$($parts[1]).$patch"
+          $sha = $env:GITHUB_SHA.Substring(0,7)
+          $full = "$base-beta.$sha"
+          "base=$base"    | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "version=$full" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "sha=$sha"      | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Building beta $full (numeric base $base) from $env:GITHUB_REF_NAME"
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore GamerGuardian.sln
+
+      # A beta goes to real testers, so it does not ship without the suite passing.
+      # This builds the default (non-BETA) flavor, which is also the check that the
+      # non-beta path still compiles warning-free.
+      - name: Test
+        run: dotnet test GamerGuardian.sln --nologo
+
+      - name: Publish beta (self-contained, single-file, win-x64)
+        # Identical publish flags to release.yml, plus -p:Beta=true to define the
+        # BETA constant and an explicit InformationalVersion for the sha marker.
+        run: >
+          dotnet publish src/GamerGuardian/GamerGuardian.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:Beta=true
+          -p:Version=${{ steps.ver.outputs.base }}
+          -p:AssemblyVersion=${{ steps.ver.outputs.base }}.0
+          -p:FileVersion=${{ steps.ver.outputs.base }}.0
+          -p:InformationalVersion=${{ steps.ver.outputs.version }}
+          -o publish
+
+      # Fails the run if the update path somehow survived into a beta build.
+      #
+      # Scans the managed assembly, NOT publish\GamerGuardian.exe. The shipped EXE is
+      # a single-file bundle published with EnableCompressionInSingleFile, so its
+      # assemblies are compressed: scanning the EXE's bytes finds nothing even in a
+      # stable build. An earlier version of this step did exactly that and passed on
+      # both flavors, which made it false assurance rather than a check. The DLL
+      # below is the same assembly that gets bundled into that EXE.
+      #
+      # build.yml proves this check can actually fail, by asserting the differential
+      # against a stable build. Here we only assert the absolute property.
+      - name: Verify the update path is absent from the beta assembly
+        shell: pwsh
+        run: |
+          $dll = Get-ChildItem -Recurse -Path "src/GamerGuardian/bin/Release" -Filter "GamerGuardian.dll" |
+                 Select-Object -First 1
+          if (-not $dll) { throw "Could not find the built GamerGuardian.dll to scan." }
+          $bytes = [System.IO.File]::ReadAllBytes($dll.FullName)
+          # .NET stores string literals as UTF-16 in the #US heap, but at arbitrary
+          # byte offsets. Decoding from offset 0 only sees even-aligned literals; an
+          # odd-aligned one decodes to garbage and is missed. Check both alignments.
+          $even = [System.Text.Encoding]::Unicode.GetString($bytes, 0, $bytes.Length - ($bytes.Length % 2))
+          $odd  = [System.Text.Encoding]::Unicode.GetString($bytes, 1, $bytes.Length - 1 - (($bytes.Length - 1) % 2))
+          $pattern = 'api\.github\.com/repos/carterscode/GamerGuardian/releases'
+          if ([regex]::IsMatch($even, $pattern) -or [regex]::IsMatch($odd, $pattern)) {
+            throw "BETA build still contains the update-feed URL -- the update path was not compiled out."
+          }
+          Write-Host "OK: no update-feed URL in $($dll.FullName)"
+
+      - name: List artifacts
+        shell: pwsh
+        run: Get-ChildItem -Recurse publish | Select-Object FullName, Length
+
+      # The only output. No installer is built, no release is created, no tag is
+      # pushed, and nothing is published to the update feed.
+      - name: Upload beta EXE artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: GamerGuardian-beta-r${{ github.run_number }}-${{ steps.ver.outputs.sha }}
+          path: publish/GamerGuardian.exe
+          if-no-files-found: error

@@ -30,9 +30,7 @@ namespace GamerGuardian.Services;
 /// </summary>
 public static class ChangeLogger
 {
-    public static string LogPath { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "GamerGuardian", "changes.log");
+    public static string LogPath { get; } = AppIdentity.ChangeLogFile;
 
     private const long MaxBytes = 1_000_000;
     private const string Divider = "--------------------------------------------------------------------------------";
@@ -148,7 +146,11 @@ public static class ChangeLogger
             sb.AppendLine($"  Machine    : {Environment.MachineName}");
             sb.AppendLine($"  User       : {Environment.UserName}  (elevated: {elevated})");
             sb.AppendLine($"  PID        : {p.Id}");
-            sb.AppendLine($"  ConfigPath : {Path.Combine(Path.GetDirectoryName(LogPath) ?? "", "config.json")}");
+            // Report the real config path rather than inferring one from this log's
+            // own directory -- the inference silently assumed the two always share a
+            // folder, so it would have reported a path that doesn't exist the moment
+            // they diverged.
+            sb.AppendLine($"  ConfigPath : {AppIdentity.ConfigFile}");
             sb.AppendLine(Divider);
             File.AppendAllText(LogPath, sb.ToString(), Encoding.UTF8);
         }

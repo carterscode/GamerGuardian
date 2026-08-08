@@ -42,7 +42,6 @@ public static class AppConfigCloner
 
         target.LaunchAtStartup = source.LaunchAtStartup;
         target.PollIntervalSeconds = source.PollIntervalSeconds;
-        target.ConsolidateNotifications = source.ConsolidateNotifications;
         target.Theme = source.Theme;
         target.CheckForUpdatesOnStartup = source.CheckForUpdatesOnStartup;
         target.SkippedUpdateVersion = source.SkippedUpdateVersion;

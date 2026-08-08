@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Windows;
 using System.Windows.Forms;
+using GamerGuardian.Services;
 
 namespace GamerGuardian.Tray;
 
@@ -31,7 +32,9 @@ public sealed class TrayIconHost : IDisposable
         _icon = new NotifyIcon
         {
             Icon = LoadAppIcon() ?? SystemIcons.Application,
-            Text = "GamerGuardian",
+            // DisplaySuffix is "" in a stable build and " [BETA <sha>]" in a beta
+            // one, so a tester can tell the two tray icons apart at a glance.
+            Text = Truncate("GamerGuardian" + AppIdentity.DisplaySuffix),
             Visible = true,
             ContextMenuStrip = menu,
         };
@@ -42,8 +45,16 @@ public sealed class TrayIconHost : IDisposable
     {
         _paused = paused;
         _pauseItem.Text = paused ? "Resume monitoring" : "Pause monitoring";
-        _icon.Text = paused ? "GamerGuardian (paused)" : "GamerGuardian";
+        _icon.Text = Truncate(
+            paused ? "GamerGuardian (paused)" + AppIdentity.DisplaySuffix
+                   : "GamerGuardian" + AppIdentity.DisplaySuffix);
     }
+
+    /// <summary>NotifyIcon.Text throws above 63 characters. The stable text is far
+    /// short of that, but a beta suffix carrying a sha pushes it closer, so clamp
+    /// rather than risk a crash on a build flavor nobody tests as hard.</summary>
+    private static string Truncate(string text) =>
+        text.Length <= 63 ? text : text[..63];
 
     public void ShowBalloon(string title, string text)
     {

@@ -2,6 +2,7 @@ bin/
 obj/
 out/
 publish/
+publish-beta/
 .tmp_*/
 *.user
 *.suo

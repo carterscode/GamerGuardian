@@ -16,7 +16,36 @@ Versions before 1.0.0 are pre-release: features and defaults may still change.
 
 ## [Unreleased]
 
+## [0.1.65] - 2026-08-07
+
+The biggest visual change since the app was first released: the window has been
+rebuilt around a grouped sidebar, and it now has a home screen.
+
+### Added
+- **A Status home screen.** Opening GamerGuardian now lands you on Status
+  instead of the first settings tab. It leads with a single number — how many of
+  the settings you monitor have drifted from what you asked for — and breaks
+  that down by section, so you can see at a glance whether anything needs you.
+- **A "This PC" summary.** Status shows six cards describing the machine:
+  processor, graphics, memory, Windows version, displays, and the active power
+  plan. Each one is context for settings GamerGuardian actually manages — the
+  CPU behind the power-plan recommendation, the GPU behind hardware-accelerated
+  scheduling, the Windows build that decides which policies apply.
+- **Real memory detail.** The memory card reads your firmware directly and
+  reports the installed total with its type, plus the module layout and speed —
+  for example "31.2 GB DDR5" and "2 × 16 GB @ 5600 MT/s". Mismatched sticks are
+  listed rather than averaged away, because a mismatched pair is worth noticing.
+- **Pause monitoring from Status.** Stopping and resuming background checks no
+  longer means hunting through the settings.
+
 ### Changed
+- **New navigation.** The row of tabs is gone. Settings are now grouped in a
+  sidebar under Performance, Privacy, Cleanup and Reference, so related settings
+  sit together and the window no longer runs out of horizontal room. Everything
+  that was in the old tabs is still there — nothing was dropped in the move.
+- **A GitHub-dark colour scheme.** The app is recoloured to match GitHub's dark
+  theme: a deep navy-black canvas, cards that actually read as cards, and
+  GitHub's green, amber and red for status. Light theme is unchanged.
 - **Clearer upgrade notes.** The "what's new" text shown when a new version is
   offered is now plain-English highlights only — no more raw list of internal
   pull-request titles — and Markdown formatting is cleaned up so it reads

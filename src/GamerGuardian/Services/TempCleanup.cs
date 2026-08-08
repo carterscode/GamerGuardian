@@ -19,12 +19,17 @@ public static class TempCleanup
             var temp = Path.GetTempPath();
             var cutoff = DateTime.Now.AddDays(-KeepDays);
 
+#if !BETA
+            // Only the stable build downloads installers, so only it cleans them up.
+            // A beta build has the whole update path compiled out and must not delete
+            // a stable install's in-flight download.
             foreach (var path in Directory.EnumerateFiles(temp, "GamerGuardian-Setup-*.exe"))
             {
                 TryDeleteIfOlder(path, cutoff);
             }
+#endif
 
-            var stale = Path.Combine(temp, "gamerguardian_trace.log");
+            var stale = Path.Combine(temp, $"{AppIdentity.DiagnosticPrefix}_trace.log");
             TryDeleteIfOlder(stale, DateTime.MaxValue); // always remove — code no longer writes it
         }
         catch { /* best-effort */ }
