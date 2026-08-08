@@ -105,10 +105,48 @@ public static class SystemInfo
 
     public static SystemInfoCard Memory()
     {
+        var modules = Smbios.ParseMemoryDevices(SystemMetrics.ReadRawSmbios());
+
+        var installed = FormatBytes(SystemMetrics.TotalPhysicalBytes());
+        // Type is a property of the installed sticks, so it belongs with the total
+        // rather than in the per-module line.
+        var type = SharedTypeName(modules);
+        if (type is not null && installed != Unknown) installed = $"{installed} {type}";
+
         return new SystemInfoCard("Memory", "Installed physical RAM", new[]
         {
-            ("Total", FormatBytes(SystemMetrics.TotalPhysicalBytes())),
+            ("Installed", installed),
+            ("Modules", DescribeModules(modules)),
         });
+    }
+
+    /// <summary>The memory type when every module agrees on one, else null. Pure.</summary>
+    public static string? SharedTypeName(IReadOnlyList<MemoryModule> modules)
+    {
+        if (modules.Count == 0) return null;
+        var first = modules[0].TypeName;
+        if (string.IsNullOrWhiteSpace(first)) return null;
+        return modules.All(m => m.TypeName == first) ? first : null;
+    }
+
+    /// <summary>
+    /// One line describing the populated slots — "2 × 16 GB @ 6000 MT/s". Mixed
+    /// capacities are listed rather than averaged, because a mismatched pair is
+    /// exactly the sort of thing worth noticing. Pure, so it is unit-tested directly.
+    /// </summary>
+    public static string DescribeModules(IReadOnlyList<MemoryModule> modules)
+    {
+        if (modules.Count == 0) return Unknown;
+
+        var sizes = modules.Select(m => m.SizeBytes).ToList();
+        var layout = sizes.Distinct().Count() == 1
+            ? (modules.Count == 1 ? FormatBytes(sizes[0]) : $"{modules.Count} × {FormatBytes(sizes[0])}")
+            : string.Join(" + ", sizes.Select(s => FormatBytes(s)));
+
+        // Modules can report different speeds; the machine runs at the slowest, so
+        // that is the honest number to show.
+        var speeds = modules.Where(m => m.SpeedMts > 0).Select(m => m.SpeedMts).ToList();
+        return speeds.Count == 0 ? layout : $"{layout} @ {speeds.Min()} MT/s";
     }
 
     public static SystemInfoCard Windows()
