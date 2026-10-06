@@ -16,6 +16,16 @@ Versions before 1.0.0 are pre-release: features and defaults may still change.
 
 ## [Unreleased]
 
+## [0.1.70] - 2026-10-06
+
+### Changed
+- **GamerGuardian is now GamerTune.** This update installs GamerTune, which
+  replaces GamerGuardian in place: your settings, launch-at-startup preference
+  and custom power plan all carry over, and the old app is removed.
+- **Updates now come from a new home:**
+  [github.com/gamertune/gamertuneapp](https://github.com/gamertune/gamertuneapp).
+  This is the last release published here.
+
 ## [0.1.69] - 2026-08-08
 
 ### Fixed
