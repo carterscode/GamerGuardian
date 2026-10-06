@@ -1,3 +1,6 @@
+> **GamerGuardian is now GamerTune and has moved to [github.com/gamertune/gamertuneapp](https://github.com/gamertune/gamertuneapp).**
+> Installed copies update to GamerTune automatically (version 0.1.70) and keep your settings. New downloads and all future releases are there; this repository is no longer updated.
+
 <div align="center">
 
 <img src="src/GamerGuardian/Assets/AppIcon-128.png" width="96" alt="GamerGuardian" />
