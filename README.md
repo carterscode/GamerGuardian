@@ -1,5 +1,5 @@
 > **GamerGuardian is now GamerTune and has moved to [github.com/gamertune/gamertuneapp](https://github.com/gamertune/gamertuneapp).**
-> Installed copies update to GamerTune automatically (version 0.1.70) and keep your settings. New downloads and all future releases are there; this repository is no longer updated.
+> Installed copies are offered the update to GamerTune automatically and keep your settings (or use **Settings → General → Check for updates**). New downloads and all development are there; releases published here only exist to carry existing installs across.
 
 <div align="center">
 

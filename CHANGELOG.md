@@ -24,7 +24,9 @@ Versions before 1.0.0 are pre-release: features and defaults may still change.
   and custom power plan all carry over, and the old app is removed.
 - **Updates now come from a new home:**
   [github.com/gamertune/gamertuneapp](https://github.com/gamertune/gamertuneapp).
-  This is the last release published here.
+  Once you're on GamerTune, it updates itself from there.
+- **Not ready yet?** Choose **Later** and you'll be asked again next time, or
+  update whenever you like from **Settings → General → Check for updates**.
 
 ## [0.1.69] - 2026-08-08
 
